@@ -1,0 +1,22 @@
+{
+  "name": "@babytalk/db",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "postgres": "^3"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*",
+    "drizzle-kit": "1.0.0-beta.17-67b1795",
+    "typescript": "^5"
+  }
+}

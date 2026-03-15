@@ -1,0 +1,26 @@
+{
+  "name": "@babytalk/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@babytalk/db": "workspace:*",
+    "@pothos/core": "^4",
+    "@pothos/plugin-drizzle": "^0",
+    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "graphql": "^16",
+    "graphql-yoga": "^5",
+    "jose": "^6",
+    "nodemailer": "^6"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*",
+    "@types/nodemailer": "^6",
+    "tsx": "^4",
+    "typescript": "^5"
+  }
+}
