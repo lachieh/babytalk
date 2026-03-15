@@ -117,6 +117,42 @@ Schema is split across files in `apps/api/src/schema/`:
 - `mutations.ts` — mutation fields
 - `index.ts` — imports all the above, exports the built schema
 
+## CI/CD
+
+### Workflows (`.github/workflows/`)
+
+- **ci.yml** — runs on PRs, pushes to main, and manual dispatch. Spins up a
+  Postgres service container and runs: lint → type-check → migrations → build.
+- **release.yml** — runs on push to main. Uses `changesets/action` to either
+  open a "Version Packages" PR or (when that PR merges) tag releases.
+- **deploy.yml** — builds Docker images and pushes to GHCR. Two trigger paths:
+  - **Every commit to main**: builds changed apps, tags `nightly` + `sha-<hash>`.
+    A cleanup job prunes images keeping the last 10 per package.
+  - **Tag push** (from changesets): builds the tagged app, tags with the
+    semver version + `latest`.
+
+### Changesets
+
+Versioning and changelogs are managed with `@changesets/cli`.
+
+```sh
+pnpm changeset         # add a changeset before merging a PR
+pnpm version           # apply changesets (bumps versions, updates changelogs)
+pnpm release           # create git tags for changed packages
+```
+
+The release workflow automates `version` and `release` — developers only need
+to run `pnpm changeset` locally and include the changeset file in their PR.
+
+### Docker
+
+Both apps have Dockerfiles using multi-stage builds (deps → build → runner).
+Images are published to GHCR as:
+- `ghcr.io/<owner>/babytalk-api`
+- `ghcr.io/<owner>/babytalk-web`
+
+The web app uses Next.js `output: "standalone"` for a minimal Docker image.
+
 ## Environment Variables
 
 Each app/package has a `.env.example`. Copy to `.env` and adjust as needed.

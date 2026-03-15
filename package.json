@@ -8,9 +8,13 @@
     "fix": "ultracite fix",
     "db:generate": "turbo db:generate --filter=@babytalk/db",
     "db:migrate": "turbo db:migrate --filter=@babytalk/db",
-    "db:studio": "pnpm --filter @babytalk/db drizzle-kit studio"
+    "db:studio": "pnpm --filter @babytalk/db drizzle-kit studio",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "changeset tag"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "oxfmt": "^0.40.0",
     "oxlint": "^1.55.0",
     "turbo": "^2",

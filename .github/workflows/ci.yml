@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ci:
+    name: Lint, Type-check, Build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: babytalk
+          POSTGRES_USER: babytalk
+          POSTGRES_PASSWORD: babytalk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U babytalk"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DATABASE_URL: postgresql://babytalk:babytalk@localhost:5432/babytalk
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm check
+
+      - name: Type-check API
+        run: pnpm --filter @babytalk/api exec tsc --noEmit
+
+      - name: Type-check Web
+        run: pnpm --filter @babytalk/web exec tsc --noEmit
+
+      - name: Generate migrations
+        run: pnpm db:generate
+
+      - name: Run migrations
+        run: pnpm db:migrate
+
+      - name: Build
+        run: pnpm build
