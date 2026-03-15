@@ -153,6 +153,15 @@ Images are published to GHCR as:
 
 The web app uses Next.js `output: "standalone"` for a minimal Docker image.
 
+## Infrastructure
+
+The babytalk stack is hosted on a Hetzner Cloud server managed by Coolify.
+See `infrastructure/README.md` for server details, Coolify dashboard access,
+and deployment instructions.
+
+- **Server**: hthosting-alpha (`5.161.45.94`), CPX21, Ubuntu 24.04
+- **Coolify Dashboard**: `http://5.161.45.94:8000`
+
 ## Environment Variables
 
 Each app/package has a `.env.example`. Copy to `.env` and adjust as needed.
