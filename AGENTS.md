@@ -111,6 +111,7 @@ var in `apps/api`.
 - **Playground**: `http://localhost:4000/graphql`
 
 Schema is split across files in `apps/api/src/schema/`:
+
 - `builder.ts` — Pothos SchemaBuilder instance
 - `types.ts` — object type definitions (User, AuthPayload)
 - `queries.ts` — query fields
@@ -148,10 +149,20 @@ to run `pnpm changeset` locally and include the changeset file in their PR.
 
 Both apps have Dockerfiles using multi-stage builds (deps → build → runner).
 Images are published to GHCR as:
+
 - `ghcr.io/<owner>/babytalk-api`
 - `ghcr.io/<owner>/babytalk-web`
 
 The web app uses Next.js `output: "standalone"` for a minimal Docker image.
+
+## Infrastructure
+
+The babytalk stack is hosted on a Hetzner Cloud server managed by Coolify.
+See `infrastructure/README.md` for server details, Coolify dashboard access,
+and deployment instructions.
+
+- **Server**: hthosting-alpha (`5.161.45.94`), CPX21, Ubuntu 24.04
+- **Coolify Dashboard**: `http://5.161.45.94:8000`
 
 ## Environment Variables
 

@@ -1,30 +1,29 @@
 "use client";
 
+import { UrqlProvider as Provider, ssrExchange } from "@urql/next";
 import { useMemo } from "react";
-import { UrqlProvider as Provider } from "@urql/next";
-import { ssrExchange } from "@urql/next";
 import { cacheExchange, createClient, fetchExchange } from "urql";
 
-export function UrqlProvider({ children }: { children: React.ReactNode }) {
-  const [client, ssr] = useMemo(() => {
-    const ssr = ssrExchange({ isClient: true });
-    const client = createClient({
-      url: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
-      exchanges: [cacheExchange, ssr, fetchExchange],
+export const UrqlProvider = ({ children }: { children: React.ReactNode }) => {
+  const [urqlClient, urqlSsr] = useMemo(() => {
+    const ssrInstance = ssrExchange({ isClient: true });
+    const clientInstance = createClient({
+      exchanges: [cacheExchange, ssrInstance, fetchExchange],
       fetchOptions: () => {
-        if (typeof window === "undefined") return {};
+        if (typeof window === "undefined") {
+          return {};
+        }
         const token = localStorage.getItem("babytalk_token");
-        return token
-          ? { headers: { Authorization: `Bearer ${token}` } }
-          : {};
+        return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       },
+      url: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
     });
-    return [client, ssr];
+    return [clientInstance, ssrInstance];
   }, []);
 
   return (
-    <Provider client={client} ssr={ssr}>
+    <Provider client={urqlClient} ssr={urqlSsr}>
       {children}
     </Provider>
   );
-}
+};

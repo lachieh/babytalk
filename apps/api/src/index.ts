@@ -1,15 +1,17 @@
 import { createServer } from "node:http";
+
 import { createYoga } from "graphql-yoga";
-import { schema } from "./schema/index.js";
+
 import { createContext } from "./context.js";
+import { schema } from "./schema/index.js";
 
 const yoga = createYoga({
-  schema,
   context: createContext,
   cors: {
-    origin: process.env.WEB_URL || "http://localhost:3000",
     credentials: true,
+    origin: process.env.WEB_URL || "http://localhost:3000",
   },
+  schema,
 });
 
 const server = createServer(yoga);
