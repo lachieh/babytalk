@@ -33,11 +33,13 @@ Coolify can pull Docker images from GHCR or build from source. The recommended a
 ### Environment variables
 
 Required for the API:
+
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` — secret for signing JWTs
 - `SMTP_HOST`, `SMTP_PORT` — email delivery
 
 Required for the web app:
+
 - `NEXT_PUBLIC_API_URL` — URL of the GraphQL API
 
 ## Hetzner API

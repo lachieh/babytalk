@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 const REQUEST_MAGIC_LINK = `
   mutation RequestMagicLink($email: String!) {
@@ -13,37 +13,45 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setError("");
 
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
 
-    const res = await fetch(apiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query: REQUEST_MAGIC_LINK,
-        variables: { email },
-      }),
-    });
+      const res = await fetch(apiUrl, {
+        body: JSON.stringify({
+          query: REQUEST_MAGIC_LINK,
+          variables: { email },
+        }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
 
-    const data = await res.json();
-    if (data.errors) {
-      setError(data.errors[0].message);
-    } else {
-      setSent(true);
-    }
-  }
+      const data = await res.json();
+      if (data.errors) {
+        setError(data.errors[0].message);
+      } else {
+        setSent(true);
+      }
+    },
+    [email]
+  );
+
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEmail(e.target.value);
+    },
+    []
+  );
 
   if (sent) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-24">
         <h1 className="text-2xl font-bold">Check your email</h1>
-        <p className="mt-4 text-gray-600">
-          We sent a sign-in link to {email}
-        </p>
+        <p className="mt-4 text-gray-600">We sent a sign-in link to {email}</p>
       </main>
     );
   }
@@ -55,7 +63,7 @@ export default function LoginPage() {
         <input
           type="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={handleEmailChange}
           placeholder="you@example.com"
           required
           className="rounded-lg border px-4 py-2"

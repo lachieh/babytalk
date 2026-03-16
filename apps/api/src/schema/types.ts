@@ -8,8 +8,8 @@ export const UserType = builder.objectRef<{
 
 UserType.implement({
   fields: (t) => ({
-    id: t.exposeString("id"),
     email: t.exposeString("email"),
+    id: t.exposeString("id"),
     name: t.exposeString("name", { nullable: true }),
   }),
 });
@@ -23,8 +23,8 @@ AuthPayloadType.implement({
   fields: (t) => ({
     token: t.exposeString("token"),
     user: t.field({
-      type: UserType,
       resolve: (parent) => parent.user,
+      type: UserType,
     }),
   }),
 });

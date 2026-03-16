@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Babytalk",
   description: "Babytalk application",
+  title: "Babytalk",
 };
 
 export default function RootLayout({
