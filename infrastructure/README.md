@@ -12,13 +12,28 @@
 
 [Coolify](https://coolify.io) is installed on hthosting-alpha as the self-hosted PaaS for deploying services.
 
-- **Dashboard**: `http://5.161.45.94:8000`
+- **Dashboard**: `https://hosting.devbox.party` (also `http://5.161.45.94:8000`)
+- **Project domains**: `*.on.devbox.party` (wildcard)
 - **SSH Key**: The `Hetzner` SSH key (ed25519) is configured for root access.
+
+### Domain setup
+
+| Purpose           | Domain                   |
+| ----------------- | ------------------------ |
+| Coolify dashboard | `hosting.devbox.party`   |
+| Deployed projects | `<name>.on.devbox.party` |
+
+DNS requirements:
+
+- `hosting.devbox.party` → `A` record pointing to `5.161.45.94`
+- `*.on.devbox.party` → `A` record pointing to `5.161.45.94`
+
+Traefik (Coolify's built-in reverse proxy) handles TLS certificates automatically via Let's Encrypt.
 
 ### First-time setup
 
-1. Visit `http://5.161.45.94:8000` and create your admin account.
-2. The localhost server is automatically added as a deployment target.
+1. Run `pnpm tsx infrastructure/setup-coolify.ts` to create the admin account and API token.
+2. Run `pnpm tsx infrastructure/configure-domain.ts` to set the dashboard FQDN, wildcard domain, and start Traefik.
 3. Connect your GitHub repository to deploy the babytalk apps.
 
 ### Deploying babytalk
@@ -28,7 +43,8 @@ Coolify can pull Docker images from GHCR or build from source. The recommended a
 1. Add a new **Resource** in Coolify.
 2. Choose **Docker Compose** or **Dockerfile** and point to the repo.
 3. Configure environment variables (see each app's `.env.example`).
-4. Coolify handles SSL, reverse proxy (Traefik), and container management.
+4. Coolify assigns a subdomain under `*.on.devbox.party` automatically, or you can set a custom domain.
+5. Coolify handles SSL, reverse proxy (Traefik), and container management.
 
 ### Environment variables
 
