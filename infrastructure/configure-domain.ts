@@ -8,6 +8,7 @@ import { chromium } from "playwright";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COOLIFY_URL = "http://5.161.45.94:8000";
 const DOMAIN = "hosting.devbox.party";
+const WILDCARD_DOMAIN = "on.devbox.party";
 
 // Read credentials from .env
 const envContent = readFileSync(resolve(__dirname, "../.env"), "utf8");
@@ -180,8 +181,96 @@ const startProxy = async (page: Page) => {
   }
 };
 
+const setWildcardDomainViaApi = async (): Promise<boolean> => {
+  if (!env.COOLIFY_API_TOKEN) {
+    return false;
+  }
+
+  const serverUUID = await fetchServerUuid();
+  if (!serverUUID) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(
+      `${COOLIFY_URL}/api/v1/servers/${serverUUID}`,
+      {
+        body: JSON.stringify({
+          wildcard_domain: `https://${WILDCARD_DOMAIN}`,
+        }),
+        headers: {
+          Authorization: `Bearer ${env.COOLIFY_API_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        method: "PATCH",
+      }
+    );
+    console.log(`   API response: ${response.status}`);
+    return response.ok;
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(`   API call failed: ${message}`);
+    return false;
+  }
+};
+
+const setWildcardDomain = async (page: Page) => {
+  console.log("5. Setting wildcard domain for projects...");
+
+  // Try API first
+  if (await setWildcardDomainViaApi()) {
+    console.log(
+      `   Wildcard domain set to https://${WILDCARD_DOMAIN} via API.`
+    );
+    return;
+  }
+
+  console.log("   API approach failed, using UI...");
+  const serverUUID = await fetchServerUuid();
+  const serverPageUrl = `${COOLIFY_URL}/server/${serverUUID || "hfbqjiy2sx09u1xoleaiqcan"}`;
+  await page.goto(serverPageUrl, { waitUntil: "load" });
+  await page.waitForTimeout(3000);
+  await dismissPopups(page);
+
+  // Look for the wildcard domain input
+  const inputs = page.locator('input[type="text"]');
+  const count = await inputs.count();
+  for (let i = 0; i < count; i += 1) {
+    const input = inputs.nth(i);
+    if (await input.isVisible().catch(() => false)) {
+      const placeholder =
+        (await input.getAttribute("placeholder").catch(() => "")) || "";
+      const wireModel =
+        (await input.getAttribute("wire:model").catch(() => "")) || "";
+      const wireModelLive =
+        (await input.getAttribute("wire:model.live").catch(() => "")) || "";
+      const model = wireModel || wireModelLive;
+
+      if (
+        placeholder.toLowerCase().includes("wildcard") ||
+        model.toLowerCase().includes("wildcard")
+      ) {
+        await input.clear();
+        await input.fill(`https://${WILDCARD_DOMAIN}`);
+        console.log(`   Set wildcard domain to https://${WILDCARD_DOMAIN}`);
+        break;
+      }
+    }
+  }
+
+  // Save
+  const saveBtn = page.getByRole("button", { name: /save/i }).first();
+  if (await saveBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    await saveBtn.click();
+    await page.waitForTimeout(3000);
+    console.log("   Server settings saved.");
+  }
+
+  await screenshot(page, "04-wildcard-domain");
+};
+
 const waitForProxy = async (page: Page) => {
-  console.log("5. Waiting for proxy to start...");
+  console.log("6. Waiting for proxy to start...");
   for (let attempt = 0; attempt < 12; attempt += 1) {
     await page.waitForTimeout(10_000);
     try {
@@ -223,10 +312,14 @@ const main = async () => {
   await setFqdn(page);
   await enableApi(page);
   await startProxy(page);
+  await setWildcardDomain(page);
   await waitForProxy(page);
 
-  await screenshot(page, "03-final");
-  console.log("   Done!");
+  await screenshot(page, "05-final");
+  console.log("\n=== Domain Configuration Complete ===");
+  console.log(`Dashboard:       https://${DOMAIN}`);
+  console.log(`Project domains: *.${WILDCARD_DOMAIN}`);
+  console.log("====================================\n");
   await browser.close();
 };
 
