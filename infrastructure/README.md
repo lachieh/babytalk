@@ -23,14 +23,12 @@
 | Coolify dashboard | `hosting.devbox.party`   |
 | Deployed projects | `<name>.on.devbox.party` |
 
-DNS requirements (Cloudflare: set to **DNS-only**, not Proxied):
+DNS requirements:
 
-- `hosting.devbox.party` → `A` record pointing to `5.161.45.94`
-- `*.on.devbox.party` → `A` record pointing to `5.161.45.94`
+- `hosting.devbox.party` → CNAME via Cloudflare Tunnel
+- `*.on.devbox.party` → CNAME via Cloudflare Tunnel
 
-Cloudflare's proxy must be disabled (grey cloud) because Traefik uses HTTP-01 challenges for Let's Encrypt certificates, which require direct access to the server on port 80. Wildcard records on Cloudflare's free plan cannot be proxied anyway.
-
-Traefik (Coolify's built-in reverse proxy) handles TLS certificates automatically via Let's Encrypt.
+Traffic is routed through Cloudflare Tunnels. Cloudflare handles TLS termination at the edge; Traefik (Coolify's built-in reverse proxy) handles routing to containers.
 
 ### First-time setup
 
