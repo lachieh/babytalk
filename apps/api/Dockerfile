@@ -10,14 +10,10 @@ COPY apps/api/package.json ./apps/api/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS build
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=deps /app ./
 COPY . .
 RUN pnpm turbo build --filter=@babytalk/api
-RUN echo "node-linker=hoisted" >> .npmrc \
-    && echo "inject-workspace-packages=true" >> .npmrc \
-    && pnpm --filter=@babytalk/api deploy --prod /app/deploy
+RUN pnpm --filter=@babytalk/api deploy --prod /app/deploy
 
 FROM node:24-alpine AS runner
 ENV NODE_ENV=production
