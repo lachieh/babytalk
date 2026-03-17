@@ -71,6 +71,43 @@ jobs:
         with:
           context: .
           file: apps/api/Dockerfile
+          load: true
+          tags: babytalk-api:smoke-test
+
+      - name: Smoke test API image
+        run: |
+          docker run -d --name api-smoke-test \
+            -e DATABASE_URL="postgresql://user:pass@localhost:5432/db" \
+            -e JWT_SECRET="ci-test-secret" \
+            -p 4000:4000 \
+            babytalk-api:smoke-test
+
+          for i in $(seq 1 10); do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' api-smoke-test 2>/dev/null || echo "waiting")
+            echo "Health check attempt $i: $STATUS"
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Container is healthy"
+              docker stop api-smoke-test && docker rm api-smoke-test
+              exit 0
+            fi
+            if [ "$STATUS" = "unhealthy" ]; then
+              echo "Container is unhealthy"
+              docker logs api-smoke-test
+              docker stop api-smoke-test && docker rm api-smoke-test
+              exit 1
+            fi
+            sleep 5
+          done
+
+          echo "Health check timed out"
+          docker logs api-smoke-test
+          docker stop api-smoke-test && docker rm api-smoke-test
+          exit 1
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
