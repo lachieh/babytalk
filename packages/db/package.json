@@ -3,23 +3,19 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js"
-      },
-      "./schema": {
-        "types": "./dist/schema/index.d.ts",
-        "import": "./dist/schema/index.js"
-      },
-      "./package.json": "./package.json"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./src/index.ts"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js",
+      "default": "./src/schema/index.ts"
     }
   },
   "scripts": {
+    "build": "tsc",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },
@@ -29,6 +25,7 @@
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",
+    "@types/node": "^25.5.0",
     "drizzle-kit": "1.0.0-beta.17-67b1795",
     "typescript": "^5"
   }
