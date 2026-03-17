@@ -14,7 +14,9 @@ services:
       retries: 5
 
   api:
-    image: ghcr.io/lachieh/babytalk-api:${IMAGE_TAG:-nightly}
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     ports:
       - "4000:4000"
     environment:
@@ -30,7 +32,9 @@ services:
         condition: service_healthy
 
   web:
-    image: ghcr.io/lachieh/babytalk-web:${IMAGE_TAG:-nightly}
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
     ports:
       - "3000:3000"
     environment:
