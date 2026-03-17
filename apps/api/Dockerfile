@@ -15,7 +15,9 @@ COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/apps/api/node_modules ./apps/api/node_modules
 COPY . .
 RUN pnpm turbo build --filter=@babytalk/api
-RUN pnpm --filter=@babytalk/api deploy --prod --legacy /app/deploy
+RUN pnpm --filter=@babytalk/api deploy --prod /app/deploy \
+    --config.inject-workspace-packages=true \
+    --config.node-linker=hoisted
 
 FROM node:24-alpine AS runner
 ENV NODE_ENV=production
