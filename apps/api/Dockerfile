@@ -25,6 +25,8 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 appuser
 COPY --from=build /app/deploy .
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD node -e "fetch('http://localhost:4000/graphql?query=%7B__typename%7D').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"
 USER appuser
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
