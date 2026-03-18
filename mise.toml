@@ -1,6 +1,7 @@
 [tools]
 jq = "latest"
 gh = "latest"
+"github:coollabsio/coolify-cli" = "latest"
 
 [settings]
 idiomatic_version_file = true
