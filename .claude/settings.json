@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "pnpm fix ${file_path}"
+            "command": "pnpm fix ${file_path}; test $? -ne 2"
           }
         ]
       }

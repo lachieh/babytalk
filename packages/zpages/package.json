@@ -1,0 +1,30 @@
+{
+  "name": "@babytalk/zpages",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./src/index.ts"
+    },
+    "./hono": {
+      "types": "./dist/adapter-hono.d.ts",
+      "import": "./dist/adapter-hono.js",
+      "default": "./src/adapter-hono.ts"
+    },
+    "./next": {
+      "types": "./dist/adapter-next.d.ts",
+      "import": "./dist/adapter-next.js",
+      "default": "./src/adapter-next.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*",
+    "@types/node": "^25.5.0",
+    "typescript": "^5"
+  }
+}

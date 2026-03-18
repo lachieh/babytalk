@@ -8,6 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
+    "@babytalk/zpages": "workspace:*",
     "@urql/next": "^1",
     "graphql": "^16",
     "next": "^15",

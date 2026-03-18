@@ -1,16 +1,10 @@
-import { NextResponse } from "next/server";
-
-const startTime = Date.now();
+import { ZPages } from "@babytalk/zpages";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
 const API_BASE = API_URL.replace(/\/graphql$/, "");
 
-async function checkApi(): Promise<{
-  status: "ok" | "error";
-  responseTime: number | null;
-  message?: string;
-}> {
+export const zpages = new ZPages().addReadinessCheck("api", async () => {
   const start = Date.now();
   try {
     const res = await fetch(`${API_BASE}/livez`, {
@@ -31,19 +25,4 @@ async function checkApi(): Promise<{
       status: "error",
     };
   }
-}
-
-export async function GET() {
-  const api = await checkApi();
-  const ok = api.status === "ok";
-
-  return NextResponse.json(
-    {
-      checks: { api },
-      status: ok ? "ok" : "error",
-      timestamp: new Date().toISOString(),
-      uptime: (Date.now() - startTime) / 1000,
-    },
-    { status: ok ? 200 : 503 }
-  );
-}
+});

@@ -36,6 +36,12 @@ importers:
       '@babytalk/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@babytalk/zpages':
+        specifier: workspace:*
+        version: link:../../packages/zpages
+      '@hono/node-server':
+        specifier: ^1.19.11
+        version: 1.19.11(hono@4.12.8)
       '@pothos/core':
         specifier: ^4
         version: 4.12.0(graphql@16.13.1)
@@ -51,6 +57,9 @@ importers:
       graphql-yoga:
         specifier: ^5
         version: 5.18.1(graphql@16.13.1)
+      hono:
+        specifier: ^4.12.8
+        version: 4.12.8
       jose:
         specifier: ^6
         version: 6.2.1
@@ -73,6 +82,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@babytalk/zpages':
+        specifier: workspace:*
+        version: link:../../packages/zpages
       '@urql/next':
         specifier: ^1
         version: 1.1.5(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4))
@@ -137,6 +149,18 @@ importers:
         version: 5.9.3
 
   packages/tsconfig: {}
+
+  packages/zpages:
+    devDependencies:
+      '@babytalk/tsconfig':
+        specifier: workspace:*
+        version: link:../tsconfig
+      '@types/node':
+        specifier: ^25.5.0
+        version: 25.5.0
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
 packages:
 
@@ -667,6 +691,12 @@ packages:
   '@graphql-yoga/typed-event-target@3.0.2':
     resolution: {integrity: sha512-ZpJxMqB+Qfe3rp6uszCQoag4nSw42icURnBRfFYSOmTgEeOe4rD0vYlbA8spvCu2TlCesNTlEN9BLWtQqLxabA==}
     engines: {node: '>=18.0.0'}
+
+  '@hono/node-server@1.19.11':
+    resolution: {integrity: sha512-dr8/3zEaB+p0D2n/IUrlPF1HZm586qgJNXK1a9fhg/PzdtkK7Ksd5l312tJX2yBuALqDYBlG20QEbayqPyxn+g==}
+    engines: {node: '>=18.14.1'}
+    peerDependencies:
+      hono: ^4
 
   '@img/colour@1.1.0':
     resolution: {integrity: sha512-Td76q7j57o/tLVdgS746cYARfSyxk8iEfRxewL9h4OMzYhbW4TAcppl0mT4eyqXddh6L/jwoM75mo7ixa/pCeQ==}
@@ -1698,6 +1728,10 @@ packages:
   graphql@16.13.1:
     resolution: {integrity: sha512-gGgrVCoDKlIZ8fIqXBBb0pPKqDgki0Z/FSKNiQzSGj2uEYHr1tq5wmBegGwJx6QB5S5cM0khSBpi/JFHMCvsmQ==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
+
+  hono@4.12.8:
+    resolution: {integrity: sha512-VJCEvtrezO1IAR+kqEYnxUOoStaQPGrCmX3j4wDTNOcD1uRPFpGlwQUIW8niPuvHXaTUxeOUl5MMDGrl+tmO9A==}
+    engines: {node: '>=16.9.0'}
 
   http-proxy-agent@7.0.2:
     resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
@@ -2888,6 +2922,10 @@ snapshots:
       '@repeaterjs/repeater': 3.0.6
       tslib: 2.8.1
 
+  '@hono/node-server@1.19.11(hono@4.12.8)':
+    dependencies:
+      hono: 4.12.8
+
   '@img/colour@1.1.0':
     optional: true
 
@@ -3650,6 +3688,8 @@ snapshots:
       tslib: 2.8.1
 
   graphql@16.13.1: {}
+
+  hono@4.12.8: {}
 
   http-proxy-agent@7.0.2:
     dependencies:

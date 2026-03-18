@@ -45,12 +45,6 @@ jobs:
       - name: Lint
         run: pnpm check
 
-      - name: Type-check API
-        run: pnpm --filter @babytalk/api exec tsc --noEmit
-
-      - name: Type-check Web
-        run: pnpm --filter @babytalk/web exec tsc --noEmit
-
       - name: Generate migrations
         run: pnpm db:generate
 

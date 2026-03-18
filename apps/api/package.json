@@ -9,11 +9,14 @@
   },
   "dependencies": {
     "@babytalk/db": "workspace:*",
+    "@babytalk/zpages": "workspace:*",
+    "@hono/node-server": "^1.19.11",
     "@pothos/core": "^4",
     "@pothos/plugin-drizzle": "^0",
     "drizzle-orm": "1.0.0-beta.17-67b1795",
     "graphql": "^16",
     "graphql-yoga": "^5",
+    "hono": "^4.12.8",
     "jose": "^6",
     "nodemailer": "^6"
   },
