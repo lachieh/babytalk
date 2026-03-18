@@ -1,5 +1,5 @@
-FROM alpine
-RUN apk add --no-cache npm gcompat curl bash
+FROM node:24-alpine
+RUN apk add --no-cache gcompat curl bash
 RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise bash
 ENV MISE_YES=1
 ENV PATH="/root/.local/share/mise/shims:$PATH"
