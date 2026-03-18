@@ -143,3 +143,6 @@ vite.config.ts.timestamp-*
 
 # pnpm
 pnpm-debug.log*
+
+# mise
+.mise.local.toml

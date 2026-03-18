@@ -1,7 +1,16 @@
 [tools]
-"npm:pnpm" = "latest"
 jq = "latest"
+gh = "latest"
 
 [settings]
 idiomatic_version_file = true
 idiomatic_version_file_enable_tools = ["pnpm", "node"]
+
+[env]
+# Add node_modules/.bin to PATH for local package binaries
+_.path = ["{{config_root}}/node_modules/.bin"]
+
+# Disable telemetry for various tools
+TURBO_TELEMETRY_DISABLED = 1
+NEXT_TELEMETRY_DISABLED = 1
+DO_NOT_TRACK = 1
