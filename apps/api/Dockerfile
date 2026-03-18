@@ -14,7 +14,7 @@ COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
 COPY --from=deps /app ./
 COPY . .
 RUN pnpm turbo build --filter=@babytalk/api
-RUN pnpm --filter=@babytalk/api deploy --prod /app/deploy
+RUN pnpm --filter=@babytalk/api --config.node-linker=hoisted deploy --prod /app/deploy
 
 FROM node:24-alpine AS runner
 ENV NODE_ENV=production
