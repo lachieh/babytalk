@@ -28,4 +28,7 @@ COPY --from=builder /app .
 ENV PORT=4000
 EXPOSE 4000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:${PORT}/readyz | jq -e '.status == "ok"' > /dev/null
+
 CMD [ "dumb-init", "node", "apps/api/dist/index.js" ]

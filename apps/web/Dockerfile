@@ -31,4 +31,7 @@ ENV HOSTNAME="0.0.0.0"
 ENV PORT=3000
 EXPOSE 3000
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -sf http://localhost:${PORT}/readyz | jq -e '.status == "ok"' > /dev/null
+
 CMD ["dumb-init", "node", "apps/web/server.js"]
