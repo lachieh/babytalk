@@ -10,6 +10,7 @@ COPY apps/api/package.json ./apps/api/
 RUN pnpm install --frozen-lockfile
 
 FROM base AS build
+COPY --from=deps /root/.local/share/pnpm/store /root/.local/share/pnpm/store
 COPY --from=deps /app ./
 COPY . .
 RUN pnpm turbo build --filter=@babytalk/api
