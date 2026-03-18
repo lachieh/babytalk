@@ -92,8 +92,7 @@ jobs:
           load: true
           files: |
             docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file-tags }}
-            ${{ steps.meta.outputs.bake-file-labels }}
+            cwd://${{ steps.meta.outputs.bake-file }}
 
       - name: Smoke test API image
         run: |
@@ -161,8 +160,7 @@ jobs:
           push: true
           files: |
             docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file-tags }}
-            ${{ steps.meta.outputs.bake-file-labels }}
+            cwd://${{ steps.meta.outputs.bake-file }}
 
   deploy-coolify:
     name: Trigger Coolify Deploy

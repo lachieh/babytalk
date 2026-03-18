@@ -4,7 +4,7 @@ RUN curl https://mise.run | MISE_INSTALL_PATH=/usr/local/bin/mise bash
 ENV MISE_YES=1
 ENV PATH="/root/.local/share/mise/shims:$PATH"
 WORKDIR /app
-COPY mise.toml ./
+COPY mise.toml package.json ./
 RUN mise trust && mise install && mise reshim
 
 # install root dependencies and turbo globally
