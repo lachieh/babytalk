@@ -9,7 +9,7 @@ interface HonoApp {
   get: (path: string, handler: (c: HonoContext) => Promise<Response>) => void;
 }
 
-export function registerZPages(app: HonoApp, zpages: ZPages): void {
+export const registerZPages = (app: HonoApp, zpages: ZPages): void => {
   app.get("/livez", async (c) => {
     const result = await zpages.getLiveness();
     return c.json(result.body, result.status);
@@ -29,4 +29,4 @@ export function registerZPages(app: HonoApp, zpages: ZPages): void {
     const result = await zpages.getReadiness(c.req.param("check"));
     return c.json(result.body, result.status);
   });
-}
+};

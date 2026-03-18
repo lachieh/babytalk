@@ -5,12 +5,7 @@ import { sql } from "drizzle-orm";
 export const zpages = new ZPages().addReadinessCheck("postgres", async () => {
   const start = Date.now();
   try {
-    await Promise.race([
-      db.execute(sql`SELECT 1`),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("timeout")), 3000)
-      ),
-    ]);
+    await db.execute(sql`SELECT 1`);
     return { responseTime: Date.now() - start, status: "ok" };
   } catch (error) {
     return {

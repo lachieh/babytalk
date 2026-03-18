@@ -16,6 +16,29 @@ const STARTING_RESULT: CheckResult = {
   status: "starting",
 };
 
+const worstStatus = (a: CheckStatus, b: CheckStatus): CheckStatus => {
+  if (a === "error" || b === "error") {
+    return "error";
+  }
+  if (a === "starting" || b === "starting") {
+    return "starting";
+  }
+  return "ok";
+};
+
+const statusCode = (status: CheckStatus): number => {
+  if (status === "ok") {
+    return 200;
+  }
+  return 503;
+};
+
+const executeCheck = async (cached: CachedCheck): Promise<CheckResult> => {
+  const result = await cached.fn();
+  cached.lastResult = result;
+  return result;
+};
+
 export class ZPages {
   private livenessChecks = new Map<string, CachedCheck>();
   private readinessChecks = new Map<string, CachedCheck>();
@@ -37,13 +60,13 @@ export class ZPages {
     return this;
   }
 
-  async getLiveness(
+  getLiveness(
     checkName?: string
   ): Promise<{ body: ZPageResponse; status: number }> {
     return this.runChecks(this.livenessChecks, checkName);
   }
 
-  async getReadiness(
+  getReadiness(
     checkName?: string
   ): Promise<{ body: ZPageResponse; status: number }> {
     return this.runChecks(this.readinessChecks, checkName);
@@ -68,7 +91,7 @@ export class ZPages {
           status: 404,
         };
       }
-      const result = await this.executeCheck(cached);
+      const result = await executeCheck(cached);
       return {
         body: {
           checks: { [checkName]: result },
@@ -84,7 +107,7 @@ export class ZPages {
     let overallStatus: CheckStatus = "ok";
 
     for (const [name, cached] of checks) {
-      results[name] = await this.executeCheck(cached);
+      results[name] = await executeCheck(cached);
       overallStatus = worstStatus(overallStatus, results[name].status);
     }
 
@@ -100,27 +123,4 @@ export class ZPages {
       status: statusCode(overallStatus),
     };
   }
-
-  private async executeCheck(cached: CachedCheck): Promise<CheckResult> {
-    const result = await cached.fn();
-    cached.lastResult = result;
-    return result;
-  }
-}
-
-function worstStatus(a: CheckStatus, b: CheckStatus): CheckStatus {
-  if (a === "error" || b === "error") {
-    return "error";
-  }
-  if (a === "starting" || b === "starting") {
-    return "starting";
-  }
-  return "ok";
-}
-
-function statusCode(status: CheckStatus): number {
-  if (status === "ok") {
-    return 200;
-  }
-  return 503;
 }

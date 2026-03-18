@@ -75,6 +75,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/babytalk-api
+          bake-target: api
           tags: |
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
@@ -89,9 +90,10 @@ jobs:
           targets: api
           push: true
           load: true
-          set: |
-            api.tags=${{ steps.meta.outputs.tags }}
-            api.labels=${{ steps.meta.outputs.labels }}
+          files: |
+            docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file-tags }}
+            ${{ steps.meta.outputs.bake-file-labels }}
 
       - name: Smoke test API image
         run: |
@@ -143,6 +145,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/babytalk-web
+          bake-target: web
           tags: |
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
@@ -156,9 +159,10 @@ jobs:
         with:
           targets: web
           push: true
-          set: |
-            web.tags=${{ steps.meta.outputs.tags }}
-            web.labels=${{ steps.meta.outputs.labels }}
+          files: |
+            docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file-tags }}
+            ${{ steps.meta.outputs.bake-file-labels }}
 
   deploy-coolify:
     name: Trigger Coolify Deploy
