@@ -1,0 +1,7 @@
+[tools]
+"npm:pnpm" = "latest"
+jq = "latest"
+
+[settings]
+idiomatic_version_file = true
+idiomatic_version_file_enable_tools = ["pnpm", "node"]

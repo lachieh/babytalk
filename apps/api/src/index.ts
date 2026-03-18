@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { createYoga } from "graphql-yoga";
 
 import { createContext } from "./context.js";
+import { handleHealthRoutes } from "./health.js";
 import { schema } from "./schema/index.js";
 
 const yoga = createYoga({
@@ -14,7 +15,12 @@ const yoga = createYoga({
   schema,
 });
 
-const server = createServer(yoga);
+const server = createServer((req, res) => {
+  if (handleHealthRoutes(req, res)) {
+    return;
+  }
+  yoga(req, res);
+});
 const port = Number(process.env.PORT || 4000);
 
 server.listen(port, () => {
