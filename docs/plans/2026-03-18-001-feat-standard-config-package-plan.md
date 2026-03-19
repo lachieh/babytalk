@@ -1,7 +1,7 @@
 ---
 title: "feat: Add schema-validated config loading package"
 type: feat
-status: active
+status: completed
 date: 2026-03-18
 origin: docs/brainstorms/2026-03-18-standard-config-requirements.md
 ---
