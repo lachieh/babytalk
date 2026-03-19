@@ -15,7 +15,7 @@ const mergeConfig = createDefu((obj, key, value) => {
   }
 });
 
-function parseFile(filePath: string): Record<string, unknown> {
+const parseFile = (filePath: string): Record<string, unknown> => {
   const content = readFileSync(filePath, "utf8");
 
   if (filePath.endsWith(".json")) {
@@ -23,14 +23,16 @@ function parseFile(filePath: string): Record<string, unknown> {
   }
 
   return parseYaml(content) as Record<string, unknown>;
-}
+};
 
 /**
  * Reads and deep-merges config files in precedence order.
  * Files are listed highest-precedence first. defu merges so that
  * the first argument (highest precedence) wins for each key.
  */
-export function mergeConfigFiles(filePaths: string[]): Record<string, unknown> {
+export const mergeConfigFiles = (
+  filePaths: string[]
+): Record<string, unknown> => {
   if (filePaths.length === 0) {
     return {};
   }
@@ -39,4 +41,4 @@ export function mergeConfigFiles(filePaths: string[]): Record<string, unknown> {
 
   // defu(highest, ...lower) — first arg wins per key
   return mergeConfig(configs[0] ?? {}, ...configs.slice(1));
-}
+};

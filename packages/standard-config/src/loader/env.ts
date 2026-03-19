@@ -11,32 +11,35 @@ export interface EnvOptions {
   envMap?: (keyPath: string) => string | null | undefined;
 }
 
+const escapeRegex = (str: string): string =>
+  str.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /**
  * Convert a dot-separated key path to an env var name.
  * e.g. ("APP", "database.port", "_") => "APP_DATABASE_PORT"
  */
-function keyToEnvName(
+const keyToEnvName = (
   prefix: string,
   keyPath: string,
   separator: string
-): string {
-  return `${prefix}${separator}${keyPath.replaceAll(".", separator)}`.toUpperCase();
-}
+): string =>
+  `${prefix}${separator}${keyPath.replaceAll(".", separator)}`.toUpperCase();
 
 /**
  * Set a nested value on an object using a dot-separated path.
  */
-function setNested(
+const setNested = (
   obj: Record<string, unknown>,
   path: string,
   value: unknown
-): void {
+): void => {
   const parts = path.split(".");
   let current: Record<string, unknown> = obj;
 
-  for (let i = 0; i < parts.length - 1; i++) {
-    const key = parts[i]!;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    const key = parts[i];
     if (
+      key === undefined ||
       current[key] === undefined ||
       current[key] === null ||
       typeof current[key] !== "object"
@@ -46,8 +49,11 @@ function setNested(
     current = current[key] as Record<string, unknown>;
   }
 
-  current[parts.at(-1)!] = value;
-}
+  const lastKey = parts.at(-1);
+  if (lastKey !== undefined) {
+    current[lastKey] = value;
+  }
+};
 
 /**
  * Coerce a string env var value to a typed value.
@@ -56,7 +62,7 @@ function setNested(
  * - Numeric strings become numbers
  * - Everything else stays as string
  */
-function coerceValue(value: string): unknown {
+const coerceValue = (value: string): unknown => {
   if (value.startsWith("[")) {
     try {
       return JSON.parse(value);
@@ -78,21 +84,21 @@ function coerceValue(value: string): unknown {
   }
 
   return value;
-}
+};
 
 /**
  * Scan process.env for matching env vars and build a config overlay.
  * Returns a record of dot-separated key paths to coerced values.
  */
-export function scanEnvVars(
+export const scanEnvVars = (
   options: EnvOptions,
   env: Record<string, string | undefined> = process.env
-): Record<string, unknown> {
+): Record<string, unknown> => {
   const separator = options.separator ?? "_";
   const prefixUpper = options.prefix.toUpperCase();
   const fullPrefix = `${prefixUpper}${separator}`;
 
-  const publicPaths = new Set(options.public ?? []);
+  const publicPaths = new Set(options.public);
   const publicPrefix = options.publicPrefix ?? "";
 
   const result: Record<string, unknown> = {};
@@ -146,18 +152,18 @@ export function scanEnvVars(
   }
 
   return result;
-}
+};
 
 /**
  * Build a map of key paths to their expected env var names.
  * Used for documentation/generation, not runtime loading.
  */
-export function buildEnvVarMap(
+export const buildEnvVarMap = (
   options: EnvOptions,
   keyPaths: string[]
-): Record<string, string> {
+): Record<string, string> => {
   const separator = options.separator ?? "_";
-  const publicPaths = new Set(options.public ?? []);
+  const publicPaths = new Set(options.public);
   const publicPrefix = options.publicPrefix ?? "";
   const map: Record<string, string> = {};
 
@@ -182,8 +188,4 @@ export function buildEnvVarMap(
   }
 
   return map;
-}
-
-function escapeRegex(str: string): string {
-  return str.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
+};

@@ -34,9 +34,9 @@ export interface GenerateResult {
  * If the schema library doesn't support StandardJSONSchemaV1,
  * JSON Schema generation is skipped (jsonPath will be null).
  */
-export async function generate(
+export const generate = async (
   options: GenerateOptions = {}
-): Promise<GenerateResult> {
+): Promise<GenerateResult> => {
   const root = resolve(options.root ?? process.cwd());
   const schemaPath = resolve(root, options.schema ?? "./src/config.ts");
   const outputTs = resolve(root, options.outputTs ?? "./src/config.gen.ts");
@@ -95,4 +95,4 @@ export async function generate(
   }
 
   return { jsonPath, tsPath: outputTs };
-}
+};

@@ -14,16 +14,16 @@ interface CandidatePair {
   json: string;
 }
 
-function fileExists(path: string): boolean {
+const fileExists = (path: string): boolean => {
   try {
     accessSync(path, constants.R_OK);
     return true;
   } catch {
     return false;
   }
-}
+};
 
-function buildCandidates(prefix: string, root: string): CandidatePair[] {
+const buildCandidates = (prefix: string, root: string): CandidatePair[] => {
   const xdgHome = process.env.XDG_CONFIG_HOME || join(homedir(), ".config");
 
   return [
@@ -78,14 +78,14 @@ function buildCandidates(prefix: string, root: string): CandidatePair[] {
       yaml: resolve(homedir(), ".config", prefix, "config.yaml"),
     },
   ];
-}
+};
 
 /**
  * Discovers config files in precedence order (highest first).
  * Throws ConfigError if both .yaml and .json exist at the same path.
  * Returns the list of existing file paths, highest precedence first.
  */
-export function discoverConfigFiles(options: DiscoverOptions): string[] {
+export const discoverConfigFiles = (options: DiscoverOptions): string[] => {
   const root = resolve(options.root ?? process.cwd());
   const candidates = buildCandidates(options.prefix, root);
   const found: string[] = [];
@@ -111,4 +111,4 @@ export function discoverConfigFiles(options: DiscoverOptions): string[] {
   }
 
   return found;
-}
+};
