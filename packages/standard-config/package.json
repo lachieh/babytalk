@@ -56,7 +56,7 @@
     "@standard-schema/spec": "^1",
     "@types/node": "^25.5.0",
     "jiti": "^2",
-    "next": "^15",
+    "next": "^16",
     "typescript": "^5",
     "unplugin": "^2",
     "valibot": "^1",
