@@ -59,7 +59,7 @@ export function generateTypeScript(
   const allPaths = flattenPaths(properties);
   for (const path of allPaths) {
     const envName =
-      `${prefix}${separator}${path.replaceAll('.', separator)}`.toUpperCase();
+      `${prefix}${separator}${path.replaceAll(".", separator)}`.toUpperCase();
     lines.push(`  "${path}": "${envName}",`);
   }
 
@@ -68,7 +68,7 @@ export function generateTypeScript(
   if (publicPrefix && publicKeys.length > 0) {
     for (const path of publicKeys) {
       const envName =
-        `${publicPrefix.toUpperCase()}${prefix}${separator}${path.replaceAll('.', separator)}`.toUpperCase();
+        `${publicPrefix.toUpperCase()}${prefix}${separator}${path.replaceAll(".", separator)}`.toUpperCase();
       lines.push(`  "public:${path}": "${envName}",`);
     }
   }

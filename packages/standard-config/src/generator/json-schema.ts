@@ -4,7 +4,7 @@ import type { StandardJSONSchemaV1 } from "@standard-schema/spec";
  * Check if a schema supports StandardJSONSchemaV1.
  */
 export function supportsJsonSchema(
-  schema: unknown,
+  schema: unknown
 ): schema is StandardJSONSchemaV1 {
   return (
     typeof schema === "object" &&
@@ -21,7 +21,7 @@ export function supportsJsonSchema(
  * StandardJSONSchemaV1. Returns the JSON Schema as a plain object.
  */
 export function extractJsonSchema(
-  schema: StandardJSONSchemaV1,
+  schema: StandardJSONSchemaV1
 ): Record<string, unknown> {
   const { jsonSchema } = schema["~standard"];
 

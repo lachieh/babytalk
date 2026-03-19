@@ -35,14 +35,14 @@ export interface GenerateResult {
  * JSON Schema generation is skipped (jsonPath will be null).
  */
 export async function generate(
-  options: GenerateOptions = {},
+  options: GenerateOptions = {}
 ): Promise<GenerateResult> {
   const root = resolve(options.root ?? process.cwd());
   const schemaPath = resolve(root, options.schema ?? "./src/config.ts");
   const outputTs = resolve(root, options.outputTs ?? "./src/config.gen.ts");
   const outputJson = resolve(
     root,
-    options.outputJson ?? "./src/config.schema.json",
+    options.outputJson ?? "./src/config.schema.json"
   );
 
   // Evaluate the TypeScript schema file
@@ -54,7 +54,7 @@ export async function generate(
 
   if (!definition?.schema) {
     throw new Error(
-      `Schema file ${schemaPath} must default-export a defineConfig() call.`,
+      `Schema file ${schemaPath} must default-export a defineConfig() call.`
     );
   }
 
@@ -68,15 +68,15 @@ export async function generate(
 
     mkdirSync(dirname(outputTs), { recursive: true });
     mkdirSync(dirname(outputJson), { recursive: true });
-    writeFileSync(outputTs, tsStr, "utf-8");
-    writeFileSync(outputJson, jsonSchemaStr, "utf-8");
+    writeFileSync(outputTs, tsStr, "utf8");
+    writeFileSync(outputJson, jsonSchemaStr, "utf8");
     jsonPath = outputJson;
   } else {
     // No JSON Schema support — skip JSON Schema file, write minimal .gen.ts
     console.warn(
       "Warning: Schema library does not support StandardJSONSchemaV1. " +
         "Skipping JSON Schema generation. " +
-        "TypeScript types will use the schema's inferred types via import.",
+        "TypeScript types will use the schema's inferred types via import."
     );
 
     const tsContent = [
@@ -91,8 +91,8 @@ export async function generate(
     ].join("\n");
 
     mkdirSync(dirname(outputTs), { recursive: true });
-    writeFileSync(outputTs, tsContent, "utf-8");
+    writeFileSync(outputTs, tsContent, "utf8");
   }
 
-  return { tsPath: outputTs, jsonPath };
+  return { jsonPath, tsPath: outputTs };
 }
