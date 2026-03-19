@@ -1,0 +1,52 @@
+#!/usr/bin/env node
+import { parseArgs } from "node:util";
+
+import { generate } from "./generator/core.js";
+
+const { values } = parseArgs({
+  allowPositionals: true,
+  options: {
+    schema: { type: "string", default: "./src/config.ts" },
+    "output-ts": { type: "string", default: "./src/config.gen.ts" },
+    "output-json": {
+      type: "string",
+      default: "./src/config.schema.json",
+    },
+    root: { type: "string", default: process.cwd() },
+    help: { type: "boolean", short: "h" },
+  },
+  strict: false,
+});
+
+if (values.help) {
+  console.log(`
+Usage: standard-config generate [options]
+
+Options:
+  --schema <path>       Path to schema source file (default: ./src/config.ts)
+  --output-ts <path>    Output path for .gen.ts (default: ./src/config.gen.ts)
+  --output-json <path>  Output path for .schema.json (default: ./src/config.schema.json)
+  --root <path>         Root directory (default: cwd)
+  -h, --help            Show this help message
+`);
+  process.exit(0);
+}
+
+async function main(): Promise<void> {
+  const result = await generate({
+    outputJson: values["output-json"] as string,
+    outputTs: values["output-ts"] as string,
+    root: values.root as string,
+    schema: values.schema as string,
+  });
+
+  console.log(`Generated: ${result.tsPath}`);
+  if (result.jsonPath) {
+    console.log(`Generated: ${result.jsonPath}`);
+  }
+}
+
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

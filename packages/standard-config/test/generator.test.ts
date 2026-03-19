@@ -1,7 +1,15 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { generate } from "../src/generator/core.js";
 
 describe("generate", () => {
@@ -13,7 +21,7 @@ describe("generate", () => {
   });
 
   afterEach(() => {
-    rmSync(root, { recursive: true, force: true });
+    rmSync(root, { force: true, recursive: true });
   });
 
   it("generates .gen.ts and .schema.json from a Zod schema", async () => {
@@ -36,24 +44,24 @@ export default defineConfig({
   public: ["host"],
   publicPrefix: "NEXT_PUBLIC_",
 });
-`,
+`
     );
 
     const result = await generate({
+      outputJson: "./src/config.schema.json",
+      outputTs: "./src/config.gen.ts",
       root,
       schema: "./src/config.ts",
-      outputTs: "./src/config.gen.ts",
-      outputJson: "./src/config.schema.json",
     });
 
     expect(result.tsPath).toBe(join(root, "src", "config.gen.ts"));
     expect(result.jsonPath).toBe(join(root, "src", "config.schema.json"));
 
     // Verify JSON Schema
-    const jsonContent = readFileSync(result.jsonPath!, "utf-8");
+    const jsonContent = readFileSync(result.jsonPath!, "utf8");
     const jsonSchema = JSON.parse(jsonContent);
     expect(jsonSchema.$schema).toBe(
-      "https://json-schema.org/draft/2020-12/schema",
+      "https://json-schema.org/draft/2020-12/schema"
     );
     expect(jsonSchema.type).toBe("object");
     expect(jsonSchema.properties.port.type).toBe("number");
@@ -61,7 +69,7 @@ export default defineConfig({
     expect(jsonSchema.properties.database.properties.url.type).toBe("string");
 
     // Verify TypeScript types
-    const tsContent = readFileSync(result.tsPath, "utf-8");
+    const tsContent = readFileSync(result.tsPath, "utf8");
     expect(tsContent).toContain("auto-generated");
     expect(tsContent).toContain("Do not edit");
     expect(tsContent).toContain("export interface Config");
@@ -91,24 +99,21 @@ export default defineConfig({
     }),
   }),
 });
-`,
+`
     );
 
     const result = await generate({ root });
-    const tsContent = readFileSync(result.tsPath, "utf-8");
+    const tsContent = readFileSync(result.tsPath, "utf8");
 
     expect(tsContent).toContain("MYAPP__SERVER__PORT");
     expect(tsContent).toContain("MYAPP__SERVER__HOST");
   });
 
   it("throws for schema file without default export", async () => {
-    writeFileSync(
-      join(root, "src", "config.ts"),
-      `export const foo = "bar";`,
-    );
+    writeFileSync(join(root, "src", "config.ts"), `export const foo = "bar";`);
 
     await expect(generate({ root })).rejects.toThrow(
-      "must default-export a defineConfig() call",
+      "must default-export a defineConfig() call"
     );
   });
 });
