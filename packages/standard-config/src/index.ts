@@ -12,6 +12,8 @@ export { discoverConfigFiles } from "./loader/discover.js";
 export { mergeConfigFiles } from "./loader/merge.js";
 export { scanEnvVars, buildEnvVarMap } from "./loader/env.js";
 export { validateConfig } from "./loader/validate.js";
+export { generate } from "./generator/core.js";
+export type { GenerateOptions, GenerateResult } from "./generator/core.js";
 
 export interface ConfigDefinition<T> {
   /** Config file prefix, e.g. "app" => app.config.yaml */

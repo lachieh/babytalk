@@ -50,6 +50,6 @@
     "unplugin": "^2",
     "valibot": "^1",
     "vitest": "^4",
-    "zod": "^3.25"
+    "zod": "^4"
   }
 }
