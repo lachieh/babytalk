@@ -1,5 +1,7 @@
 import { cacheExchange, createClient, fetchExchange } from "@urql/next";
 
+import { getApiUrl } from "./env";
+
 export const makeClient = () =>
   createClient({
     exchanges: [cacheExchange, fetchExchange],
@@ -10,5 +12,5 @@ export const makeClient = () =>
       const token = localStorage.getItem("babytalk_token");
       return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
     },
-    url: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql",
+    url: getApiUrl(),
   });

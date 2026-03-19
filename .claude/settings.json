@@ -11,5 +11,29 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "WebFetch",
+      "Bash(docker build:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker run:*)",
+      "Bash(wrangler:*)",
+      "Bash(mise reshim:*)",
+      "Bash(mise use:*)",
+      "Bash(mise which:*)",
+      "Bash(mise ls:*)",
+      "Bash(coolify:*)",
+      "Bash(pnpm docker:*)",
+      "Bash(pnpm check:*)",
+      "Bash(pnpm turbo:*)",
+      "Bash(pnpm dev)",
+      "Bash(pnpm build)",
+      "Bash(pnpm check)",
+      "Bash(pnpm fix)",
+      "Bash(pnpm db:generate)",
+      "Bash(pnpm db:migrate)",
+      "Bash(pnpm db:studio)"
+    ]
   }
 }
