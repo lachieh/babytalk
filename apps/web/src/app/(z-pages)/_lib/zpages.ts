@@ -1,8 +1,8 @@
 import { ZPages } from "@babytalk/zpages";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
-const API_BASE = API_URL.replace(/\/graphql$/, "");
+import { getApiUrl } from "@/lib/env";
+
+const API_BASE = getApiUrl().replace(/\/graphql$/, "");
 
 export const zpages = new ZPages().addReadinessCheck("api", async () => {
   const start = Date.now();
