@@ -40,8 +40,7 @@ babytalk/
 │       └── nextjs.json   # Next.js (Bundler resolution, JSX)
 ├── .github/workflows/
 │   ├── ci.yml            # Lint → type-check → migrate → build
-│   ├── release.yml       # Changesets version/tag
-│   └── deploy.yml        # Docker build → GHCR → Coolify
+│   └── cd.yml            # Changesets version/tag + Docker build → GHCR → Coolify
 ├── docker-compose.yml      # Local dev services (Postgres + Mailpit)
 ├── docker-compose.test.yml # Full stack from local Dockerfiles
 ├── docker-compose.prod.yml # Full stack from GHCR images
@@ -381,10 +380,16 @@ docker compose up -d
 
 ## Infrastructure
 
-Hosted on Hetzner Cloud, managed by Coolify:
+See [INFRA.md](./INFRA.md) for full infrastructure documentation including
+Cloudflare DNS/tunnel configuration, Coolify applications, TLS setup, and
+operational runbooks.
 
-- **Server**: hthosting-alpha (`5.161.45.94`), CPX21, Ubuntu 24.04
-- **Coolify Dashboard**: `http://5.161.45.94:8000`
+**Quick reference**:
+
+- **Server**: Hetzner CPX21, Ubuntu 24.04
+- **Coolify Dashboard**: `https://hosting.devbox.party`
+- **Domain convention**: `<app>-<env>.devbox.party` (single-level subdomains only)
+- **Tunnel**: Cloudflare Tunnel "Hetzner" with `matchSNItoHost: true`
 
 ## Environment Variables
 
