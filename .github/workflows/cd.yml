@@ -114,6 +114,9 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
       - name: Smoke test
         run: |
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
@@ -164,6 +167,9 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
   # ── Deploy to staging (main push or manual) ─────────────
   deploy-staging:

@@ -14,6 +14,7 @@ RUN pnpm install --frozen-lockfile
 # copy source from pruned output and then build
 COPY --from=installer /app/out/full/ .
 RUN --mount=type=secret,id=TURBO_TOKEN,env=TURBO_TOKEN \
+    --mount=type=secret,id=TURBO_TEAM,env=TURBO_TEAM \
     --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
     pnpm turbo build --filter=@babytalk/api
 
