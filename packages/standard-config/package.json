@@ -1,0 +1,55 @@
+{
+  "name": "@babytalk/standard-config",
+  "private": true,
+  "bin": {
+    "standard-config": "./dist/cli.js"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./src/index.ts"
+    },
+    "./vite": {
+      "types": "./dist/unplugin.d.ts",
+      "import": "./dist/unplugin.js",
+      "default": "./src/unplugin.ts"
+    },
+    "./webpack": {
+      "types": "./dist/unplugin.d.ts",
+      "import": "./dist/unplugin.js",
+      "default": "./src/unplugin.ts"
+    },
+    "./rollup": {
+      "types": "./dist/unplugin.d.ts",
+      "import": "./dist/unplugin.js",
+      "default": "./src/unplugin.ts"
+    },
+    "./esbuild": {
+      "types": "./dist/unplugin.d.ts",
+      "import": "./dist/unplugin.js",
+      "default": "./src/unplugin.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "defu": "^6",
+    "yaml": "^2"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*",
+    "@standard-schema/spec": "^1",
+    "@types/node": "^25.5.0",
+    "jiti": "^2",
+    "typescript": "^5",
+    "unplugin": "^2",
+    "valibot": "^1",
+    "vitest": "^4",
+    "zod": "^3.25"
+  }
+}
