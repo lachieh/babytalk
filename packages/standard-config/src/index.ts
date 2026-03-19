@@ -1,16 +1,16 @@
-import type { ConfigDefinition } from "./types.js";
+import type { ConfigDefinition } from "./types";
 
-export type { ConfigDefinition } from "./types.js";
-export { ConfigError } from "./errors.js";
-export type { ConfigIssue } from "./errors.js";
-export { discoverConfigFiles } from "./loader/discover.js";
-export { mergeConfigFiles } from "./loader/merge.js";
-export { scanEnvVars, buildEnvVarMap } from "./loader/env.js";
-export { validateConfig } from "./loader/validate.js";
-export { loadConfig } from "./load.js";
-export { getPublicConfig } from "./public.js";
-export { generate } from "./generator/core.js";
-export type { GenerateOptions, GenerateResult } from "./generator/core.js";
+export type { ConfigDefinition } from "./types";
+export { ConfigError } from "./errors";
+export type { ConfigIssue } from "./errors";
+export { discoverConfigFiles } from "./loader/discover";
+export { mergeConfigFiles } from "./loader/merge";
+export { scanEnvVars, buildEnvVarMap } from "./loader/env";
+export { validateConfig } from "./loader/validate";
+export { loadConfig } from "./load";
+export { getPublicConfig } from "./public";
+export { generate } from "./generator/core";
+export type { GenerateOptions, GenerateResult } from "./generator/core";
 
 /**
  * Define a config shape. Returns the definition object (identity function

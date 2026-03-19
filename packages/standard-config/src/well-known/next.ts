@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { getPublicConfig } from "../public.js";
-import type { ConfigDefinition } from "../types.js";
+import { getPublicConfig } from "../public";
+import type { ConfigDefinition } from "../types";
 
 export interface WellKnownConfigOptions {
   /** Cache-Control max-age in seconds. Default: 60 */

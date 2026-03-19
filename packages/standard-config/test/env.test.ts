@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildEnvVarMap, scanEnvVars } from "../src/loader/env.js";
+import { buildEnvVarMap, scanEnvVars } from "../src/loader/env";
 
 describe("scanEnvVars", () => {
   it("scans matching prefix vars", () => {

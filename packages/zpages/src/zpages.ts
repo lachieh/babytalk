@@ -1,9 +1,4 @@
-import type {
-  CheckFn,
-  CheckResult,
-  CheckStatus,
-  ZPageResponse,
-} from "./types.js";
+import type { CheckFn, CheckResult, CheckStatus, ZPageResponse } from "./types";
 
 interface CachedCheck {
   fn: CheckFn;

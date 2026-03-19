@@ -1,6 +1,6 @@
-import { requestMagicLink, verifyMagicLink } from "../auth/magic-link.js";
-import { builder } from "./builder.js";
-import { AuthPayloadType } from "./types.js";
+import { requestMagicLink, verifyMagicLink } from "../auth/magic-link";
+import { builder } from "./builder";
+import { AuthPayloadType } from "./types";
 
 builder.mutationField("requestMagicLink", (t) =>
   t.field({

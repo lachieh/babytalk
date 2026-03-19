@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
 
-import { generate } from "./generator/core.js";
+import { generate } from "./generator/core";
 
 const { values } = parseArgs({
   allowPositionals: true,

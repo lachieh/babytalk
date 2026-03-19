@@ -1,10 +1,10 @@
 import { defu } from "defu";
 
-import { discoverConfigFiles } from "./loader/discover.js";
-import { scanEnvVars } from "./loader/env.js";
-import { mergeConfigFiles } from "./loader/merge.js";
-import { validateConfig } from "./loader/validate.js";
-import type { ConfigDefinition } from "./types.js";
+import { discoverConfigFiles } from "./loader/discover";
+import { scanEnvVars } from "./loader/env";
+import { mergeConfigFiles } from "./loader/merge";
+import { validateConfig } from "./loader/validate";
+import type { ConfigDefinition } from "./types";
 
 /**
  * Load, merge, and validate config from files and environment variables.

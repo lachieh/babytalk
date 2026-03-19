@@ -20,7 +20,7 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "vite build"
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",

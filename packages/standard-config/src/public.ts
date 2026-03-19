@@ -1,5 +1,5 @@
-import { loadConfig } from "./load.js";
-import type { ConfigDefinition } from "./types.js";
+import { loadConfig } from "./load";
+import type { ConfigDefinition } from "./types";
 
 /**
  * Pick only the keys listed in `definition.public` from a config object.

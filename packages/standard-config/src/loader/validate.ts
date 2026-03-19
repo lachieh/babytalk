@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { ConfigError } from "../errors.js";
-import type { ConfigIssue } from "../errors.js";
+import { ConfigError } from "../errors";
+import type { ConfigIssue } from "../errors";
 
 /**
  * Validate a config object against a standard-schema.

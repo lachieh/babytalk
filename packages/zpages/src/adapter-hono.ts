@@ -1,4 +1,4 @@
-import type { ZPages } from "./zpages.js";
+import type { ZPages } from "./zpages";
 
 interface HonoContext {
   json: (data: unknown, status?: number) => Response;

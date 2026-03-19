@@ -1,2 +1,2 @@
-export { users } from "./users.js";
-export { magicLinks } from "./magic-links.js";
+export { users } from "./users";
+export { magicLinks } from "./magic-links";

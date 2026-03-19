@@ -2,8 +2,8 @@ import { db } from "@babytalk/db";
 import type { Database } from "@babytalk/db";
 import type { YogaInitialContext } from "graphql-yoga";
 
-import { verifyToken } from "./auth/jwt.js";
-import type { JwtPayload } from "./auth/jwt.js";
+import { verifyToken } from "./auth/jwt";
+import type { JwtPayload } from "./auth/jwt";
 
 export interface Context {
   db: Database;

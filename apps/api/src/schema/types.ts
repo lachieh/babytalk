@@ -1,4 +1,4 @@
-import { builder } from "./builder.js";
+import { builder } from "./builder";
 
 export const UserType = builder.objectRef<{
   id: string;

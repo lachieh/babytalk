@@ -1,8 +1,8 @@
 import { users } from "@babytalk/db";
 import { eq } from "drizzle-orm";
 
-import { builder } from "./builder.js";
-import { UserType } from "./types.js";
+import { builder } from "./builder";
+import { UserType } from "./types";
 
 builder.queryField("me", (t) =>
   t.field({

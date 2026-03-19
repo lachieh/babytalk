@@ -2,7 +2,7 @@ import { accessSync, constants } from "node:fs";
 import { homedir } from "node:os";
 import { resolve, join } from "node:path";
 
-import { ConfigError } from "../errors.js";
+import { ConfigError } from "../errors";
 
 export interface DiscoverOptions {
   prefix: string;

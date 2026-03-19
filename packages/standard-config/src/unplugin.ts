@@ -2,8 +2,8 @@ import { resolve } from "node:path";
 
 import { createUnplugin } from "unplugin";
 
-import { generate } from "./generator/core.js";
-import type { GenerateOptions } from "./generator/core.js";
+import { generate } from "./generator/core";
+import type { GenerateOptions } from "./generator/core";
 
 export interface PluginOptions {
   /** Path to the schema source file. Default: "./src/config.ts" */

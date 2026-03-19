@@ -4,10 +4,10 @@ import { createYoga } from "graphql-yoga";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
-import { createContext } from "./context.js";
-import { config } from "./env.js";
-import { schema } from "./schema/index.js";
-import { zpages } from "./zpages.js";
+import { createContext } from "./context";
+import { config } from "./env";
+import { schema } from "./schema/index";
+import { zpages } from "./zpages";
 
 const app = new Hono();
 

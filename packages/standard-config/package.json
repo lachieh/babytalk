@@ -43,7 +43,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "vite build",
     "test": "vitest run",
     "test:watch": "vitest"
   },

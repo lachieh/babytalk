@@ -2,8 +2,8 @@ import * as v from "valibot";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { ConfigError } from "../src/errors.js";
-import { validateConfig } from "../src/loader/validate.js";
+import { ConfigError } from "../src/errors";
+import { validateConfig } from "../src/loader/validate";
 
 describe("validateConfig", () => {
   describe("with Zod", () => {

@@ -3,13 +3,13 @@ import { resolve, dirname } from "node:path";
 
 import { createJiti } from "jiti";
 
-import type { ConfigDefinition } from "../types.js";
+import type { ConfigDefinition } from "../types";
 import {
   extractJsonSchema,
   formatJsonSchema,
   supportsJsonSchema,
-} from "./json-schema.js";
-import { generateTypeScript } from "./typescript.js";
+} from "./json-schema";
+import { generateTypeScript } from "./typescript";
 
 export interface GenerateOptions {
   /** Path to the schema source file (TypeScript). Default: "./src/config.ts" */

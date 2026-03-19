@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stringify as stringifyYaml } from "yaml";
 
-import { mergeConfigFiles } from "../src/loader/merge.js";
+import { mergeConfigFiles } from "../src/loader/merge";
 
 describe("mergeConfigFiles", () => {
   let root: string;

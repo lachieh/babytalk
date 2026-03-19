@@ -3,8 +3,8 @@ import { randomUUID } from "node:crypto";
 import { db, magicLinks, users } from "@babytalk/db";
 import { eq } from "drizzle-orm";
 
-import { sendMagicLinkEmail } from "../email/send.js";
-import { signToken } from "./jwt.js";
+import { sendMagicLinkEmail } from "../email/send";
+import { signToken } from "./jwt";
 
 export const requestMagicLink = async (email: string): Promise<boolean> => {
   const token = randomUUID();

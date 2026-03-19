@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-import { defineConfig, getPublicConfig } from "../src/index.js";
+import { defineConfig, getPublicConfig } from "../src/index";
 
 describe("getPublicConfig", () => {
   let root: string;

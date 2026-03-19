@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ConfigError } from "../src/errors.js";
-import { discoverConfigFiles } from "../src/loader/discover.js";
+import { ConfigError } from "../src/errors";
+import { discoverConfigFiles } from "../src/loader/discover";
 
 describe("discoverConfigFiles", () => {
   let root: string;
