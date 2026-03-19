@@ -4,9 +4,13 @@ import { UrqlProvider as Provider, ssrExchange } from "@urql/next";
 import { useMemo } from "react";
 import { cacheExchange, createClient, fetchExchange } from "urql";
 
-import { getApiUrl } from "./env";
-
-export const UrqlProvider = ({ children }: { children: React.ReactNode }) => {
+export const UrqlProvider = ({
+  apiUrl,
+  children,
+}: {
+  apiUrl: string;
+  children: React.ReactNode;
+}) => {
   const [urqlClient, urqlSsr] = useMemo(() => {
     const ssrInstance = ssrExchange({ isClient: true });
     const clientInstance = createClient({
@@ -18,10 +22,10 @@ export const UrqlProvider = ({ children }: { children: React.ReactNode }) => {
         const token = localStorage.getItem("babytalk_token");
         return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       },
-      url: getApiUrl(),
+      url: apiUrl,
     });
     return [clientInstance, ssrInstance];
-  }, []);
+  }, [apiUrl]);
 
   return (
     <Provider client={urqlClient} ssr={urqlSsr}>

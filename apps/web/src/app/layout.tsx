@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 
 import "./globals.css";
 
@@ -8,17 +7,6 @@ export const metadata: Metadata = {
   title: "Babytalk",
 };
 
-/**
- * Runtime env vars injected into the client via a script tag.
- * NEXT_PUBLIC_* vars are baked in at build time, which doesn't work
- * for standalone deployments where the image is built once and deployed
- * to multiple environments. This reads server-side env at request time.
- */
-const getRuntimeEnv = () =>
-  JSON.stringify({
-    API_URL: process.env.API_URL ?? "",
-  });
-
 export default function RootLayout({
   children,
 }: {
@@ -26,11 +14,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <Script id="runtime-env" strategy="beforeInteractive">
-          {`window.__ENV__=${getRuntimeEnv()}`}
-        </Script>
-      </head>
       <body>{children}</body>
     </html>
   );

@@ -3,7 +3,7 @@ import { resolve, dirname } from "node:path";
 
 import { createJiti } from "jiti";
 
-import type { ConfigDefinition } from "../index.js";
+import type { ConfigDefinition } from "../types.js";
 import {
   extractJsonSchema,
   formatJsonSchema,

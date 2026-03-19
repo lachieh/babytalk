@@ -1,8 +1,10 @@
+import { loadConfig } from "@babytalk/standard-config";
 import { ZPages } from "@babytalk/zpages";
 
-import { getApiUrl } from "@/lib/env";
+import configDef from "@/config";
 
-const API_BASE = getApiUrl().replace(/\/graphql$/, "");
+const config = await loadConfig(configDef);
+const API_BASE = config.api_url.replace(/\/graphql$/, "");
 
 export const zpages = new ZPages().addReadinessCheck("api", async () => {
   const start = Date.now();
