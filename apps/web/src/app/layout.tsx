@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 
 import "./globals.css";
 
@@ -26,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <script id="runtime-env">{`window.__ENV__=${getRuntimeEnv()}`}</script>
+        <Script id="runtime-env" strategy="beforeInteractive">
+          {`window.__ENV__=${getRuntimeEnv()}`}
+        </Script>
       </head>
       <body>{children}</body>
     </html>
