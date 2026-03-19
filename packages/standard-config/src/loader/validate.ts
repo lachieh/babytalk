@@ -7,10 +7,10 @@ import type { ConfigIssue } from "../errors.js";
  * Validate a config object against a standard-schema.
  * Returns the validated output or throws ConfigError with all issues.
  */
-export async function validateConfig<T>(
+export const validateConfig = async <T>(
   schema: StandardSchemaV1<unknown, T>,
   config: Record<string, unknown>
-): Promise<T> {
+): Promise<T> => {
   const result = schema["~standard"].validate(config);
 
   // Handle both sync and async results
@@ -34,4 +34,4 @@ export async function validateConfig<T>(
   }
 
   return resolved.value as T;
-}
+};

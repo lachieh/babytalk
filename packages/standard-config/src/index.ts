@@ -36,11 +36,9 @@ export interface ConfigDefinition<T> {
  * Define a config shape. Returns the definition object (identity function
  * for type inference).
  */
-export function defineConfig<T>(
+export const defineConfig = <T>(
   definition: ConfigDefinition<T>
-): ConfigDefinition<T> {
-  return definition;
-}
+): ConfigDefinition<T> => definition;
 
 /**
  * Load, merge, and validate config from files and environment variables.
@@ -51,9 +49,9 @@ export function defineConfig<T>(
  * 4. Validate against schema
  * 5. Return frozen config object
  */
-export async function loadConfig<T>(
+export const loadConfig = async <T>(
   definition: ConfigDefinition<T>
-): Promise<Readonly<T>> {
+): Promise<Readonly<T>> => {
   // 1. Discover files
   const filePaths = discoverConfigFiles({
     prefix: definition.prefix,
@@ -80,4 +78,4 @@ export async function loadConfig<T>(
 
   // 6. Freeze and return
   return Object.freeze(validated);
-}
+};

@@ -6,14 +6,14 @@ import { generate } from "./generator/core.js";
 const { values } = parseArgs({
   allowPositionals: true,
   options: {
-    schema: { type: "string", default: "./src/config.ts" },
-    "output-ts": { type: "string", default: "./src/config.gen.ts" },
+    help: { short: "h", type: "boolean" },
     "output-json": {
-      type: "string",
       default: "./src/config.schema.json",
+      type: "string",
     },
-    root: { type: "string", default: process.cwd() },
-    help: { type: "boolean", short: "h" },
+    "output-ts": { default: "./src/config.gen.ts", type: "string" },
+    root: { default: process.cwd(), type: "string" },
+    schema: { default: "./src/config.ts", type: "string" },
   },
   strict: false,
 });
@@ -32,7 +32,7 @@ Options:
   process.exit(0);
 }
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const result = await generate({
     outputJson: values["output-json"] as string,
     outputTs: values["output-ts"] as string,
@@ -44,9 +44,11 @@ async function main(): Promise<void> {
   if (result.jsonPath) {
     console.log(`Generated: ${result.jsonPath}`);
   }
-}
+};
 
-main().catch((error: unknown) => {
+try {
+  await main();
+} catch (error: unknown) {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
-});
+}

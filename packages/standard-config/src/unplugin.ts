@@ -16,14 +16,12 @@ export interface PluginOptions {
   root?: string;
 }
 
-function toGenerateOptions(options: PluginOptions): GenerateOptions {
-  return {
-    outputJson: options.outputJson,
-    outputTs: options.outputTs,
-    root: options.root,
-    schema: options.schema,
-  };
-}
+const toGenerateOptions = (options: PluginOptions): GenerateOptions => ({
+  outputJson: options.outputJson,
+  outputTs: options.outputTs,
+  root: options.root,
+  schema: options.schema,
+});
 
 const unplugin = createUnplugin((options: PluginOptions = {}) => {
   const root = resolve(options.root ?? process.cwd());

@@ -58,7 +58,11 @@ export default defineConfig({
     expect(result.jsonPath).toBe(join(root, "src", "config.schema.json"));
 
     // Verify JSON Schema
-    const jsonContent = readFileSync(result.jsonPath!, "utf8");
+    const { jsonPath } = result;
+    if (jsonPath === undefined) {
+      throw new Error("Expected jsonPath to be defined");
+    }
+    const jsonContent = readFileSync(jsonPath, "utf8");
     const jsonSchema = JSON.parse(jsonContent);
     expect(jsonSchema.$schema).toBe(
       "https://json-schema.org/draft/2020-12/schema"
