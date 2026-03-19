@@ -8,13 +8,15 @@
     "start": "next start"
   },
   "dependencies": {
+    "@babytalk/standard-config": "workspace:*",
     "@babytalk/zpages": "workspace:*",
     "@urql/next": "^1",
     "graphql": "^16",
     "next": "^15",
     "react": "^19",
     "react-dom": "^19",
-    "urql": "^4"
+    "urql": "^4",
+    "zod": "^4"
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",

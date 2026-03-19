@@ -5,6 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { createContext } from "./context.js";
+import { config } from "./env.js";
 import { schema } from "./schema/index.js";
 import { zpages } from "./zpages.js";
 
@@ -14,7 +15,7 @@ app.use(
   "/graphql",
   cors({
     credentials: true,
-    origin: process.env.WEB_URL || "http://localhost:3000",
+    origin: config.web_url,
   })
 );
 
@@ -30,8 +31,6 @@ app.on(["GET", "POST"], "/graphql", async (c) => {
   });
 });
 
-const port = Number(process.env.PORT || 4000);
-
-serve({ fetch: app.fetch, port }, () => {
-  console.log(`API running on http://localhost:${port}/graphql`);
+serve({ fetch: app.fetch, port: config.port }, () => {
+  console.log(`API running on http://localhost:${config.port}/graphql`);
 });

@@ -1,22 +1,21 @@
 import { createTransport } from "nodemailer";
 
+import { config } from "../env.js";
+
 const transport = createTransport({
-  host: process.env.SMTP_HOST || "localhost",
-  port: Number(process.env.SMTP_PORT || 1025),
+  host: config.smtp.host,
+  port: config.smtp.port,
   secure: false,
 });
-
-const from = process.env.SMTP_FROM || "noreply@babytalk.dev";
 
 export const sendMagicLinkEmail = async (
   email: string,
   token: string
 ): Promise<void> => {
-  const webUrl = process.env.WEB_URL || "http://localhost:3000";
-  const link = `${webUrl}/auth/verify?token=${token}`;
+  const link = `${config.web_url}/auth/verify?token=${token}`;
 
   await transport.sendMail({
-    from,
+    from: config.smtp.from,
     html: `
       <h2>Sign in to Babytalk</h2>
       <p>Click the link below to sign in:</p>

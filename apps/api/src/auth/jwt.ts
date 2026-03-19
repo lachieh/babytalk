@@ -1,8 +1,8 @@
 import { SignJWT, jwtVerify } from "jose";
 
-const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "dev-secret-change-me"
-);
+import { config } from "../env.js";
+
+const secret = new TextEncoder().encode(config.jwt_secret);
 
 export interface JwtPayload {
   sub: string;
