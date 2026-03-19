@@ -19,6 +19,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
 permissions:
   contents: write
@@ -33,10 +35,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v6
-        with: { node-version: 24, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
       - uses: changesets/action@v1
         with:
           version: pnpm version
@@ -44,36 +43,44 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Detect which apps changed ───────────────────────────
+  # ── Detect which apps are affected ──────────────────────
   changes:
     name: Detect changes
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     outputs:
-      api: ${{ steps.filter.outputs.api }}
-      web: ${{ steps.filter.outputs.web }}
+      api: ${{ steps.affected.outputs.api }}
+      web: ${{ steps.affected.outputs.web }}
     steps:
       - uses: actions/checkout@v6
-      - uses: dorny/paths-filter@v4
-        id: filter
         with:
-          filters: |
-            api:
-              - 'apps/api/**'
-              - 'packages/**'
-              - 'docker/**'
-              - 'docker-bake.hcl'
-              - 'mise.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
-            web:
-              - 'apps/web/**'
-              - 'packages/**'
-              - 'docker/**'
-              - 'docker-bake.hcl'
-              - 'mise.toml'
-              - 'pnpm-lock.yaml'
-              - 'pnpm-workspace.yaml'
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+
+      - name: Detect affected packages
+        id: affected
+        run: |
+          AFFECTED=$(pnpm turbo build --affected --dry=json | jq -r '.packages[]')
+          echo "Affected packages: $AFFECTED"
+
+          API=false
+          WEB=false
+
+          for pkg in $AFFECTED; do
+            case "$pkg" in
+              @babytalk/api) API=true ;;
+              @babytalk/web) WEB=true ;;
+              # Shared packages affect both apps
+              @babytalk/db|@babytalk/zpages|@babytalk/standard-config)
+                API=true
+                WEB=true
+                ;;
+            esac
+          done
+
+          echo "api=$API" >> "$GITHUB_OUTPUT"
+          echo "web=$WEB" >> "$GITHUB_OUTPUT"
+          echo "API affected: $API, Web affected: $WEB"
 
   # ── Build & push API image ──────────────────────────────
   build-api:
@@ -112,9 +119,6 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
       - name: Smoke test
         run: |
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
@@ -165,9 +169,6 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
-        env:
-          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
   # ── Deploy API to staging ───────────────────────────────
   deploy-api-staging:

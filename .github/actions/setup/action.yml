@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=http://json.schemastore.org/github-action.json
+
+name: "Setup"
+description: "Install tools via mise, configure pnpm cache, and install dependencies."
+
+inputs:
+  install:
+    description: "Whether to install pnpm dependencies."
+    required: false
+    default: "true"
+  frozen:
+    description: "Use frozen lockfile for install."
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup mise
+      uses: jdx/mise-action@v2
+      with:
+        cache: true
+
+    - name: Get pnpm store path
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: pnpm-store-${{ runner.os }}-
+
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      shell: bash
+      run: pnpm install ${{ inputs.frozen == 'true' && '--frozen-lockfile' || '' }}
