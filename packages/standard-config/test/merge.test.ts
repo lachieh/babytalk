@@ -83,8 +83,8 @@ describe("mergeConfigFiles", () => {
 
     const result = mergeConfigFiles([a, b, c]);
     expect(result).toEqual({
-      db: { name: "test", host: "db.local" },
-      server: { port: 9000, host: "0.0.0.0" },
+      db: { host: "db.local", name: "test" },
+      server: { host: "0.0.0.0", port: 9000 },
     });
   });
 
