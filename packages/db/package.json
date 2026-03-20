@@ -22,13 +22,13 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-beta.17-67b1795",
+    "drizzle-orm": "1.0.0-beta.18-5ffac6d",
     "postgres": "^3"
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
-    "drizzle-kit": "1.0.0-beta.17-67b1795",
+    "drizzle-kit": "1.0.0-beta.18-5ffac6d",
     "typescript": "^5"
   }
 }
