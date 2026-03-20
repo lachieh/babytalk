@@ -58,7 +58,7 @@
     "jiti": "^2",
     "next": "^15",
     "typescript": "^5",
-    "unplugin": "^2",
+    "unplugin": "^3",
     "valibot": "^1",
     "vitest": "^4",
     "zod": "^4"
