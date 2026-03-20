@@ -2,7 +2,7 @@ import { defineConfig } from "@babytalk/standard-config";
 import { z } from "zod";
 
 export default defineConfig({
-  prefix: "api",
+  prefix: "babytalk_api",
   schema: z.object({
     jwt_secret: z.string().default("dev-secret-change-me"),
     port: z.number().default(4000),
