@@ -9,7 +9,7 @@ import {
   formatJsonSchema,
   supportsJsonSchema,
 } from "./json-schema";
-import { generateTypeScript } from "./typescript";
+import { generateEnvDeclaration, generateTypeScript } from "./typescript";
 
 export interface GenerateOptions {
   /** Path to the schema source file (TypeScript). Default: "./src/config.ts" */
@@ -61,14 +61,17 @@ export const generate = async (
   let jsonPath: string | null = null;
 
   if (supportsJsonSchema(definition.schema)) {
-    // Extract JSON Schema and generate .gen.ts with full types
+    // Extract JSON Schema and generate .gen.ts + .env.d.ts with full types
     const jsonSchemaObj = extractJsonSchema(definition.schema);
     const jsonSchemaStr = formatJsonSchema(jsonSchemaObj);
     const tsStr = generateTypeScript(jsonSchemaObj, definition);
+    const envDtsStr = generateEnvDeclaration(jsonSchemaObj, definition);
+    const envDtsPath = outputTs.replace(/\.gen\.ts$/, ".gen.d.ts");
 
     mkdirSync(dirname(outputTs), { recursive: true });
     mkdirSync(dirname(outputJson), { recursive: true });
     writeFileSync(outputTs, tsStr, "utf8");
+    writeFileSync(envDtsPath, envDtsStr, "utf8");
     writeFileSync(outputJson, jsonSchemaStr, "utf8");
     jsonPath = outputJson;
   } else {

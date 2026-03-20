@@ -24,7 +24,7 @@ describe("generate", () => {
     rmSync(root, { force: true, recursive: true });
   });
 
-  it("generates .gen.ts and .schema.json from a Zod schema", async () => {
+  it("generates .gen.ts, .env.d.ts, and .schema.json from a Zod schema", async () => {
     writeFileSync(
       join(root, "src", "config.ts"),
       `
@@ -72,7 +72,7 @@ export default defineConfig({
     expect(jsonSchema.properties.host.type).toBe("string");
     expect(jsonSchema.properties.database.properties.url.type).toBe("string");
 
-    // Verify TypeScript types
+    // Verify TypeScript types (.gen.ts)
     const tsContent = readFileSync(result.tsPath, "utf8");
     expect(tsContent).toContain("auto-generated");
     expect(tsContent).toContain("Do not edit");
@@ -80,13 +80,21 @@ export default defineConfig({
     expect(tsContent).toContain("port: number");
     expect(tsContent).toContain("host: string");
     expect(tsContent).toContain("export type PublicConfig");
-    expect(tsContent).toContain("ENV_VARS");
-    expect(tsContent).toContain("APP_PORT");
-    expect(tsContent).toContain("APP_DATABASE_URL");
-    expect(tsContent).toContain("NEXT_PUBLIC_APP_HOST");
+
+    // Verify env declarations (.env.d.ts)
+    const envDtsContent = readFileSync(
+      join(root, "src", "config.gen.d.ts"),
+      "utf8"
+    );
+    expect(envDtsContent).toContain("APP_PORT");
+    expect(envDtsContent).toContain("APP_DATABASE_URL");
+    expect(envDtsContent).toContain("NEXT_PUBLIC_APP_HOST");
+    expect(envDtsContent).toContain("ProcessEnv");
+    expect(envDtsContent).toContain("ImportMetaEnv");
+    expect(envDtsContent).toContain("ImportMeta");
   });
 
-  it("generates correct env var map with nested keys", async () => {
+  it("generates correct env var names with nested keys and custom separator", async () => {
     writeFileSync(
       join(root, "src", "config.ts"),
       `
@@ -106,11 +114,14 @@ export default defineConfig({
 `
     );
 
-    const result = await generate({ root });
-    const tsContent = readFileSync(result.tsPath, "utf8");
+    await generate({ root });
+    const envDtsContent = readFileSync(
+      join(root, "src", "config.gen.d.ts"),
+      "utf8"
+    );
 
-    expect(tsContent).toContain("MYAPP__SERVER__PORT");
-    expect(tsContent).toContain("MYAPP__SERVER__HOST");
+    expect(envDtsContent).toContain("MYAPP__SERVER__PORT");
+    expect(envDtsContent).toContain("MYAPP__SERVER__HOST");
   });
 
   it("throws for schema file without default export", async () => {

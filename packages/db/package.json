@@ -17,6 +17,7 @@
   },
   "scripts": {
     "build": "vite build",
+    "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
   },

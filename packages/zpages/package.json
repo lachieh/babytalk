@@ -21,7 +21,8 @@
     }
   },
   "scripts": {
-    "build": "vite build"
+    "build": "vite build",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",
