@@ -4,6 +4,7 @@ import { z } from "zod";
 export default defineConfig({
   prefix: "babytalk_api",
   schema: z.object({
+    database_url: z.string(),
     jwt_secret: z.string().default("dev-secret-change-me"),
     port: z.number().default(4000),
     smtp: z
