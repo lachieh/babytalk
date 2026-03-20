@@ -83,7 +83,7 @@ export default defineConfig({
 
     // Verify env declarations (.env.d.ts)
     const envDtsContent = readFileSync(
-      join(root, "src", "config.env.d.ts"),
+      join(root, "src", "config.gen.d.ts"),
       "utf8"
     );
     expect(envDtsContent).toContain("APP_PORT");
@@ -116,7 +116,7 @@ export default defineConfig({
 
     await generate({ root });
     const envDtsContent = readFileSync(
-      join(root, "src", "config.env.d.ts"),
+      join(root, "src", "config.gen.d.ts"),
       "utf8"
     );
 

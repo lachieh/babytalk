@@ -66,7 +66,7 @@ export const generate = async (
     const jsonSchemaStr = formatJsonSchema(jsonSchemaObj);
     const tsStr = generateTypeScript(jsonSchemaObj, definition);
     const envDtsStr = generateEnvDeclaration(jsonSchemaObj, definition);
-    const envDtsPath = outputTs.replace(/\.gen\.ts$/, ".env.d.ts");
+    const envDtsPath = outputTs.replace(/\.gen\.ts$/, ".gen.d.ts");
 
     mkdirSync(dirname(outputTs), { recursive: true });
     mkdirSync(dirname(outputJson), { recursive: true });
