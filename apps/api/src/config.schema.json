@@ -48,5 +48,7 @@
       "type": "string"
     }
   },
-  "required": ["database_url"]
+  "required": [
+    "database_url"
+  ]
 }
