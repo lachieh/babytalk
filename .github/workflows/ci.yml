@@ -11,9 +11,43 @@ concurrency:
   group: ci-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+env:
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
+
 jobs:
-  ci:
-    name: Lint, Type-check, Build
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm check
+
+  typecheck:
+    name: Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm turbo typecheck
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm build
+
+  test:
+    name: Test
     runs-on: ubuntu-latest
 
     services:
@@ -33,18 +67,12 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://babytalk:babytalk@localhost:5432/babytalk
-      TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-      TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
       - uses: ./.github/actions/setup
-
-      - name: Lint
-        run: pnpm check
 
       - name: Generate migrations
         run: pnpm db:generate
@@ -52,5 +80,4 @@ jobs:
       - name: Run migrations
         run: pnpm db:migrate
 
-      - name: Build
-        run: pnpm build
+      - run: pnpm turbo test
