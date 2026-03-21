@@ -14,7 +14,7 @@
     "@babytalk/zpages": "workspace:*",
     "@urql/next": "^2",
     "graphql": "^16",
-    "next": "^15",
+    "next": "^16",
     "react": "^19",
     "react-dom": "^19",
     "urql": "^5",
