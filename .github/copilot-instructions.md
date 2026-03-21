@@ -1,11 +1,15 @@
+---
+applyTo: "**/*.{ts,tsx,js,jsx}"
+---
+
 # Ultracite Code Standards
 
 This project uses **Ultracite**, a zero-config preset that enforces strict code quality standards through automated formatting and linting.
 
 ## Quick Reference
 
-- **Format code**: `pnpm fix`
-- **Check for issues**: `pnpm check`
+- **Format code**: `pnpm dlx ultracite fix`
+- **Check for issues**: `pnpm dlx ultracite check`
 - **Diagnose setup**: `pnpm dlx ultracite doctor`
 
 Oxlint + Oxfmt (the underlying engine) provides robust linting and formatting. Most issues are automatically fixable.
@@ -110,11 +114,11 @@ Write code that is **accessible, performant, type-safe, and maintainable**. Focu
 - Don't use `.only` or `.skip` in committed code
 - Keep test suites reasonably flat - avoid excessive `describe` nesting
 
-## When the Linter Can't Help
+## When Oxlint + Oxfmt Can't Help
 
-The linter will catch most issues automatically. Focus your attention on:
+Oxlint + Oxfmt's linter will catch most issues automatically. Focus your attention on:
 
-1. **Business logic correctness** - Biome can't validate your algorithms
+1. **Business logic correctness** - Oxlint + Oxfmt can't validate your algorithms
 2. **Meaningful naming** - Use descriptive names for functions, variables, and types
 3. **Architecture decisions** - Component structure, data flow, and API design
 4. **Edge cases** - Handle boundary conditions and error states
@@ -123,4 +127,4 @@ The linter will catch most issues automatically. Focus your attention on:
 
 ---
 
-Most formatting and common issues are automatically fixed. Run `pnpm fix` before committing to ensure compliance.
+Most formatting and common issues are automatically fixed by Oxlint + Oxfmt. Run `pnpm dlx ultracite fix` before committing to ensure compliance.

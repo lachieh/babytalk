@@ -70,11 +70,6 @@ jobs:
             case "$pkg" in
               @babytalk/api) API=true ;;
               @babytalk/web) WEB=true ;;
-              # Shared packages affect both apps
-              @babytalk/db|@babytalk/zpages|@babytalk/standard-config)
-                API=true
-                WEB=true
-                ;;
             esac
           done
 
@@ -120,14 +115,20 @@ jobs:
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
       - name: Smoke test
-        run: |
+        run: | #shell
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
           docker run -d --name smoke \
             -e DATABASE_URL="postgresql://x:x@localhost:5432/x" \
             -e JWT_SECRET="ci" -p 4000:4000 "$IMAGE"
           sleep 5
-          for i in $(seq 1 10); do
-            curl -sf http://localhost:4000/livez > /dev/null 2>&1 && break
+          for i in $(seq 1 20); do
+            livez=$(curl -sf http://localhost:4000/livez || true)
+            if [[ "$livez" == "OK" ]]; then
+              echo "Smoke test passed!"
+              break
+            else
+              echo "Livez response: $livez"
+            fi
             echo "Attempt $i…"; sleep 3
           done
           curl -sf http://localhost:4000/livez

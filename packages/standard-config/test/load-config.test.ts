@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import * as v from "valibot";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -38,8 +37,8 @@ describe("loadConfig integration", () => {
       defineConfig({ prefix: "app", root, schema })
     );
 
-    expect(config).toEqual({ host: "localhost", port: 3000 });
-    expect(Object.isFrozen(config)).toBe(true);
+    expect(config).toStrictEqual({ host: "localhost", port: 3000 });
+    expect(Object.isFrozen(config)).toBeTruthy();
   });
 
   it("loads config from file with Valibot schema", async () => {
@@ -57,7 +56,7 @@ describe("loadConfig integration", () => {
       defineConfig({ prefix: "app", root, schema })
     );
 
-    expect(config).toEqual({ host: "localhost", port: 3000 });
+    expect(config).toStrictEqual({ host: "localhost", port: 3000 });
   });
 
   it("env vars override file values", async () => {
@@ -103,7 +102,7 @@ describe("loadConfig integration", () => {
 
     expect(config.port).toBe(4000);
     expect(config.host).toBe("localhost");
-    expect(config.debug).toBe(true);
+    expect(config.debug).toBeTruthy();
   });
 
   it("throws ConfigError for missing required fields", async () => {
@@ -132,6 +131,6 @@ describe("loadConfig integration", () => {
       defineConfig({ prefix: "app", root, schema })
     );
 
-    expect(config).toEqual({ host: "0.0.0.0", port: 3000 });
+    expect(config).toStrictEqual({ host: "0.0.0.0", port: 3000 });
   });
 });

@@ -6,6 +6,9 @@
     "build": "turbo build",
     "check": "ultracite check",
     "fix": "ultracite fix",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "prepare": "lefthook install",
     "db:generate": "turbo db:generate --filter=@babytalk/db",
     "db:migrate": "turbo db:migrate --filter=@babytalk/db",
     "db:studio": "pnpm --filter @babytalk/db drizzle-kit studio",
@@ -18,14 +21,13 @@
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
-    "oxfmt": "^0.40.0",
-    "oxlint": "^1.55.0",
+    "lefthook": "^2.1.4",
+    "oxfmt": "^0.41.0",
+    "oxlint": "^1.56.0",
     "playwright": "1.58.2",
-    "turbo": "^2",
-    "typescript": "^5",
-    "ultracite": "7.3.2",
-    "vite": "^8",
-    "vite-plugin-dts": "^4"
+    "turbo": "^2.8.20",
+    "typescript": "^5.9.3",
+    "ultracite": "7.3.2"
   },
   "devEngines": {
     "packageManager": {

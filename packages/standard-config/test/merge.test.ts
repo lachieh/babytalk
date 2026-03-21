@@ -2,12 +2,11 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stringify as stringifyYaml } from "yaml";
 
 import { mergeConfigFiles } from "../src/loader/merge";
 
-describe("mergeConfigFiles", () => {
+describe(mergeConfigFiles, () => {
   let root: string;
 
   beforeEach(() => {
@@ -19,7 +18,7 @@ describe("mergeConfigFiles", () => {
   });
 
   it("returns empty object for no files", () => {
-    expect(mergeConfigFiles([])).toEqual({});
+    expect(mergeConfigFiles([])).toStrictEqual({});
   });
 
   it("reads a single yaml file", () => {
@@ -27,7 +26,7 @@ describe("mergeConfigFiles", () => {
     writeFileSync(file, stringifyYaml({ host: "localhost", port: 3000 }));
 
     const result = mergeConfigFiles([file]);
-    expect(result).toEqual({ host: "localhost", port: 3000 });
+    expect(result).toStrictEqual({ host: "localhost", port: 3000 });
   });
 
   it("reads a single json file", () => {
@@ -35,7 +34,7 @@ describe("mergeConfigFiles", () => {
     writeFileSync(file, JSON.stringify({ port: 3000 }));
 
     const result = mergeConfigFiles([file]);
-    expect(result).toEqual({ port: 3000 });
+    expect(result).toStrictEqual({ port: 3000 });
   });
 
   it("deep merges with higher precedence file winning", () => {
@@ -50,7 +49,7 @@ describe("mergeConfigFiles", () => {
 
     // high is first (highest precedence)
     const result = mergeConfigFiles([high, low]);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       database: { host: "localhost", port: 5433 },
     });
   });
@@ -63,7 +62,7 @@ describe("mergeConfigFiles", () => {
     writeFileSync(low, stringifyYaml({ tags: ["a", "b", "c"] }));
 
     const result = mergeConfigFiles([high, low]);
-    expect(result).toEqual({ tags: ["override"] });
+    expect(result).toStrictEqual({ tags: ["override"] });
   });
 
   it("deep merges across three files", () => {
@@ -82,7 +81,7 @@ describe("mergeConfigFiles", () => {
     );
 
     const result = mergeConfigFiles([a, b, c]);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       db: { host: "db.local", name: "test" },
       server: { host: "0.0.0.0", port: 9000 },
     });
@@ -97,6 +96,6 @@ describe("mergeConfigFiles", () => {
     writeFileSync(low, stringifyYaml({ b: 2, c: 3 }));
 
     const result = mergeConfigFiles([high, low]);
-    expect(result).toEqual({ a: 1, b: 2, c: 3 });
+    expect(result).toStrictEqual({ a: 1, b: 2, c: 3 });
   });
 });

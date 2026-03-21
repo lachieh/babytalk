@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 
-import { vite as standardConfig } from "@babytalk/standard-config/vite";
+import standardConfig from "@babytalk/standard-config/vite";
 import { defineConfig } from "vite";
 
 export default defineConfig({

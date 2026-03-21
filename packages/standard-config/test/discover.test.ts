@@ -2,12 +2,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-
 import { ConfigError } from "../src/errors";
 import { discoverConfigFiles } from "../src/loader/discover";
 
-describe("discoverConfigFiles", () => {
+describe(discoverConfigFiles, () => {
   let root: string;
 
   beforeEach(() => {
@@ -20,19 +18,19 @@ describe("discoverConfigFiles", () => {
 
   it("returns empty array when no config files exist", () => {
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([]);
+    expect(files).toStrictEqual([]);
   });
 
   it("discovers a yaml file at root level", () => {
     writeFileSync(join(root, "app.config.yaml"), "port: 3000");
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([join(root, "app.config.yaml")]);
+    expect(files).toStrictEqual([join(root, "app.config.yaml")]);
   });
 
   it("discovers a json file at root level", () => {
     writeFileSync(join(root, "app.config.json"), '{"port": 3000}');
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([join(root, "app.config.json")]);
+    expect(files).toStrictEqual([join(root, "app.config.json")]);
   });
 
   it("discovers .local variant with higher precedence", () => {
@@ -40,7 +38,7 @@ describe("discoverConfigFiles", () => {
     writeFileSync(join(root, "app.config.local.yaml"), "port: 4000");
 
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([
+    expect(files).toStrictEqual([
       join(root, "app.config.local.yaml"),
       join(root, "app.config.yaml"),
     ]);
@@ -51,7 +49,7 @@ describe("discoverConfigFiles", () => {
     writeFileSync(join(root, ".config", "app.yaml"), "port: 3000");
 
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([join(root, ".config", "app.yaml")]);
+    expect(files).toStrictEqual([join(root, ".config", "app.yaml")]);
   });
 
   it("discovers files in .config/<prefix>/ directory", () => {
@@ -59,7 +57,7 @@ describe("discoverConfigFiles", () => {
     writeFileSync(join(root, ".config", "app", "config.yaml"), "port: 3000");
 
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([join(root, ".config", "app", "config.yaml")]);
+    expect(files).toStrictEqual([join(root, ".config", "app", "config.yaml")]);
   });
 
   it("returns files in correct precedence order (highest first)", () => {
@@ -70,7 +68,7 @@ describe("discoverConfigFiles", () => {
     writeFileSync(join(root, ".config", "app", "config.yaml"), "nested: true");
 
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([
+    expect(files).toStrictEqual([
       join(root, "app.config.local.yaml"),
       join(root, "app.config.yaml"),
       join(root, ".config", "app", "config.yaml"),
@@ -101,7 +99,7 @@ describe("discoverConfigFiles", () => {
     writeFileSync(join(root, ".config", "app.yaml"), "base: true");
 
     const files = discoverConfigFiles({ prefix: "app", root });
-    expect(files).toEqual([
+    expect(files).toStrictEqual([
       join(root, ".config", "app.local.yaml"),
       join(root, ".config", "app.yaml"),
     ]);

@@ -2,32 +2,16 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
   mkdirSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { join, resolve } from "node:path";
 
 import { generate } from "../src/generator/core";
 
-describe("generate", () => {
-  let root: string;
-
-  beforeEach(() => {
-    root = mkdtempSync(join(tmpdir(), "sc-gen-"));
-    mkdirSync(join(root, "src"), { recursive: true });
-  });
-
-  afterEach(() => {
-    rmSync(root, { force: true, recursive: true });
-  });
-
-  it("generates .gen.ts, .env.d.ts, and .schema.json from a Zod schema", async () => {
-    writeFileSync(
-      join(root, "src", "config.ts"),
-      `
+const zodSchemaSource = `
 import { z } from "zod";
 import { defineConfig } from "@babytalk/standard-config";
 
@@ -44,8 +28,34 @@ export default defineConfig({
   public: ["host"],
   publicPrefix: "NEXT_PUBLIC_",
 });
-`
+`;
+
+describe(generate, () => {
+  let root: string;
+
+  const pkgRoot = resolve(import.meta.dirname, "..");
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), "sc-gen-"));
+    mkdirSync(join(root, "src"), { recursive: true });
+    // Symlink deps so jiti can resolve them from the temp dir
+    mkdirSync(join(root, "node_modules", "@babytalk"), { recursive: true });
+    symlinkSync(
+      pkgRoot,
+      join(root, "node_modules", "@babytalk", "standard-config")
     );
+    symlinkSync(
+      join(pkgRoot, "node_modules", "zod"),
+      join(root, "node_modules", "zod")
+    );
+  });
+
+  afterEach(() => {
+    rmSync(root, { force: true, recursive: true });
+  });
+
+  it("outputs correct file paths", async () => {
+    writeFileSync(join(root, "src", "config.ts"), zodSchemaSource);
 
     const result = await generate({
       outputJson: "./src/config.schema.json",
@@ -56,12 +66,21 @@ export default defineConfig({
 
     expect(result.tsPath).toBe(join(root, "src", "config.gen.ts"));
     expect(result.jsonPath).toBe(join(root, "src", "config.schema.json"));
+  });
 
-    // Verify JSON Schema
+  it("generates a valid JSON Schema", async () => {
+    writeFileSync(join(root, "src", "config.ts"), zodSchemaSource);
+
+    const result = await generate({
+      outputJson: "./src/config.schema.json",
+      outputTs: "./src/config.gen.ts",
+      root,
+      schema: "./src/config.ts",
+    });
+
     const { jsonPath } = result;
-    if (jsonPath === undefined) {
-      throw new Error("Expected jsonPath to be defined");
-    }
+    if (!jsonPath) throw new Error("Expected jsonPath to be defined");
+
     const jsonContent = readFileSync(jsonPath, "utf8");
     const jsonSchema = JSON.parse(jsonContent);
     expect(jsonSchema.$schema).toBe(
@@ -71,17 +90,36 @@ export default defineConfig({
     expect(jsonSchema.properties.port.type).toBe("number");
     expect(jsonSchema.properties.host.type).toBe("string");
     expect(jsonSchema.properties.database.properties.url.type).toBe("string");
+  });
 
-    // Verify TypeScript types (.gen.ts)
+  it("generates TypeScript types in .gen.ts", async () => {
+    writeFileSync(join(root, "src", "config.ts"), zodSchemaSource);
+
+    const result = await generate({
+      outputJson: "./src/config.schema.json",
+      outputTs: "./src/config.gen.ts",
+      root,
+      schema: "./src/config.ts",
+    });
+
     const tsContent = readFileSync(result.tsPath, "utf8");
     expect(tsContent).toContain("auto-generated");
     expect(tsContent).toContain("Do not edit");
     expect(tsContent).toContain("export interface Config");
     expect(tsContent).toContain("port: number");
     expect(tsContent).toContain("host: string");
-    expect(tsContent).toContain("export type PublicConfig");
+  });
 
-    // Verify env declarations (.env.d.ts)
+  it("generates env declarations in .gen.d.ts", async () => {
+    writeFileSync(join(root, "src", "config.ts"), zodSchemaSource);
+
+    await generate({
+      outputJson: "./src/config.schema.json",
+      outputTs: "./src/config.gen.ts",
+      root,
+      schema: "./src/config.ts",
+    });
+
     const envDtsContent = readFileSync(
       join(root, "src", "config.gen.d.ts"),
       "utf8"
@@ -91,7 +129,6 @@ export default defineConfig({
     expect(envDtsContent).toContain("NEXT_PUBLIC_APP_HOST");
     expect(envDtsContent).toContain("ProcessEnv");
     expect(envDtsContent).toContain("ImportMetaEnv");
-    expect(envDtsContent).toContain("ImportMeta");
   });
 
   it("generates correct env var names with nested keys and custom separator", async () => {

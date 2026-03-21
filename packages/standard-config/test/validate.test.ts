@@ -1,11 +1,10 @@
 import * as v from "valibot";
-import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import { ConfigError } from "../src/errors";
 import { validateConfig } from "../src/loader/validate";
 
-describe("validateConfig", () => {
+describe(validateConfig, () => {
   describe("with Zod", () => {
     const schema = z.object({
       host: z.string(),
@@ -17,7 +16,7 @@ describe("validateConfig", () => {
         host: "localhost",
         port: 3000,
       });
-      expect(result).toEqual({ host: "localhost", port: 3000 });
+      expect(result).toStrictEqual({ host: "localhost", port: 3000 });
     });
 
     it("throws ConfigError for invalid config", async () => {
@@ -27,14 +26,13 @@ describe("validateConfig", () => {
     });
 
     it("collects all validation issues", async () => {
-      try {
-        await validateConfig(schema, { host: 123, port: "bad" });
-        expect.unreachable("should have thrown");
-      } catch (error) {
-        expect(error).toBeInstanceOf(ConfigError);
-        const configErr = error as ConfigError;
-        expect(configErr.issues.length).toBeGreaterThanOrEqual(2);
-      }
+      const thrown = await validateConfig(schema, {
+        host: 123,
+        port: "bad",
+      }).catch((error: unknown) => error);
+      expect(thrown).toBeInstanceOf(ConfigError);
+      const configErr = thrown as ConfigError;
+      expect(configErr.issues.length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -49,7 +47,7 @@ describe("validateConfig", () => {
         host: "localhost",
         port: 3000,
       });
-      expect(result).toEqual({ host: "localhost", port: 3000 });
+      expect(result).toStrictEqual({ host: "localhost", port: 3000 });
     });
 
     it("throws ConfigError for invalid config", async () => {

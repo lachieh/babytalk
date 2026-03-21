@@ -2,13 +2,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 import { defineConfig, getPublicConfig } from "../src/index";
 
-describe("getPublicConfig", () => {
+describe(getPublicConfig, () => {
   let root: string;
 
   beforeEach(() => {
@@ -41,7 +40,7 @@ describe("getPublicConfig", () => {
     });
 
     const publicConfig = await getPublicConfig(config);
-    expect(publicConfig).toEqual({
+    expect(publicConfig).toStrictEqual({
       api_url: "https://api.example.com",
       port: 3000,
     });
@@ -61,7 +60,7 @@ describe("getPublicConfig", () => {
     });
 
     const publicConfig = await getPublicConfig(config);
-    expect(publicConfig).toEqual({});
+    expect(publicConfig).toStrictEqual({});
   });
 
   it("handles nested public keys", async () => {
@@ -84,6 +83,8 @@ describe("getPublicConfig", () => {
     });
 
     const publicConfig = await getPublicConfig(config);
-    expect(publicConfig).toEqual({ api: { url: "https://api.example.com" } });
+    expect(publicConfig).toStrictEqual({
+      api: { url: "https://api.example.com" },
+    });
   });
 });

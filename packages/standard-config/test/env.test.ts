@@ -1,8 +1,6 @@
-import { describe, expect, it } from "vitest";
-
 import { buildEnvVarMap, scanEnvVars } from "../src/loader/env";
 
-describe("scanEnvVars", () => {
+describe(scanEnvVars, () => {
   it("scans matching prefix vars", () => {
     const env = {
       APP_HOST: "localhost",
@@ -11,7 +9,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({ host: "localhost", port: 3000 });
+    expect(result).toStrictEqual({ host: "localhost", port: 3000 });
   });
 
   it("maps nested keys via separator", () => {
@@ -21,7 +19,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       database: { host: "db.local", port: 5432 },
     });
   });
@@ -32,7 +30,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP", separator: "__" }, env);
-    expect(result).toEqual({ database: { host: "db.local" } });
+    expect(result).toStrictEqual({ database: { host: "db.local" } });
   });
 
   it("coerces boolean values", () => {
@@ -42,7 +40,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({ debug: true, verbose: false });
+    expect(result).toStrictEqual({ debug: true, verbose: false });
   });
 
   it("coerces numeric values", () => {
@@ -52,7 +50,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({ port: 3000, ratio: 0.5 });
+    expect(result).toStrictEqual({ port: 3000, ratio: 0.5 });
   });
 
   it("parses JSON array values", () => {
@@ -61,7 +59,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({
+    expect(result).toStrictEqual({
       origins: ["http://localhost:3000", "http://localhost:4000"],
     });
   });
@@ -72,7 +70,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({ value: "[not valid json" });
+    expect(result).toStrictEqual({ value: "[not valid json" });
   });
 
   it("handles public prefix vars", () => {
@@ -88,7 +86,7 @@ describe("scanEnvVars", () => {
       },
       env
     );
-    expect(result).toEqual({ api: { url: "https://api.example.com" } });
+    expect(result).toStrictEqual({ api: { url: "https://api.example.com" } });
   });
 
   it("ignores public prefix vars for non-public paths", () => {
@@ -104,7 +102,7 @@ describe("scanEnvVars", () => {
       },
       env
     );
-    expect(result).toEqual({});
+    expect(result).toStrictEqual({});
   });
 
   it("returns empty for no matching vars", () => {
@@ -113,7 +111,7 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({});
+    expect(result).toStrictEqual({});
   });
 
   it("keeps plain strings as strings", () => {
@@ -122,11 +120,11 @@ describe("scanEnvVars", () => {
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
-    expect(result).toEqual({ name: "my-app" });
+    expect(result).toStrictEqual({ name: "my-app" });
   });
 });
 
-describe("buildEnvVarMap", () => {
+describe(buildEnvVarMap, () => {
   it("maps key paths to env var names", () => {
     const map = buildEnvVarMap({ prefix: "APP" }, [
       "port",
@@ -134,7 +132,7 @@ describe("buildEnvVarMap", () => {
       "database.port",
     ]);
 
-    expect(map).toEqual({
+    expect(map).toStrictEqual({
       "database.host": "APP_DATABASE_HOST",
       "database.port": "APP_DATABASE_PORT",
       port: "APP_PORT",
