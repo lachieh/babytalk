@@ -41,7 +41,8 @@
       "types": "./dist/well-known/next.d.ts",
       "import": "./dist/well-known/next.js",
       "default": "./src/well-known/next.ts"
-    }
+    },
+    "./loader": "./src/loader.cjs"
   },
   "scripts": {
     "build": "vite build",

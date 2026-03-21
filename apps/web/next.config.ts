@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
     "@babytalk/standard-config",
     "@babytalk/zpages",
   ],
+  turbopack: {
+    rules: {
+      "**/config.ts": {
+        as: "*.ts",
+        condition: { not: "foreign" },
+        loaders: ["@babytalk/standard-config/loader"],
+      },
+    },
+  },
 };
 
 export default nextConfig;
