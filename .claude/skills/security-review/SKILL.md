@@ -1,3 +1,8 @@
+---
+description: Audit a TypeScript package for secrets leaking to clients via config endpoints, build output, generated types, env var prefixes, and error messages
+argument-hint: "[package-path]"
+---
+
 # Security Review — Secret Leakage Auditor
 
 Audit a TypeScript package for secrets leaking to clients via config endpoints, build output, generated types, env var prefixes, and error messages.

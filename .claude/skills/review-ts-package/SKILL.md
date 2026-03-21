@@ -1,3 +1,8 @@
+---
+description: Comprehensive code review for maintainability, type safety, and fast feedback loops in TypeScript library packages
+argument-hint: "[package-path]"
+---
+
 # Review TypeScript Package — Maintainability, Type Safety & Fast Feedback
 
 Comprehensive code review for long-term health of TypeScript library packages. Evaluates maintainability, type safety, and fast feedback loops through targeted grep scans, deep analysis, and actionable scoring.

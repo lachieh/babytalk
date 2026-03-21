@@ -1,3 +1,8 @@
+---
+description: Evaluate whether AI coding agents can discover, understand, integrate, debug, and generate code for a TypeScript package
+argument-hint: "[package-path]"
+---
+
 # DX Review — Agentic DX Reviewer
 
 Evaluate whether AI coding agents can discover, understand, integrate, debug, and generate code for a TypeScript package — while guarding against context-window bloat.
