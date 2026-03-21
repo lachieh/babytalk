@@ -2,8 +2,8 @@ import { resolve } from "node:path";
 
 import { createUnplugin } from "unplugin";
 
-import { generate } from "./generator/core";
-import type { GenerateOptions } from "./generator/core";
+import { generate } from "../generator/core";
+import type { GenerateOptions } from "../generator/core";
 
 export interface PluginOptions {
   /** Path to the schema source file. Default: "./src/config.ts" */
@@ -23,7 +23,7 @@ const toGenerateOptions = (options: PluginOptions): GenerateOptions => ({
   schema: options.schema,
 });
 
-const unplugin = createUnplugin((options: PluginOptions = {}) => {
+export const unplugin = createUnplugin((options: PluginOptions = {}) => {
   const root = resolve(options.root ?? process.cwd());
   const schemaPath = resolve(root, options.schema ?? "./src/config.ts");
 
@@ -57,10 +57,3 @@ const unplugin = createUnplugin((options: PluginOptions = {}) => {
     },
   };
 });
-
-export const { vite } = unplugin;
-export const { webpack } = unplugin;
-export const { rollup } = unplugin;
-export const { esbuild } = unplugin;
-
-export default unplugin;

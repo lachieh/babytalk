@@ -1,4 +1,3 @@
-import { webpack as standardConfig } from "@babytalk/standard-config/webpack";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -8,13 +7,14 @@ const nextConfig: NextConfig = {
     "@babytalk/standard-config",
     "@babytalk/zpages",
   ],
-  webpack: (config) => {
-    config.plugins.push(
-      standardConfig({
-        schema: "./src/config.ts",
-      })
-    );
-    return config;
+  turbopack: {
+    rules: {
+      "**/config.ts": {
+        as: "*.ts",
+        condition: { not: "foreign" },
+        loaders: ["@babytalk/standard-config/loader"],
+      },
+    },
   },
 };
 
