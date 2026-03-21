@@ -101,8 +101,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/zpages
       '@urql/next':
-        specifier: ^1
-        version: 1.1.5(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4))
+        specifier: ^2
+        version: 2.0.0(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4))
       graphql:
         specifier: ^16
         version: 16.13.1
@@ -116,8 +116,8 @@ importers:
         specifier: ^19
         version: 19.2.4(react@19.2.4)
       urql:
-        specifier: ^4
-        version: 4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4)
+        specifier: ^5
+        version: 5.0.1(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4)
       zod:
         specifier: ^4
         version: 4.3.6
@@ -1605,12 +1605,12 @@ packages:
   '@urql/core@5.2.0':
     resolution: {integrity: sha512-/n0ieD0mvvDnVAXEQgX/7qJiVcvYvNkOHeBvkwtylfjydar123caCXcl58PXFY11oU1oquJocVXHxLAbtv4x1A==}
 
-  '@urql/next@1.1.5':
-    resolution: {integrity: sha512-xCNzgf6IarQ99FN4IPvj5nwkeX1z/mpO9+R54StZOK445lXlYbQnI8s4b9tNqTHbB09gt/vKE3ByRh2NLFMyfw==}
+  '@urql/next@2.0.0':
+    resolution: {integrity: sha512-X7q/+MOUtX1suaDxGJdgjAqE/eyhcGr1XnTO0VpUnSPdPOkVUKm5RNDIQy4ecupTYKs++1j2YWcmAfLc9R/Gkw==}
     peerDependencies:
       next: '>=13.0.0'
       react: '>=18.0.0'
-      urql: ^4.0.0
+      urql: ^5.0.0
 
   '@vitest/expect@4.1.0':
     resolution: {integrity: sha512-EIxG7k4wlWweuCLG9Y5InKFwpMEOyrMb6ZJ1ihYu02LVj/bzUwn2VMU+13PinsjRW75XnITeFrQBMH5+dLvCDA==}
@@ -2995,10 +2995,10 @@ packages:
   urlpattern-polyfill@10.1.0:
     resolution: {integrity: sha512-IGjKp/o0NL3Bso1PymYURCJxMPNAf/ILOpendP9f5B6e1rTJgdgiOvgfoT8VxCAdY+Wisb9uhGaJJf3yZ2V9nw==}
 
-  urql@4.2.2:
-    resolution: {integrity: sha512-3GgqNa6iF7bC4hY/ImJKN4REQILcSU9VKcKL8gfELZM8mM5BnLH1BsCc8kBdnVGD1LIFOs4W3O2idNHhON1r0w==}
+  urql@5.0.1:
+    resolution: {integrity: sha512-r58gYlWvCTC19QvkTaARaCLV9/bp870byH/qbLaw3S7f8i/bC6x2Szub8RVXptiMxWmqq5dyVBjUL9G+xPEuqg==}
     peerDependencies:
-      '@urql/core': ^5.0.0
+      '@urql/core': ^6.0.0
       react: '>= 16.8.0'
 
   uuid@8.3.2:
@@ -4306,11 +4306,11 @@ snapshots:
     transitivePeerDependencies:
       - graphql
 
-  '@urql/next@1.1.5(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4))':
+  '@urql/next@2.0.0(next@15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4))':
     dependencies:
       next: 15.5.12(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
-      urql: 4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4)
+      urql: 5.0.1(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4)
 
   '@vitest/expect@4.1.0':
     dependencies:
@@ -5586,7 +5586,7 @@ snapshots:
 
   urlpattern-polyfill@10.1.0: {}
 
-  urql@4.2.2(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4):
+  urql@5.0.1(@urql/core@5.2.0(graphql@16.13.1))(react@19.2.4):
     dependencies:
       '@urql/core': 5.2.0(graphql@16.13.1)
       react: 19.2.4

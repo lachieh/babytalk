@@ -12,12 +12,12 @@
   "dependencies": {
     "@babytalk/standard-config": "workspace:*",
     "@babytalk/zpages": "workspace:*",
-    "@urql/next": "^1",
+    "@urql/next": "^2",
     "graphql": "^16",
     "next": "^15",
     "react": "^19",
     "react-dom": "^19",
-    "urql": "^4",
+    "urql": "^5",
     "zod": "^4"
   },
   "devDependencies": {
