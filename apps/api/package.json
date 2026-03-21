@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "vite build",
+    "generate": "tsx scripts/generate.ts",
+    "build": "pnpm generate && vite build",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit"
   },

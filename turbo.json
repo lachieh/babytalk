@@ -5,6 +5,10 @@
       "cache": false,
       "persistent": true
     },
+    "generate": {
+      "dependsOn": ["^build"],
+      "outputs": ["src/*.gen.ts", "src/*.gen.d.ts", "src/*.schema.json"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "dist/**"]
