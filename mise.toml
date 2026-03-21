@@ -4,7 +4,6 @@ gh = "latest"
 "github:coollabsio/coolify-cli" = "latest"
 
 [settings]
-idiomatic_version_file = true
 idiomatic_version_file_enable_tools = ["pnpm", "node"]
 
 [env]
