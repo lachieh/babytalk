@@ -13,24 +13,29 @@
       "default": "./src/index.ts"
     },
     "./vite": {
-      "types": "./dist/unplugin.d.ts",
-      "import": "./dist/unplugin.js",
-      "default": "./src/unplugin.ts"
+      "types": "./dist/plugin/vite.d.ts",
+      "import": "./dist/plugin/vite.js",
+      "default": "./src/plugin/vite.ts"
     },
     "./webpack": {
-      "types": "./dist/unplugin.d.ts",
-      "import": "./dist/unplugin.js",
-      "default": "./src/unplugin.ts"
+      "types": "./dist/plugin/webpack.d.ts",
+      "import": "./dist/plugin/webpack.js",
+      "default": "./src/plugin/webpack.ts"
     },
     "./rollup": {
-      "types": "./dist/unplugin.d.ts",
-      "import": "./dist/unplugin.js",
-      "default": "./src/unplugin.ts"
+      "types": "./dist/plugin/rollup.d.ts",
+      "import": "./dist/plugin/rollup.js",
+      "default": "./src/plugin/rollup.ts"
     },
     "./esbuild": {
-      "types": "./dist/unplugin.d.ts",
-      "import": "./dist/unplugin.js",
-      "default": "./src/unplugin.ts"
+      "types": "./dist/plugin/esbuild.d.ts",
+      "import": "./dist/plugin/esbuild.js",
+      "default": "./src/plugin/esbuild.ts"
+    },
+    "./loader": {
+      "types": "./dist/plugin/webpack-loader.d.ts",
+      "import": "./dist/plugin/webpack-loader.js",
+      "default": "./src/plugin/webpack-loader.ts"
     },
     "./client": {
       "types": "./dist/client.d.ts",
@@ -41,8 +46,7 @@
       "types": "./dist/well-known/next.d.ts",
       "import": "./dist/well-known/next.js",
       "default": "./src/well-known/next.ts"
-    },
-    "./loader": "./src/loader.cjs"
+    }
   },
   "scripts": {
     "build": "vite build",

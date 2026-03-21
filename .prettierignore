@@ -2,6 +2,3 @@
 *.gen.ts
 *.gen.d.ts
 *.schema.json
-
-# Webpack loader — uses callback API incompatible with lint rules
-packages/standard-config/src/loader.cjs
