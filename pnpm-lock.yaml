@@ -73,8 +73,8 @@ importers:
         specifier: ^6
         version: 6.2.1
       nodemailer:
-        specifier: ^6
-        version: 6.10.1
+        specifier: ^8
+        version: 8.0.2
       zod:
         specifier: ^4
         version: 4.3.6
@@ -2563,8 +2563,8 @@ packages:
       sass:
         optional: true
 
-  nodemailer@6.10.1:
-    resolution: {integrity: sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==}
+  nodemailer@8.0.2:
+    resolution: {integrity: sha512-zbj002pZAIkWQFxyAaqoxvn+zoIwRnS40hgjqTXudKOOJkiFFgBeNqjgD3/YCR12sZnrghWYBY+yP1ZucdDRpw==}
     engines: {node: '>=6.0.0'}
 
   nypm@0.6.5:
@@ -5142,7 +5142,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  nodemailer@6.10.1: {}
+  nodemailer@8.0.2: {}
 
   nypm@0.6.5:
     dependencies:
