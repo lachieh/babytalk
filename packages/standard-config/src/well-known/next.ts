@@ -27,12 +27,19 @@ export const createConfigHandler = <T>(
   const maxAge = options.maxAge ?? 60;
 
   return async (): Promise<NextResponse> => {
-    const publicConfig = await getPublicConfig(definition);
+    try {
+      const publicConfig = await getPublicConfig(definition);
 
-    return NextResponse.json(publicConfig, {
-      headers: {
-        "cache-control": `public, max-age=${maxAge}`,
-      },
-    });
+      return NextResponse.json(publicConfig, {
+        headers: {
+          "cache-control": `public, max-age=${maxAge}`,
+        },
+      });
+    } catch {
+      return NextResponse.json(
+        { error: "Configuration error" },
+        { status: 500 }
+      );
+    }
   };
 };
