@@ -14,6 +14,15 @@ import type { ConfigDefinition } from "./types";
  * 3. Scan env vars and overlay on merged config
  * 4. Validate against schema
  * 5. Return frozen config object
+ *
+ * @example
+ * ```ts
+ * import { loadConfig } from "@babytalk/standard-config";
+ * import configDef from "./config";
+ *
+ * const config = await loadConfig(configDef);
+ * console.log(config.database.host);
+ * ```
  */
 export const loadConfig = async <T>(
   definition: ConfigDefinition<T>
