@@ -38,8 +38,8 @@ jobs:
       - uses: ./.github/actions/setup
       - uses: changesets/action@v1
         with:
-          version: pnpm version
-          publish: pnpm release
+          version: pnpm changeset version
+          publish: pnpm changeset tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
