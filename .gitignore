@@ -146,3 +146,9 @@ pnpm-debug.log*
 
 # mise
 .mise.local.toml
+
+# Local config overrides (may contain secrets)
+*.config.local.yaml
+*.config.local.json
+.config/*.local.yaml
+.config/*.local.json
