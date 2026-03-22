@@ -1,3 +1,19 @@
+/**
+ * Redact a value for safe inclusion in error messages.
+ * Shows type and length instead of the actual value to prevent secret leakage.
+ */
+const redactValue = (value: unknown): string => {
+  if (value === null) return "null";
+  if (value === undefined) return "undefined";
+  if (typeof value === "string") return `[string, length=${value.length}]`;
+  if (typeof value === "number") return `[number: ${value}]`;
+  if (typeof value === "boolean") return `[boolean: ${value}]`;
+  if (Array.isArray(value)) return `[array, length=${value.length}]`;
+  if (typeof value === "object")
+    return `[object, keys=${Object.keys(value).length}]`;
+  return `[${typeof value}]`;
+};
+
 export interface ConfigIssue {
   path: string;
   message: string;
@@ -17,7 +33,7 @@ export class ConfigError extends Error {
           parts.push(`    expected: ${i.expected}`);
         }
         if (i.received !== undefined) {
-          parts.push(`    received: ${JSON.stringify(i.received)}`);
+          parts.push(`    received: ${redactValue(i.received)}`);
         }
         if (i.source) {
           parts.push(`    source: ${i.source}`);
