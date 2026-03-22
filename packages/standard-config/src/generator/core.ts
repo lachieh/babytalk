@@ -3,6 +3,7 @@ import { resolve, dirname } from "node:path";
 
 import { createJiti } from "jiti";
 
+import { ConfigError } from "../errors";
 import type { ConfigDefinition } from "../types";
 import {
   extractJsonSchema,
@@ -53,9 +54,14 @@ export const generate = async (
   const definition = (mod as { default: ConfigDefinition<unknown> }).default;
 
   if (!definition?.schema) {
-    throw new Error(
-      `Schema file ${schemaPath} must default-export a defineConfig() call.`
-    );
+    throw new ConfigError([
+      {
+        expected: "defineConfig({ prefix, schema })",
+        message: "must default-export a defineConfig() call",
+        path: schemaPath,
+        source: "generator",
+      },
+    ]);
   }
 
   let jsonPath: string | null = null;
