@@ -9,7 +9,7 @@ FROM base AS builder
 
 # install dependencies solo
 COPY --from=installer /app/out/json/ .
-RUN pnpm install --frozen-lockfile
+RUN LEFTHOOK=0 pnpm install --frozen-lockfile
 
 # copy source from pruned output and then build
 COPY --from=installer /app/out/full/ .

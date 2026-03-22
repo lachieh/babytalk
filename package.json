@@ -8,7 +8,7 @@
     "fix": "ultracite fix",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "prepare": "lefthook install",
+    "prepare": "lefthook install || true",
     "db:generate": "turbo db:generate --filter=@babytalk/db",
     "db:migrate": "turbo db:migrate --filter=@babytalk/db",
     "db:studio": "pnpm --filter @babytalk/db drizzle-kit studio",
