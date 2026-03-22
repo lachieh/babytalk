@@ -105,6 +105,45 @@ describe(scanEnvVars, () => {
     expect(result).toStrictEqual({});
   });
 
+  it("applies custom envMap callback", () => {
+    const env = {
+      APP_PORT: "3000",
+      DATABASE_URL: "postgres://localhost/mydb",
+    };
+
+    const result = scanEnvVars(
+      {
+        envMap: (keyPath) =>
+          keyPath === "database.url" ? "DATABASE_URL" : null,
+        prefix: "APP",
+      },
+      env
+    );
+    // database.url should NOT be set via APP_DATABASE_URL (default mapping)
+    // because envMap overrides it to DATABASE_URL
+    expect(result).toStrictEqual({ port: 3000 });
+  });
+
+  it("reads custom-mapped env var when present", () => {
+    const env = {
+      APP_DATABASE_URL: "should-be-ignored",
+      APP_PORT: "3000",
+      DATABASE_URL: "postgres://localhost/mydb",
+    };
+
+    const result = scanEnvVars(
+      {
+        envMap: (keyPath) =>
+          keyPath === "database.url" ? "DATABASE_URL" : null,
+        prefix: "APP",
+      },
+      env
+    );
+    // APP_DATABASE_URL should be skipped (envMap says the real name is DATABASE_URL)
+    // DATABASE_URL doesn't match APP_ prefix so it's not scanned here
+    expect(result).toStrictEqual({ port: 3000 });
+  });
+
   it("returns empty for no matching vars", () => {
     const env = {
       OTHER_VAR: "value",

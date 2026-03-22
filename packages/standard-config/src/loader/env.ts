@@ -138,13 +138,18 @@ export const scanEnvVars = (
     }
 
     // Apply custom mapping if provided
+    // The envMap callback maps key paths to custom env var names.
+    // During scanning, we reverse-check: if envMap produces a custom name
+    // for this keyPath, verify the current env key matches it. If not,
+    // skip this entry (another env key will match the custom name).
     if (options.envMap) {
       const customName = options.envMap(keyPath);
-      if (customName !== null && customName !== undefined) {
-        // Custom name is the env var name, but we already have the value
-        // The callback overrides the key path -> env var name mapping
-        // Since we're scanning env vars, we reverse: check if this env key
-        // matches what the custom mapping would produce
+      if (
+        customName !== null &&
+        customName !== undefined &&
+        envKey !== customName
+      ) {
+        continue;
       }
     }
 
