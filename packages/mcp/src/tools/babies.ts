@@ -1,35 +1,36 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { AuthUser } from "../auth";
-import { babies, db, eq, requireHousehold } from "../helpers";
+import { gqlRequest } from "../graphql";
+
+const MY_BABIES = `
+  query { myBabies { id name birthDate birthWeightG } }
+`;
+
+const ADD_BABY = `
+  mutation AddBaby($name: String!, $birthDate: String!, $birthWeightG: Int) {
+    addBaby(name: $name, birthDate: $birthDate, birthWeightG: $birthWeightG) {
+      id name birthDate birthWeightG
+    }
+  }
+`;
 
 export const registerBabyTools = (
   server: McpServer,
-  getUser: () => AuthUser
+  getToken: () => string
 ) => {
   server.tool(
     "list_babies",
     "List all babies in your household.",
     {},
     async () => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
-
-      const rows = await db
-        .select()
-        .from(babies)
-        .where(eq(babies.householdId, householdId));
-
-      const result = rows.map((b) => ({
-        birthDate: b.birthDate,
-        birthWeightG: b.birthWeightG,
-        id: b.id,
-        name: b.name,
-      }));
-
+      const data = await gqlRequest<{
+        myBabies: unknown[];
+      }>(getToken(), MY_BABIES);
       return {
-        content: [{ text: JSON.stringify(result), type: "text" as const }],
+        content: [
+          { text: JSON.stringify(data.myBabies), type: "text" as const },
+        ],
       };
     }
   );
@@ -43,30 +44,14 @@ export const registerBabyTools = (
       name: z.string().describe("Baby's name"),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
-
-      const [baby] = await db
-        .insert(babies)
-        .values({
-          birthDate: args.birthDate,
-          birthWeightG: args.birthWeightG ?? null,
-          householdId,
-          name: args.name,
-        })
-        .returning();
-
+      const data = await gqlRequest<{ addBaby: unknown }>(
+        getToken(),
+        ADD_BABY,
+        args
+      );
       return {
         content: [
-          {
-            text: JSON.stringify({
-              birthDate: baby.birthDate,
-              birthWeightG: baby.birthWeightG,
-              id: baby.id,
-              name: baby.name,
-            }),
-            type: "text" as const,
-          },
+          { text: JSON.stringify(data.addBaby), type: "text" as const },
         ],
       };
     }

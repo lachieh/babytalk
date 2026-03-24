@@ -1,22 +1,83 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { AuthUser } from "../auth";
-import {
-  and,
-  buildMetadata,
-  db,
-  desc,
-  eq,
-  events,
-  formatEvent,
-  requireBabyAccess,
-  requireHousehold,
-} from "../helpers";
+import { gqlRequest } from "../graphql";
+
+const LOG_EVENT = `
+  mutation LogEvent($babyId: String!, $type: EventType!, $startedAt: String, $endedAt: String, $feedMeta: FeedMetadataInput, $sleepMeta: SleepMetadataInput, $diaperMeta: DiaperMetadataInput, $noteMeta: NoteMetadataInput) {
+    logEvent(babyId: $babyId, type: $type, startedAt: $startedAt, endedAt: $endedAt, feedMeta: $feedMeta, sleepMeta: $sleepMeta, diaperMeta: $diaperMeta, noteMeta: $noteMeta) {
+      id type startedAt endedAt metadata loggedById
+    }
+  }
+`;
+
+const GET_RECENT_EVENTS = `
+  query RecentEvents($babyId: String!, $type: String, $limit: Int) {
+    recentEvents(babyId: $babyId, type: $type, limit: $limit) {
+      id type startedAt endedAt metadata loggedById
+    }
+  }
+`;
+
+const GET_LAST_EVENT = `
+  query LastEvent($babyId: String!, $type: String) {
+    lastEvent(babyId: $babyId, type: $type) {
+      id type startedAt endedAt metadata loggedById
+    }
+  }
+`;
+
+const UPDATE_EVENT = `
+  mutation UpdateEvent($id: String!, $startedAt: String, $endedAt: String, $feedMeta: FeedMetadataInput, $sleepMeta: SleepMetadataInput, $diaperMeta: DiaperMetadataInput, $noteMeta: NoteMetadataInput) {
+    updateEvent(id: $id, startedAt: $startedAt, endedAt: $endedAt, feedMeta: $feedMeta, sleepMeta: $sleepMeta, diaperMeta: $diaperMeta, noteMeta: $noteMeta) {
+      id type startedAt endedAt metadata
+    }
+  }
+`;
+
+const DELETE_EVENT = `
+  mutation DeleteEvent($id: String!) { deleteEvent(id: $id) }
+`;
+
+const buildMeta = (
+  type: string,
+  args: Record<string, unknown>
+): Record<string, unknown> => {
+  switch (type) {
+    case "feed": {
+      return {
+        ...(args.method ? { method: args.method } : {}),
+        ...(args.side ? { side: args.side } : {}),
+        ...(args.amountMl ? { amountMl: args.amountMl } : {}),
+        ...(args.foodDesc ? { foodDesc: args.foodDesc } : {}),
+      };
+    }
+    case "sleep": {
+      return {
+        ...(args.location ? { location: args.location } : {}),
+        ...(args.quality ? { quality: args.quality } : {}),
+      };
+    }
+    case "diaper": {
+      return {
+        ...(args.wet === undefined ? {} : { wet: args.wet }),
+        ...(args.soiled === undefined ? {} : { soiled: args.soiled }),
+        ...(args.color ? { color: args.color } : {}),
+        ...(args.notes ? { notes: args.notes } : {}),
+      };
+    }
+    case "note": {
+      return args.text ? { text: args.text } : {};
+    }
+    default: {
+      return {};
+    }
+  }
+};
 
 export const registerEventTools = (
   server: McpServer,
-  getUser: () => AuthUser
+  getToken: () => string
 ) => {
   server.tool(
     "log_event",
@@ -50,45 +111,24 @@ export const registerEventTools = (
       wet: z.boolean().optional(),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId, userId } = await requireHousehold(user);
-      await requireBabyAccess(args.babyId, householdId);
+      const metaKey = `${args.type}Meta`;
+      const meta = buildMeta(args.type, args);
+      const variables: Record<string, unknown> = {
+        babyId: args.babyId,
+        endedAt: args.endedAt,
+        startedAt: args.startedAt,
+        type: args.type,
+        [metaKey]: Object.keys(meta).length > 0 ? meta : undefined,
+      };
 
-      const metaFields: Record<string, unknown> = {};
-      if (args.type === "feed") {
-        if (args.method) metaFields.method = args.method;
-        if (args.side) metaFields.side = args.side;
-        if (args.amountMl) metaFields.amountMl = args.amountMl;
-        if (args.foodDesc) metaFields.foodDesc = args.foodDesc;
-      } else if (args.type === "sleep") {
-        if (args.location) metaFields.location = args.location;
-        if (args.quality) metaFields.quality = args.quality;
-      } else if (args.type === "diaper") {
-        if (args.wet !== undefined) metaFields.wet = args.wet;
-        if (args.soiled !== undefined) metaFields.soiled = args.soiled;
-        if (args.color) metaFields.color = args.color;
-        if (args.notes) metaFields.notes = args.notes;
-      } else if (args.type === "note" && args.text) {
-        metaFields.text = args.text;
-      }
-
-      const metadata = buildMetadata(args.type, metaFields);
-
-      const [event] = await db
-        .insert(events)
-        .values({
-          babyId: args.babyId,
-          endedAt: args.endedAt ? new Date(args.endedAt) : null,
-          loggedById: userId,
-          metadata,
-          startedAt: args.startedAt ? new Date(args.startedAt) : new Date(),
-          type: args.type,
-        })
-        .returning();
-
+      const data = await gqlRequest<{ logEvent: unknown }>(
+        getToken(),
+        LOG_EVENT,
+        variables
+      );
       return {
         content: [
-          { text: JSON.stringify(formatEvent(event)), type: "text" as const },
+          { text: JSON.stringify(data.logEvent), type: "text" as const },
         ],
       };
     }
@@ -106,24 +146,15 @@ export const registerEventTools = (
         .describe("Filter by event type"),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
-      await requireBabyAccess(args.babyId, householdId);
-
-      const conditions = [eq(events.babyId, args.babyId)];
-      if (args.type) conditions.push(eq(events.type, args.type));
-
-      const rows = await db
-        .select()
-        .from(events)
-        .where(and(...conditions))
-        .orderBy(desc(events.startedAt))
-        .limit(args.limit ?? 20);
-
+      const data = await gqlRequest<{ recentEvents: unknown }>(
+        getToken(),
+        GET_RECENT_EVENTS,
+        args
+      );
       return {
         content: [
           {
-            text: JSON.stringify(rows.map(formatEvent)),
+            text: JSON.stringify(data.recentEvents),
             type: "text" as const,
           },
         ],
@@ -142,27 +173,17 @@ export const registerEventTools = (
         .describe("Filter by event type"),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
-      await requireBabyAccess(args.babyId, householdId);
-
-      const conditions = [eq(events.babyId, args.babyId)];
-      if (args.type) conditions.push(eq(events.type, args.type));
-
-      const [event] = await db
-        .select()
-        .from(events)
-        .where(and(...conditions))
-        .orderBy(desc(events.startedAt))
-        .limit(1);
-
-      if (!event) {
-        return { content: [{ text: "null", type: "text" as const }] };
-      }
-
+      const data = await gqlRequest<{ lastEvent: unknown }>(
+        getToken(),
+        GET_LAST_EVENT,
+        args
+      );
       return {
         content: [
-          { text: JSON.stringify(formatEvent(event)), type: "text" as const },
+          {
+            text: JSON.stringify(data.lastEvent),
+            type: "text" as const,
+          },
         ],
       };
     }
@@ -187,65 +208,35 @@ export const registerEventTools = (
       soiled: z.boolean().optional(),
       startedAt: z.string().optional(),
       text: z.string().optional(),
+      type: z
+        .enum(["feed", "sleep", "diaper", "note"])
+        .optional()
+        .describe("Event type (needed to know which metadata to update)"),
       wet: z.boolean().optional(),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
+      const variables: Record<string, unknown> = {
+        endedAt: args.endedAt,
+        id: args.id,
+        startedAt: args.startedAt,
+      };
 
-      const [existing] = await db
-        .select()
-        .from(events)
-        .where(eq(events.id, args.id))
-        .limit(1);
-      if (!existing) throw new Error("Event not found");
-      await requireBabyAccess(existing.babyId, householdId);
-
-      const updates: Record<string, unknown> = {};
-      if (args.startedAt) updates.startedAt = new Date(args.startedAt);
-      if (args.endedAt) updates.endedAt = new Date(args.endedAt);
-
-      const metaFields: Record<string, unknown> = {};
-      const metaKeys = [
-        "method",
-        "side",
-        "amountMl",
-        "foodDesc",
-        "location",
-        "quality",
-        "wet",
-        "soiled",
-        "color",
-        "notes",
-        "text",
-      ] as const;
-      for (const key of metaKeys) {
-        if (args[key] !== undefined) metaFields[key] = args[key];
-      }
-      if (Object.keys(metaFields).length > 0) {
-        updates.metadata = buildMetadata(existing.type, metaFields);
+      if (args.type) {
+        const metaKey = `${args.type}Meta`;
+        const meta = buildMeta(args.type, args);
+        if (Object.keys(meta).length > 0) {
+          variables[metaKey] = meta;
+        }
       }
 
-      if (Object.keys(updates).length === 0) {
-        return {
-          content: [
-            {
-              text: JSON.stringify(formatEvent(existing)),
-              type: "text" as const,
-            },
-          ],
-        };
-      }
-
-      const [updated] = await db
-        .update(events)
-        .set(updates)
-        .where(eq(events.id, args.id))
-        .returning();
-
+      const data = await gqlRequest<{ updateEvent: unknown }>(
+        getToken(),
+        UPDATE_EVENT,
+        variables
+      );
       return {
         content: [
-          { text: JSON.stringify(formatEvent(updated)), type: "text" as const },
+          { text: JSON.stringify(data.updateEvent), type: "text" as const },
         ],
       };
     }
@@ -258,19 +249,7 @@ export const registerEventTools = (
       id: z.string().describe("UUID of the event to delete"),
     },
     async (args) => {
-      const user = getUser();
-      const { householdId } = await requireHousehold(user);
-
-      const [existing] = await db
-        .select()
-        .from(events)
-        .where(eq(events.id, args.id))
-        .limit(1);
-      if (!existing) throw new Error("Event not found");
-      await requireBabyAccess(existing.babyId, householdId);
-
-      await db.delete(events).where(eq(events.id, args.id));
-
+      await gqlRequest(getToken(), DELETE_EVENT, { id: args.id });
       return {
         content: [
           { text: JSON.stringify({ success: true }), type: "text" as const },

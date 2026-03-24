@@ -1,30 +1,36 @@
-import { randomBytes } from "node:crypto";
-
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { AuthUser } from "../auth";
-import { db, eq, households, users } from "../helpers";
+import { gqlRequest } from "../graphql";
 
-const generateInviteCode = (): string => randomBytes(4).toString("hex");
+const MY_HOUSEHOLD = `
+  query { myHousehold { id inviteCode createdAt } }
+`;
+
+const CREATE_HOUSEHOLD = `
+  mutation { createHousehold { id inviteCode } }
+`;
+
+const JOIN_HOUSEHOLD = `
+  mutation JoinHousehold($inviteCode: String!) {
+    joinHousehold(inviteCode: $inviteCode) { id inviteCode }
+  }
+`;
 
 export const registerHouseholdTools = (
   server: McpServer,
-  getUser: () => AuthUser
+  getToken: () => string
 ) => {
   server.tool(
     "get_household",
     "Get your current household info including the invite code for sharing with your partner.",
     {},
     async () => {
-      const user = getUser();
-      const [row] = await db
-        .select({ householdId: users.householdId })
-        .from(users)
-        .where(eq(users.id, user.sub))
-        .limit(1);
+      const data = await gqlRequest<{
+        myHousehold: unknown | null;
+      }>(getToken(), MY_HOUSEHOLD);
 
-      if (!row?.householdId) {
+      if (!data.myHousehold) {
         return {
           content: [
             {
@@ -35,20 +41,10 @@ export const registerHouseholdTools = (
         };
       }
 
-      const [household] = await db
-        .select()
-        .from(households)
-        .where(eq(households.id, row.householdId))
-        .limit(1);
-
       return {
         content: [
           {
-            text: JSON.stringify({
-              createdAt: household.createdAt.toISOString(),
-              id: household.id,
-              inviteCode: household.inviteCode,
-            }),
+            text: JSON.stringify(data.myHousehold),
             type: "text" as const,
           },
         ],
@@ -61,32 +57,14 @@ export const registerHouseholdTools = (
     "Create a new household. You must create a household before adding babies or logging events.",
     {},
     async () => {
-      const user = getUser();
-
-      const [existing] = await db
-        .select({ householdId: users.householdId })
-        .from(users)
-        .where(eq(users.id, user.sub))
-        .limit(1);
-      if (existing?.householdId) throw new Error("Already in a household");
-
-      const [household] = await db
-        .insert(households)
-        .values({ inviteCode: generateInviteCode() })
-        .returning();
-
-      await db
-        .update(users)
-        .set({ householdId: household.id })
-        .where(eq(users.id, user.sub));
-
+      const data = await gqlRequest<{ createHousehold: unknown }>(
+        getToken(),
+        CREATE_HOUSEHOLD
+      );
       return {
         content: [
           {
-            text: JSON.stringify({
-              id: household.id,
-              inviteCode: household.inviteCode,
-            }),
+            text: JSON.stringify(data.createHousehold),
             type: "text" as const,
           },
         ],
@@ -103,34 +81,15 @@ export const registerHouseholdTools = (
         .describe("8-character invite code from your partner"),
     },
     async (args) => {
-      const user = getUser();
-
-      const [existing] = await db
-        .select({ householdId: users.householdId })
-        .from(users)
-        .where(eq(users.id, user.sub))
-        .limit(1);
-      if (existing?.householdId) throw new Error("Already in a household");
-
-      const [household] = await db
-        .select()
-        .from(households)
-        .where(eq(households.inviteCode, args.inviteCode))
-        .limit(1);
-      if (!household) throw new Error("Invalid invite code");
-
-      await db
-        .update(users)
-        .set({ householdId: household.id })
-        .where(eq(users.id, user.sub));
-
+      const data = await gqlRequest<{ joinHousehold: unknown }>(
+        getToken(),
+        JOIN_HOUSEHOLD,
+        args
+      );
       return {
         content: [
           {
-            text: JSON.stringify({
-              id: household.id,
-              inviteCode: household.inviteCode,
-            }),
+            text: JSON.stringify(data.joinHousehold),
             type: "text" as const,
           },
         ],

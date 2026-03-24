@@ -1,11 +1,25 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import type { AuthUser } from "../auth";
-import { and, babies, db, desc, eq, events, users } from "../helpers";
+import { gqlRequest } from "../graphql";
+
+const SUMMARY_QUERY = `
+  query {
+    myBabies { id name birthDate }
+    myHousehold { id }
+  }
+`;
+
+const RECENT_EVENTS = `
+  query RecentEvents($babyId: String!, $limit: Int) {
+    recentEvents(babyId: $babyId, limit: $limit) {
+      id type startedAt
+    }
+  }
+`;
 
 export const registerResources = (
   server: McpServer,
-  getUser: () => AuthUser
+  getToken: () => string
 ) => {
   server.resource(
     "baby-summary",
@@ -16,14 +30,13 @@ export const registerResources = (
       mimeType: "text/plain",
     },
     async () => {
-      const user = getUser();
-      const [row] = await db
-        .select({ householdId: users.householdId })
-        .from(users)
-        .where(eq(users.id, user.sub))
-        .limit(1);
+      const token = getToken();
+      const data = await gqlRequest<{
+        myBabies: { birthDate: string; id: string; name: string }[];
+        myHousehold: { id: string } | null;
+      }>(token, SUMMARY_QUERY);
 
-      if (!row?.householdId) {
+      if (!data.myHousehold) {
         return {
           contents: [
             {
@@ -35,12 +48,7 @@ export const registerResources = (
         };
       }
 
-      const babyRows = await db
-        .select()
-        .from(babies)
-        .where(eq(babies.householdId, row.householdId));
-
-      if (babyRows.length === 0) {
+      if (data.myBabies.length === 0) {
         return {
           contents: [
             {
@@ -56,7 +64,7 @@ export const registerResources = (
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      for (const baby of babyRows) {
+      for (const baby of data.myBabies) {
         const birth = new Date(baby.birthDate);
         const days = Math.floor((Date.now() - birth.getTime()) / 86_400_000);
         const weeks = Math.floor(days / 7);
@@ -68,16 +76,13 @@ export const registerResources = (
         lines.push(`${baby.name} (ID: ${baby.id})`);
         lines.push(`  Age: ${age} (born ${baby.birthDate})`);
 
-        // Today's event counts
-        const todayEvents = await db
-          .select()
-          .from(events)
-          .where(and(eq(events.babyId, baby.id)))
-          .orderBy(desc(events.startedAt));
+        const eventsData = await gqlRequest<{
+          recentEvents: { id: string; startedAt: string; type: string }[];
+        }>(token, RECENT_EVENTS, { babyId: baby.id, limit: 50 });
 
         const todayCounts: Record<string, number> = {};
-        for (const event of todayEvents) {
-          if (event.startedAt >= today) {
+        for (const event of eventsData.recentEvents) {
+          if (new Date(event.startedAt) >= today) {
             todayCounts[event.type] = (todayCounts[event.type] ?? 0) + 1;
           }
         }

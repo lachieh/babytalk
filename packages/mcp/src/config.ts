@@ -4,11 +4,10 @@ import { z } from "zod";
 export default defineConfig({
   prefix: "babytalk_mcp",
   schema: z.object({
-    database_url: z.string().describe("PostgreSQL connection string"),
-    jwt_secret: z
+    api_url: z
       .string()
-      .default("dev-secret-change-me")
-      .describe("Secret key for verifying JWTs (must match API)"),
+      .default("http://localhost:4000/graphql")
+      .describe("BabyTalk GraphQL API URL"),
     port: z.number().default(8262).describe("HTTP server port"),
     token: z
       .string()

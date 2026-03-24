@@ -2,18 +2,16 @@ import { createServer as createHttpServer } from "node:http";
 
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
-import type { AuthUser } from "./auth";
-import { verifyToken } from "./auth";
 import { config } from "./env";
 import { createServer } from "./server";
 
-// Per-session state: map sessionId -> { server, transport, user }
+// Per-session state: map sessionId -> { server, transport, token }
 const sessions = new Map<
   string,
   {
     server: ReturnType<typeof createServer>;
+    token: string;
     transport: StreamableHTTPServerTransport;
-    user: AuthUser;
   }
 >();
 
@@ -44,7 +42,7 @@ const httpServer = createHttpServer(async (req, res) => {
     return;
   }
 
-  // Authenticate via Bearer token
+  // Extract Bearer token (passed through to GraphQL API for auth)
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
     res.writeHead(401);
@@ -52,12 +50,6 @@ const httpServer = createHttpServer(async (req, res) => {
     return;
   }
   const token = authHeader.slice(7);
-  const user = await verifyToken(token);
-  if (!user) {
-    res.writeHead(401);
-    res.end("Invalid token");
-    return;
-  }
 
   // Check for existing session
   const sessionId = req.headers["mcp-session-id"] as string | undefined;
@@ -75,7 +67,7 @@ const httpServer = createHttpServer(async (req, res) => {
     sessionIdGenerator: () => crypto.randomUUID(),
   });
 
-  const mcpServer = createServer(() => user);
+  const mcpServer = createServer(() => token);
 
   const cleanup = () => {
     if (transport.sessionId) {
@@ -89,8 +81,8 @@ const httpServer = createHttpServer(async (req, res) => {
   if (transport.sessionId) {
     sessions.set(transport.sessionId, {
       server: mcpServer,
+      token,
       transport,
-      user,
     });
   }
 
