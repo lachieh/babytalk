@@ -69,15 +69,21 @@ const httpServer = createHttpServer(async (req, res) => {
 
   const mcpServer = createServer(() => token);
 
-  const cleanup = () => {
+  await mcpServer.connect(transport);
+
+  // Override onclose after connect (SDK sets its own handler in connect)
+  const originalOnclose = transport.onclose;
+  // eslint-disable-next-line unicorn/prefer-add-event-listener -- MCP SDK transport uses setter, not EventTarget
+  transport.onclose = () => {
     if (transport.sessionId) {
       sessions.delete(transport.sessionId);
     }
+    originalOnclose?.();
   };
-  Object.defineProperty(transport, "onclose", { value: cleanup });
 
-  await mcpServer.connect(transport);
+  await transport.handleRequest(req, res);
 
+  // Store session after handleRequest (sessionId is set during first request)
   if (transport.sessionId) {
     sessions.set(transport.sessionId, {
       server: mcpServer,
@@ -85,8 +91,6 @@ const httpServer = createHttpServer(async (req, res) => {
       transport,
     });
   }
-
-  await transport.handleRequest(req, res);
 });
 
 httpServer.listen(config.port, () => {
