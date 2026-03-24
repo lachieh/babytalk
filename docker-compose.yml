@@ -19,5 +19,30 @@ services:
       MP_SMTP_AUTH_ACCEPT_ANY: "true"
       MP_SMTP_AUTH_ALLOW_INSECURE: "true"
 
+  tambo-postgres:
+    image: postgres:17
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: tambo
+      POSTGRES_USER: tambo
+      POSTGRES_PASSWORD: tambo
+    volumes:
+      - tambo-pgdata:/var/lib/postgresql/data
+
+  tambo-api:
+    image: ghcr.io/tambo-ai/tambo-api:latest
+    ports:
+      - "8261:8261"
+    environment:
+      DATABASE_URL: postgresql://tambo:tambo@tambo-postgres:5432/tambo
+      API_KEY_SECRET: dev-tambo-api-key-secret-32chars
+      PROVIDER_KEY_SECRET: dev-tambo-provider-key-secret-32
+      FALLBACK_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PORT: "8261"
+    depends_on:
+      - tambo-postgres
+
 volumes:
   pgdata:
+  tambo-pgdata:
