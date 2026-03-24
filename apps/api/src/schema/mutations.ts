@@ -25,7 +25,12 @@ builder.mutationField("verifyMagicLink", (t) =>
       }
       return {
         token: result.token,
-        user: { email: result.user.email, id: result.user.id, name: null },
+        user: {
+          email: result.user.email,
+          householdId: null,
+          id: result.user.id,
+          name: null,
+        },
       };
     },
     type: AuthPayloadType,

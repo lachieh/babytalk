@@ -13,6 +13,7 @@
   "dependencies": {
     "@babytalk/standard-config": "workspace:*",
     "@babytalk/zpages": "workspace:*",
+    "@tambo-ai/react": "^1.2.4",
     "@urql/core": "^6.0.1",
     "@urql/next": "^2.0.0",
     "graphql": "^16.13.1",

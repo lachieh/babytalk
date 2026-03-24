@@ -1,0 +1,28 @@
+{
+  "name": "@babytalk/mcp",
+  "version": "0.0.0",
+  "private": true,
+  "bin": {
+    "babytalk-mcp": "./dist/stdio.js"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/stdio.ts",
+    "dev:http": "tsx src/http.ts",
+    "build": "tsc",
+    "start": "node dist/stdio.js",
+    "start:http": "node dist/http.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@babytalk/standard-config": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*",
+    "@types/node": "^25.5.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5"
+  }
+}
