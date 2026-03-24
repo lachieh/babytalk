@@ -87,7 +87,7 @@ export default function SetupPage() {
   if (step === "household") {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <h1 className="text-2xl font-bold">Welcome to BabyLog</h1>
+        <h1 className="text-2xl font-bold">Welcome to BabyTalk</h1>
         <p className="mt-4 text-center text-gray-600">
           Create a household to start tracking, or join an existing one.
         </p>
