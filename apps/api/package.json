@@ -17,7 +17,7 @@
     "@hono/node-server": "^1.19.11",
     "@pothos/core": "^4.12.0",
     "@pothos/plugin-drizzle": "^0.17.0",
-    "drizzle-orm": "1.0.0-beta.18-5ffac6d",
+    "drizzle-orm": "1.0.0-beta.19-d95b7a4",
     "graphql": "^16.13.1",
     "graphql-yoga": "^5.18.1",
     "hono": "^4.12.8",
