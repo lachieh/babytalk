@@ -1,9 +1,14 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { gqlRequest } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
+
+const CHECK_HOUSEHOLD = `
+  query { myHousehold { id } myBabies { id } }
+`;
 
 export default function DashboardLayout({
   children,
@@ -11,16 +16,44 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("babytalk_token");
-    if (token) {
-      setReady(true);
-    } else {
+    if (!token) {
       router.replace("/auth/login");
+      return;
     }
-  }, [router]);
+
+    // Skip household check on setup/join pages
+    if (
+      pathname.startsWith("/dashboard/setup") ||
+      pathname.startsWith("/dashboard/join")
+    ) {
+      setReady(true);
+      return;
+    }
+
+    const checkHousehold = async () => {
+      try {
+        const data = await gqlRequest<{
+          myBabies: { id: string }[];
+          myHousehold: { id: string } | null;
+        }>(CHECK_HOUSEHOLD);
+
+        if (!data.myHousehold || data.myBabies.length === 0) {
+          router.replace("/dashboard/setup");
+          return;
+        }
+      } catch {
+        // If the check fails, still show dashboard
+      }
+      setReady(true);
+    };
+
+    checkHousehold();
+  }, [router, pathname]);
 
   if (!ready) {
     return (

@@ -1,7 +1,9 @@
 "use client";
 
 import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
-import { useCallback, useRef, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
+
+import { VoiceButton } from "@/components/voice-button";
 
 const MessageList = () => {
   const { messages, isStreaming } = useTambo();
@@ -113,6 +115,7 @@ const ChatInput = () => {
           type="text"
           value={value}
         />
+        <VoiceButton />
         <button
           className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           disabled={isPending || !value.trim()}
