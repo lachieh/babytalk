@@ -1,14 +1,16 @@
 import { builder } from "./builder";
 
 export const UserType = builder.objectRef<{
-  id: string;
   email: string;
+  householdId: string | null;
+  id: string;
   name: string | null;
 }>("User");
 
 UserType.implement({
   fields: (t) => ({
     email: t.exposeString("email"),
+    householdId: t.exposeString("householdId", { nullable: true }),
     id: t.exposeString("id"),
     name: t.exposeString("name", { nullable: true }),
   }),
@@ -16,7 +18,12 @@ UserType.implement({
 
 export const AuthPayloadType = builder.objectRef<{
   token: string;
-  user: { id: string; email: string; name: string | null };
+  user: {
+    email: string;
+    householdId: string | null;
+    id: string;
+    name: string | null;
+  };
 }>("AuthPayload");
 
 AuthPayloadType.implement({
