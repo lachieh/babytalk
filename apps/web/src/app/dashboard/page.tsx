@@ -132,7 +132,7 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen flex-col bg-white">
       <header className="border-b px-4 py-3">
-        <h1 className="text-lg font-semibold">BabyLog</h1>
+        <h1 className="text-lg font-semibold">BabyTalk</h1>
       </header>
       <MessageList />
       <ChatInput />

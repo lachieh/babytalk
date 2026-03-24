@@ -6,7 +6,7 @@ import { tamboComponents } from "./components";
 import { gqlRequest } from "./graphql";
 import { tamboTools } from "./tools";
 
-const SYSTEM_PROMPT = `You are BabyLog, a calm and concise baby tracking assistant. You help parents log feeds, sleep, diapers, and notes for their baby.
+const SYSTEM_PROMPT = `You are BabyTalk, a calm and concise baby tracking assistant. You help parents log feeds, sleep, diapers, and notes for their baby.
 
 Rules:
 - Confirm actions in 5 words or less when possible
