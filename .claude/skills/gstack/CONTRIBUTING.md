@@ -4,7 +4,7 @@ Thanks for wanting to make gstack better. Whether you're fixing a typo in a skil
 
 ## Quick start
 
-gstack skills are Markdown files that Claude Code discovers from a `skills/` directory. Normally they live at `~/.claude/skills/gstack/` (your global install). But when you're developing gstack itself, you want Claude Code to use the skills *in your working tree* — so edits take effect instantly without copying or deploying anything.
+gstack skills are Markdown files that Claude Code discovers from a `skills/` directory. Normally they live at `~/.claude/skills/gstack/` (your global install). But when you're developing gstack itself, you want Claude Code to use the skills _in your working tree_ — so edits take effect instantly without copying or deploying anything.
 
 That's what dev mode does. It symlinks your repo into the local `.claude/skills/` directory so Claude Code reads skills straight from your checkout.
 
@@ -118,12 +118,12 @@ Bun auto-loads `.env` — no extra config. Conductor workspaces inherit `.env` f
 
 ### Test tiers
 
-| Tier | Command | Cost | What it tests |
-|------|---------|------|---------------|
-| 1 — Static | `bun test` | Free | Command validation, snapshot flags, SKILL.md correctness, TODOS-format.md refs, observability unit tests |
-| 2 — E2E | `bun run test:e2e` | ~$3.85 | Full skill execution via `claude -p` subprocess |
-| 3 — LLM eval | `bun run test:evals` | ~$0.15 standalone | LLM-as-judge scoring of generated SKILL.md docs |
-| 2+3 | `bun run test:evals` | ~$4 combined | E2E + LLM-as-judge (runs both) |
+| Tier         | Command              | Cost              | What it tests                                                                                            |
+| ------------ | -------------------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
+| 1 — Static   | `bun test`           | Free              | Command validation, snapshot flags, SKILL.md correctness, TODOS-format.md refs, observability unit tests |
+| 2 — E2E      | `bun run test:e2e`   | ~$3.85            | Full skill execution via `claude -p` subprocess                                                          |
+| 3 — LLM eval | `bun run test:evals` | ~$0.15 standalone | LLM-as-judge scoring of generated SKILL.md docs                                                          |
+| 2+3          | `bun run test:evals` | ~$4 combined      | E2E + LLM-as-judge (runs both)                                                                           |
 
 ```bash
 bun test                     # Tier 1 only (runs on every commit, <5s)
@@ -159,13 +159,13 @@ EVALS=1 bun test test/skill-e2e-*.test.ts
 
 When E2E tests run, they produce machine-readable artifacts in `~/.gstack-dev/`:
 
-| Artifact | Path | Purpose |
-|----------|------|---------|
-| Heartbeat | `e2e-live.json` | Current test status (updated per tool call) |
-| Partial results | `evals/_partial-e2e.json` | Completed tests (survives kills) |
-| Progress log | `e2e-runs/{runId}/progress.log` | Append-only text log |
-| NDJSON transcripts | `e2e-runs/{runId}/{test}.ndjson` | Raw `claude -p` output per test |
-| Failure JSON | `e2e-runs/{runId}/{test}-failure.json` | Diagnostic data on failure |
+| Artifact           | Path                                   | Purpose                                     |
+| ------------------ | -------------------------------------- | ------------------------------------------- |
+| Heartbeat          | `e2e-live.json`                        | Current test status (updated per tool call) |
+| Partial results    | `evals/_partial-e2e.json`              | Completed tests (survives kills)            |
+| Progress log       | `e2e-runs/{runId}/progress.log`        | Append-only text log                        |
+| NDJSON transcripts | `e2e-runs/{runId}/{test}.ndjson`       | Raw `claude -p` output per test             |
+| Failure JSON       | `e2e-runs/{runId}/{test}-failure.json` | Diagnostic data on failure                  |
 
 **Live dashboard:** Run `bun run eval:watch` in a second terminal to see a live dashboard showing completed tests, the currently running test, and cost. Use `--tail` to also show the last 10 lines of progress.log.
 
@@ -248,13 +248,13 @@ bun run build
 
 ### What changes between hosts
 
-| Aspect | Claude | Codex |
-|--------|--------|-------|
-| Output directory | `{skill}/SKILL.md` | `.agents/skills/gstack-{skill}/SKILL.md` (generated at setup, gitignored) |
-| Frontmatter | Full (name, description, allowed-tools, hooks, version) | Minimal (name + description only) |
-| Paths | `~/.claude/skills/gstack` | `$GSTACK_ROOT` (`.agents/skills/gstack` in a repo, otherwise `~/.codex/skills/gstack`) |
-| Hook skills | `hooks:` frontmatter (enforced by Claude) | Inline safety advisory prose (advisory only) |
-| `/codex` skill | Included (Claude wraps codex exec) | Excluded (self-referential) |
+| Aspect           | Claude                                                  | Codex                                                                                  |
+| ---------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Output directory | `{skill}/SKILL.md`                                      | `.agents/skills/gstack-{skill}/SKILL.md` (generated at setup, gitignored)              |
+| Frontmatter      | Full (name, description, allowed-tools, hooks, version) | Minimal (name + description only)                                                      |
+| Paths            | `~/.claude/skills/gstack`                               | `$GSTACK_ROOT` (`.agents/skills/gstack` in a repo, otherwise `~/.codex/skills/gstack`) |
+| Hook skills      | `hooks:` frontmatter (enforced by Claude)               | Inline safety advisory prose (advisory only)                                           |
+| `/codex` skill   | Included (Claude wraps codex exec)                      | Excluded (self-referential)                                                            |
 
 ### Testing Codex output
 
@@ -277,6 +277,7 @@ When you run `bin/dev-setup`, it creates symlinks in both `.claude/skills/` and 
 ### Adding a new skill
 
 When you add a new skill template, both hosts get it automatically:
+
 1. Create `{skill}/SKILL.md.tmpl`
 2. Run `bun run gen:skill-docs` (Claude output) and `bun run gen:skill-docs --host codex` (Codex output)
 3. The dynamic template discovery picks it up — no static list to update
@@ -286,10 +287,10 @@ When you add a new skill template, both hosts get it automatically:
 
 If you're using [Conductor](https://conductor.build) to run multiple Claude Code sessions in parallel, `conductor.json` wires up workspace lifecycle automatically:
 
-| Hook | Script | What it does |
-|------|--------|-------------|
-| `setup` | `bin/dev-setup` | Copies `.env` from main worktree, installs deps, symlinks skills |
-| `archive` | `bin/dev-teardown` | Removes skill symlinks, cleans up `.claude/` directory |
+| Hook      | Script             | What it does                                                     |
+| --------- | ------------------ | ---------------------------------------------------------------- |
+| `setup`   | `bin/dev-setup`    | Copies `.env` from main worktree, installs deps, symlinks skills |
+| `archive` | `bin/dev-teardown` | Removes skill symlinks, cleans up `.claude/` directory           |
 
 When Conductor creates a new workspace, `bin/dev-setup` runs automatically. It detects the main worktree (via `git worktree list`), copies your `.env` so API keys carry over, and sets up dev mode — no manual steps needed.
 

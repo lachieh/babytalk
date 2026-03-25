@@ -1,4 +1,4 @@
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 
 export function generateReviewDashboard(_ctx: TemplateContext): string {
   return `## Review Readiness Dashboard
@@ -181,9 +181,9 @@ Replace ITERATIONS, FOUND, FIXED, REMAINING, SCORE with actual values from the r
 }
 
 export function generateBenefitsFrom(ctx: TemplateContext): string {
-  if (!ctx.benefitsFrom || ctx.benefitsFrom.length === 0) return '';
+  if (!ctx.benefitsFrom || ctx.benefitsFrom.length === 0) return "";
 
-  const skillList = ctx.benefitsFrom.map(s => `\`/${s}\``).join(' or ');
+  const skillList = ctx.benefitsFrom.map((s) => `\`/${s}\``).join(" or ");
   const first = ctx.benefitsFrom[0];
 
   return `## Prerequisite Skill Offer
@@ -240,7 +240,7 @@ If none was produced (user may have cancelled), proceed with standard review.`;
 
 export function generateCodexSecondOpinion(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
   return `## Phase 3.5: Cross-Model Second Opinion (optional)
 
@@ -327,10 +327,10 @@ If A: revise the premise and note the revision. If B: proceed (and note that the
 
 export function generateAdversarialStep(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
-  const isShip = ctx.skillName === 'ship';
-  const stepNum = isShip ? '3.8' : '5.7';
+  const isShip = ctx.skillName === "ship";
+  const stepNum = isShip ? "3.8" : "5.7";
 
   return `## Step ${stepNum}: Adversarial review (auto-scaled)
 
@@ -429,7 +429,7 @@ A) Investigate and fix now (recommended)
 B) Continue — review will still complete
 \`\`\`
 
-If A: address the findings${isShip ? '. After fixing, re-run tests (Step 3) since code has changed' : ''}. Re-run \`codex review\` to verify.
+If A: address the findings${isShip ? ". After fixing, re-run tests (Step 3) since code has changed" : ""}. Re-run \`codex review\` to verify.
 
 Read stderr for errors (same error handling as medium tier).
 
@@ -471,7 +471,7 @@ High-confidence findings (agreed on by multiple sources) should be prioritized f
 
 export function generateCodexPlanReview(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
   return `## Outside Voice — Independent Plan Challenge (optional, recommended)
 
@@ -623,7 +623,7 @@ PLAN=$(ls -t ~/.claude/plans/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/n
 
 // ─── Plan Completion Audit ────────────────────────────────────────────
 
-type PlanCompletionMode = 'ship' | 'review';
+type PlanCompletionMode = "ship" | "review";
 
 function generatePlanCompletionAuditInner(mode: PlanCompletionMode): string {
   const sections: string[] = [];
@@ -703,7 +703,7 @@ COMPLETION: 4/7 DONE, 1 PARTIAL, 1 NOT DONE, 1 CHANGED
 \`\`\``);
 
   // ── Gate logic (mode-specific) ──
-  if (mode === 'ship') {
+  if (mode === "ship") {
     sections.push(`
 ### Gate Logic
 
@@ -753,15 +753,17 @@ Plan items: N DONE, M PARTIAL, K NOT DONE
 **No plan file found:** Fall back to existing scope drift behavior (check TODOS.md and PR description only).`);
   }
 
-  return sections.join('\n');
+  return sections.join("\n");
 }
 
 export function generatePlanCompletionAuditShip(_ctx: TemplateContext): string {
-  return generatePlanCompletionAuditInner('ship');
+  return generatePlanCompletionAuditInner("ship");
 }
 
-export function generatePlanCompletionAuditReview(_ctx: TemplateContext): string {
-  return generatePlanCompletionAuditInner('review');
+export function generatePlanCompletionAuditReview(
+  _ctx: TemplateContext
+): string {
+  return generatePlanCompletionAuditInner("review");
 }
 
 // ─── Plan Verification Execution ──────────────────────────────────────

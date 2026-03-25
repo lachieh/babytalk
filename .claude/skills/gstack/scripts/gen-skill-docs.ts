@@ -9,28 +9,42 @@
  * Used by skill:check and CI freshness checks.
  */
 
-import { COMMAND_DESCRIPTIONS } from '../browse/src/commands';
-import { SNAPSHOT_FLAGS } from '../browse/src/snapshot';
-import { discoverTemplates } from './discover-skills';
-import * as fs from 'fs';
-import * as path from 'path';
-import type { Host, TemplateContext } from './resolvers/types';
-import { HOST_PATHS } from './resolvers/types';
-import { RESOLVERS } from './resolvers/index';
-import { codexSkillName, transformFrontmatter, extractHookSafetyProse, extractNameAndDescription, condenseOpenAIShortDescription, generateOpenAIYaml } from './resolvers/codex-helpers';
-import { generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec } from './resolvers/review';
+import * as fs from "fs";
+import * as path from "path";
 
-const ROOT = path.resolve(import.meta.dir, '..');
-const DRY_RUN = process.argv.includes('--dry-run');
+import { COMMAND_DESCRIPTIONS } from "../browse/src/commands";
+import { SNAPSHOT_FLAGS } from "../browse/src/snapshot";
+import { discoverTemplates } from "./discover-skills";
+import {
+  codexSkillName,
+  transformFrontmatter,
+  extractHookSafetyProse,
+  extractNameAndDescription,
+  condenseOpenAIShortDescription,
+  generateOpenAIYaml,
+} from "./resolvers/codex-helpers";
+import { RESOLVERS } from "./resolvers/index";
+import {
+  generatePlanCompletionAuditShip,
+  generatePlanCompletionAuditReview,
+  generatePlanVerificationExec,
+} from "./resolvers/review";
+import type { Host, TemplateContext } from "./resolvers/types";
+import { HOST_PATHS } from "./resolvers/types";
+
+const ROOT = path.resolve(import.meta.dir, "..");
+const DRY_RUN = process.argv.includes("--dry-run");
 
 // ─── Host Detection ─────────────────────────────────────────
 
-const HOST_ARG = process.argv.find(a => a.startsWith('--host'));
+const HOST_ARG = process.argv.find((a) => a.startsWith("--host"));
 const HOST: Host = (() => {
-  if (!HOST_ARG) return 'claude';
-  const val = HOST_ARG.includes('=') ? HOST_ARG.split('=')[1] : process.argv[process.argv.indexOf(HOST_ARG) + 1];
-  if (val === 'codex' || val === 'agents') return 'codex';
-  if (val === 'claude') return 'claude';
+  if (!HOST_ARG) return "claude";
+  const val = HOST_ARG.includes("=")
+    ? HOST_ARG.split("=")[1]
+    : process.argv[process.argv.indexOf(HOST_ARG) + 1];
+  if (val === "codex" || val === "agents") return "codex";
+  if (val === "claude") return "claude";
   throw new Error(`Unknown host: ${val}. Use claude, codex, or agents.`);
 })();
 
@@ -43,16 +57,16 @@ interface HostPaths {
 
 const HOST_PATHS: Record<Host, HostPaths> = {
   claude: {
-    skillRoot: '~/.claude/skills/gstack',
-    localSkillRoot: '.claude/skills/gstack',
-    binDir: '~/.claude/skills/gstack/bin',
-    browseDir: '~/.claude/skills/gstack/browse/dist',
+    skillRoot: "~/.claude/skills/gstack",
+    localSkillRoot: ".claude/skills/gstack",
+    binDir: "~/.claude/skills/gstack/bin",
+    browseDir: "~/.claude/skills/gstack/browse/dist",
   },
   codex: {
-    skillRoot: '$GSTACK_ROOT',
-    localSkillRoot: '.agents/skills/gstack',
-    binDir: '$GSTACK_BIN',
-    browseDir: '$GSTACK_BROWSE',
+    skillRoot: "$GSTACK_ROOT",
+    localSkillRoot: ".agents/skills/gstack",
+    binDir: "$GSTACK_BIN",
+    browseDir: "$GSTACK_BROWSE",
   },
 };
 
@@ -68,55 +82,69 @@ interface TemplateContext {
 
 /** gstack's 10 AI slop anti-patterns — shared between DESIGN_METHODOLOGY and DESIGN_HARD_RULES */
 const AI_SLOP_BLACKLIST = [
-  'Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes',
-  '**The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.',
-  'Icons in colored circles as section decoration (SaaS starter template look)',
-  'Centered everything (`text-align: center` on all headings, descriptions, cards)',
-  'Uniform bubbly border-radius on every element (same large radius on everything)',
-  'Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)',
-  'Emoji as design elements (rockets in headings, emoji as bullet points)',
-  'Colored left-border on cards (`border-left: 3px solid <accent>`)',
+  "Purple/violet/indigo gradient backgrounds or blue-to-purple color schemes",
+  "**The 3-column feature grid:** icon-in-colored-circle + bold title + 2-line description, repeated 3x symmetrically. THE most recognizable AI layout.",
+  "Icons in colored circles as section decoration (SaaS starter template look)",
+  "Centered everything (`text-align: center` on all headings, descriptions, cards)",
+  "Uniform bubbly border-radius on every element (same large radius on everything)",
+  "Decorative blobs, floating circles, wavy SVG dividers (if a section feels empty, it needs better content, not decoration)",
+  "Emoji as design elements (rockets in headings, emoji as bullet points)",
+  "Colored left-border on cards (`border-left: 3px solid <accent>`)",
   'Generic hero copy ("Welcome to [X]", "Unlock the power of...", "Your all-in-one solution for...")',
-  'Cookie-cutter section rhythm (hero → 3 features → testimonials → pricing → CTA, every section same height)',
+  "Cookie-cutter section rhythm (hero → 3 features → testimonials → pricing → CTA, every section same height)",
 ];
 
 /** OpenAI hard rejection criteria (from "Designing Delightful Frontends with GPT-5.4", Mar 2026) */
 const OPENAI_HARD_REJECTIONS = [
-  'Generic SaaS card grid as first impression',
-  'Beautiful image with weak brand',
-  'Strong headline with no clear action',
-  'Busy imagery behind text',
-  'Sections repeating same mood statement',
-  'Carousel with no narrative purpose',
-  'App UI made of stacked cards instead of layout',
+  "Generic SaaS card grid as first impression",
+  "Beautiful image with weak brand",
+  "Strong headline with no clear action",
+  "Busy imagery behind text",
+  "Sections repeating same mood statement",
+  "Carousel with no narrative purpose",
+  "App UI made of stacked cards instead of layout",
 ];
 
 /** OpenAI litmus checks — 7 yes/no tests for cross-model consensus scoring */
 const OPENAI_LITMUS_CHECKS = [
-  'Brand/product unmistakable in first screen?',
-  'One strong visual anchor present?',
-  'Page understandable by scanning headlines only?',
-  'Each section has one job?',
-  'Are cards actually necessary?',
-  'Does motion improve hierarchy or atmosphere?',
-  'Would design feel premium with all decorative shadows removed?',
+  "Brand/product unmistakable in first screen?",
+  "One strong visual anchor present?",
+  "Page understandable by scanning headlines only?",
+  "Each section has one job?",
+  "Are cards actually necessary?",
+  "Does motion improve hierarchy or atmosphere?",
+  "Would design feel premium with all decorative shadows removed?",
 ];
 
 // ─── Placeholder Resolvers ──────────────────────────────────
 
 function generateCommandReference(_ctx: TemplateContext): string {
   // Group commands by category
-  const groups = new Map<string, Array<{ command: string; description: string; usage?: string }>>();
+  const groups = new Map<
+    string,
+    Array<{ command: string; description: string; usage?: string }>
+  >();
   for (const [cmd, meta] of Object.entries(COMMAND_DESCRIPTIONS)) {
     const list = groups.get(meta.category) || [];
-    list.push({ command: cmd, description: meta.description, usage: meta.usage });
+    list.push({
+      command: cmd,
+      description: meta.description,
+      usage: meta.usage,
+    });
     groups.set(meta.category, list);
   }
 
   // Category display order
   const categoryOrder = [
-    'Navigation', 'Reading', 'Interaction', 'Inspection',
-    'Visual', 'Snapshot', 'Meta', 'Tabs', 'Server',
+    "Navigation",
+    "Reading",
+    "Interaction",
+    "Inspection",
+    "Visual",
+    "Snapshot",
+    "Meta",
+    "Tabs",
+    "Server",
   ];
 
   const sections: string[] = [];
@@ -128,66 +156,77 @@ function generateCommandReference(_ctx: TemplateContext): string {
     commands.sort((a, b) => a.command.localeCompare(b.command));
 
     sections.push(`### ${category}`);
-    sections.push('| Command | Description |');
-    sections.push('|---------|-------------|');
+    sections.push("| Command | Description |");
+    sections.push("|---------|-------------|");
     for (const cmd of commands) {
       const display = cmd.usage ? `\`${cmd.usage}\`` : `\`${cmd.command}\``;
       sections.push(`| ${display} | ${cmd.description} |`);
     }
-    sections.push('');
+    sections.push("");
   }
 
-  return sections.join('\n').trimEnd();
+  return sections.join("\n").trimEnd();
 }
 
 function generateSnapshotFlags(_ctx: TemplateContext): string {
   const lines: string[] = [
-    'The snapshot is your primary tool for understanding and interacting with pages.',
-    '',
-    '```',
+    "The snapshot is your primary tool for understanding and interacting with pages.",
+    "",
+    "```",
   ];
 
   for (const flag of SNAPSHOT_FLAGS) {
-    const label = flag.valueHint ? `${flag.short} ${flag.valueHint}` : flag.short;
+    const label = flag.valueHint
+      ? `${flag.short} ${flag.valueHint}`
+      : flag.short;
     lines.push(`${label.padEnd(10)}${flag.long.padEnd(24)}${flag.description}`);
   }
 
-  lines.push('```');
-  lines.push('');
-  lines.push('All flags can be combined freely. `-o` only applies when `-a` is also used.');
-  lines.push('Example: `$B snapshot -i -a -C -o /tmp/annotated.png`');
-  lines.push('');
-  lines.push('**Ref numbering:** @e refs are assigned sequentially (@e1, @e2, ...) in tree order.');
-  lines.push('@c refs from `-C` are numbered separately (@c1, @c2, ...).');
-  lines.push('');
-  lines.push('After snapshot, use @refs as selectors in any command:');
-  lines.push('```bash');
+  lines.push("```");
+  lines.push("");
+  lines.push(
+    "All flags can be combined freely. `-o` only applies when `-a` is also used."
+  );
+  lines.push("Example: `$B snapshot -i -a -C -o /tmp/annotated.png`");
+  lines.push("");
+  lines.push(
+    "**Ref numbering:** @e refs are assigned sequentially (@e1, @e2, ...) in tree order."
+  );
+  lines.push("@c refs from `-C` are numbered separately (@c1, @c2, ...).");
+  lines.push("");
+  lines.push("After snapshot, use @refs as selectors in any command:");
+  lines.push("```bash");
   lines.push('$B click @e3       $B fill @e4 "value"     $B hover @e1');
   lines.push('$B html @e2        $B css @e5 "color"      $B attrs @e6');
-  lines.push('$B click @c1       # cursor-interactive ref (from -C)');
-  lines.push('```');
-  lines.push('');
-  lines.push('**Output format:** indented accessibility tree with @ref IDs, one element per line.');
-  lines.push('```');
+  lines.push("$B click @c1       # cursor-interactive ref (from -C)");
+  lines.push("```");
+  lines.push("");
+  lines.push(
+    "**Output format:** indented accessibility tree with @ref IDs, one element per line."
+  );
+  lines.push("```");
   lines.push('  @e1 [heading] "Welcome" [level=1]');
   lines.push('  @e2 [textbox] "Email"');
   lines.push('  @e3 [button] "Submit"');
-  lines.push('```');
-  lines.push('');
-  lines.push('Refs are invalidated on navigation — run `snapshot` again after `goto`.');
+  lines.push("```");
+  lines.push("");
+  lines.push(
+    "Refs are invalidated on navigation — run `snapshot` again after `goto`."
+  );
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function generatePreambleBash(ctx: TemplateContext): string {
-  const runtimeRoot = ctx.host === 'codex'
-    ? `_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+  const runtimeRoot =
+    ctx.host === "codex"
+      ? `_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 GSTACK_ROOT="$HOME/.codex/skills/gstack"
 [ -n "$_ROOT" ] && [ -d "$_ROOT/.agents/skills/gstack" ] && GSTACK_ROOT="$_ROOT/.agents/skills/gstack"
 GSTACK_BIN="$GSTACK_ROOT/bin"
 GSTACK_BROWSE="$GSTACK_ROOT/browse/dist"
 `
-    : '';
+      : "";
 
   return `## Preamble (run first)
 
@@ -595,7 +634,7 @@ function generatePreamble(ctx: TemplateContext): string {
     generateSearchBeforeBuildingSection(ctx),
     generateContributorMode(),
     generateCompletionStatus(),
-  ].join('\n\n');
+  ].join("\n\n");
 }
 
 function generateBrowseSetup(ctx: TemplateContext): string {
@@ -921,10 +960,17 @@ Minimum 0 per category.
 }
 
 function generateDesignReviewLite(ctx: TemplateContext): string {
-  const litmusList = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join(' ');
-  const rejectionList = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join(' ');
+  const litmusList = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join(" ");
+  const rejectionList = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join(" ");
   // Codex block only for Claude host
-  const codexBlock = ctx.host === 'codex' ? '' : `
+  const codexBlock =
+    ctx.host === "codex"
+      ? ""
+      : `
 
 7. **Codex design voice** (optional, automatic if available):
 
@@ -1176,7 +1222,7 @@ Apply these at each page. Each finding gets an impact rating (high/medium/polish
 
 The test: would a human designer at a respected studio ever ship this?
 
-${AI_SLOP_BLACKLIST.map(item => `- ${item}`).join('\n')}
+${AI_SLOP_BLACKLIST.map((item) => `- ${item}`).join("\n")}
 
 **10. Performance as Design** (6 items)
 - LCP < 2.0s (web apps), < 1.5s (informational sites)
@@ -1600,18 +1646,24 @@ Only commit if there are changes. Stage all bootstrap files (config, test direct
 //   │  review: Fix-First ASK, INFORMATIONAL gaps     │
 //   └────────────────────────────────────────────────┘
 
-type CoverageAuditMode = 'plan' | 'ship' | 'review';
+type CoverageAuditMode = "plan" | "ship" | "review";
 
 function generateTestCoverageAuditInner(mode: CoverageAuditMode): string {
   const sections: string[] = [];
 
   // ── Intro (mode-specific) ──
-  if (mode === 'ship') {
-    sections.push(`100% coverage is the goal — every untested path is a path where bugs hide and vibe coding becomes yolo coding. Evaluate what was ACTUALLY coded (from the diff), not what was planned.`);
-  } else if (mode === 'plan') {
-    sections.push(`100% coverage is the goal. Evaluate every codepath in the plan and ensure the plan includes tests for each one. If the plan is missing tests, add them — the plan should be complete enough that implementation includes full test coverage from the start.`);
+  if (mode === "ship") {
+    sections.push(
+      `100% coverage is the goal — every untested path is a path where bugs hide and vibe coding becomes yolo coding. Evaluate what was ACTUALLY coded (from the diff), not what was planned.`
+    );
+  } else if (mode === "plan") {
+    sections.push(
+      `100% coverage is the goal. Evaluate every codepath in the plan and ensure the plan includes tests for each one. If the plan is missing tests, add them — the plan should be complete enough that implementation includes full test coverage from the start.`
+    );
   } else {
-    sections.push(`100% coverage is the goal. Evaluate every codepath changed in the diff and identify test gaps. Gaps become INFORMATIONAL findings that follow the Fix-First flow.`);
+    sections.push(
+      `100% coverage is the goal. Evaluate every codepath changed in the diff and identify test gaps. Gaps become INFORMATIONAL findings that follow the Fix-First flow.`
+    );
   }
 
   // ── Test framework detection (shared) ──
@@ -1635,10 +1687,10 @@ ls jest.config.* vitest.config.* playwright.config.* cypress.config.* .rspec pyt
 ls -d test/ tests/ spec/ __tests__/ cypress/ e2e/ 2>/dev/null
 \`\`\`
 
-3. **If no framework detected:**${mode === 'ship' ? ' falls through to the Test Framework Bootstrap step (Step 2.5) which handles full setup.' : ' still produce the coverage diagram, but skip test generation.'}`);
+3. **If no framework detected:**${mode === "ship" ? " falls through to the Test Framework Bootstrap step (Step 2.5) which handles full setup." : " still produce the coverage diagram, but skip test generation."}`);
 
   // ── Before/after count (ship only) ──
-  if (mode === 'ship') {
+  if (mode === "ship") {
     sections.push(`
 **0. Before/after test count:**
 
@@ -1651,17 +1703,19 @@ Store this number for the PR body.`);
   }
 
   // ── Codepath tracing methodology (shared, with mode-specific source) ──
-  const traceSource = mode === 'plan'
-    ? `**Step 1. Trace every codepath in the plan:**
+  const traceSource =
+    mode === "plan"
+      ? `**Step 1. Trace every codepath in the plan:**
 
 Read the plan document. For each new feature, service, endpoint, or component described, trace how data will flow through the code — don't just list planned functions, actually follow the planned execution:`
-    : `**${mode === 'ship' ? '1' : 'Step 1'}. Trace every codepath changed** using \`git diff origin/<base>...HEAD\`:
+      : `**${mode === "ship" ? "1" : "Step 1"}. Trace every codepath changed** using \`git diff origin/<base>...HEAD\`:
 
 Read every changed file. For each one, trace how data flows through the code — don't just list functions, actually follow the execution:`;
 
-  const traceStep1 = mode === 'plan'
-    ? `1. **Read the plan.** For each planned component, understand what it does and how it connects to existing code.`
-    : `1. **Read the diff.** For each changed file, read the full file (not just the diff hunk) to understand context.`;
+  const traceStep1 =
+    mode === "plan"
+      ? `1. **Read the plan.** For each planned component, understand what it does and how it connects to existing code.`
+      : `1. **Read the diff.** For each changed file, read the full file (not just the diff hunk) to understand context.`;
 
   sections.push(`
 ${traceSource}
@@ -1683,7 +1737,7 @@ This is the critical step — you're building a map of every line of code that c
 
   // ── User flow coverage (shared) ──
   sections.push(`
-**${mode === 'ship' ? '2' : 'Step 2'}. Map user flows, interactions, and error states:**
+**${mode === "ship" ? "2" : "Step 2"}. Map user flows, interactions, and error states:**
 
 Code coverage isn't enough — you need to cover how real users interact with the changed code. For each changed feature, think through:
 
@@ -1704,7 +1758,7 @@ Add these to your diagram alongside the code branches. A user flow with no test 
 
   // ── Check branches against tests + quality rubric (shared) ──
   sections.push(`
-**${mode === 'ship' ? '3' : 'Step 3'}. Check each branch against existing tests:**
+**${mode === "ship" ? "3" : "Step 3"}. Check each branch against existing tests:**
 
 Go through your diagram branch by branch — both code paths AND user flows. For each one, search for a test that exercises it:
 - Function \`processPayment()\` → look for \`billing.test.ts\`, \`billing.spec.ts\`, \`test/billing_test.rb\`
@@ -1744,18 +1798,18 @@ When checking each branch, also determine whether a unit test or E2E/integration
   sections.push(`
 ### REGRESSION RULE (mandatory)
 
-**IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is ${mode === 'plan' ? 'added to the plan as a critical requirement' : 'written immediately'}. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
+**IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is ${mode === "plan" ? "added to the plan as a critical requirement" : "written immediately"}. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
 
 A regression is when:
 - The diff modifies existing behavior (not new code)
 - The existing test suite (if any) doesn't cover the changed path
 - The change introduces a new failure mode for existing callers
 
-When uncertain whether a change is a regression, err on the side of writing the test.${mode !== 'plan' ? '\n\nFormat: commit as `test: regression test for {what broke}`' : ''}`);
+When uncertain whether a change is a regression, err on the side of writing the test.${mode !== "plan" ? "\n\nFormat: commit as `test: regression test for {what broke}`" : ""}`);
 
   // ── ASCII coverage diagram (shared) ──
   sections.push(`
-**${mode === 'ship' ? '4' : 'Step 4'}. Output ASCII coverage diagram:**
+**${mode === "ship" ? "4" : "Step 4"}. Output ASCII coverage diagram:**
 
 Include BOTH code paths and user flows in the same diagram. Mark E2E-worthy and eval-worthy paths:
 
@@ -1801,10 +1855,10 @@ GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
 ─────────────────────────────────
 \`\`\`
 
-**Fast path:** All paths covered → "${mode === 'ship' ? 'Step 3.4' : mode === 'review' ? 'Step 4.75' : 'Test review'}: All new code paths have test coverage ✓" Continue.`);
+**Fast path:** All paths covered → "${mode === "ship" ? "Step 3.4" : mode === "review" ? "Step 4.75" : "Test review"}: All new code paths have test coverage ✓" Continue.`);
 
   // ── Mode-specific action section ──
-  if (mode === 'plan') {
+  if (mode === "plan") {
     sections.push(`
 **Step 5. Add missing tests to the plan:**
 
@@ -1850,7 +1904,7 @@ Repo: {owner/repo}
 \`\`\`
 
 This file is consumed by \`/qa\` and \`/qa-only\` as primary test input. Include only the information that helps a QA tester know **what to test and where** — not implementation details.`);
-  } else if (mode === 'ship') {
+  } else if (mode === "ship") {
     sections.push(`
 **5. Generate tests for uncovered paths:**
 
@@ -1931,19 +1985,19 @@ If no test framework detected → include gaps as INFORMATIONAL findings only, n
 **Diff is test-only changes:** Skip Step 4.75 entirely: "No new application code paths to audit."`);
   }
 
-  return sections.join('\n');
+  return sections.join("\n");
 }
 
 function generateTestCoverageAuditPlan(_ctx: TemplateContext): string {
-  return generateTestCoverageAuditInner('plan');
+  return generateTestCoverageAuditInner("plan");
 }
 
 function generateTestCoverageAuditShip(_ctx: TemplateContext): string {
-  return generateTestCoverageAuditInner('ship');
+  return generateTestCoverageAuditInner("ship");
 }
 
 function generateTestCoverageAuditReview(_ctx: TemplateContext): string {
-  return generateTestCoverageAuditInner('review');
+  return generateTestCoverageAuditInner("review");
 }
 
 function generateSpecReviewLoop(_ctx: TemplateContext): string {
@@ -2011,9 +2065,9 @@ Replace ITERATIONS, FOUND, FIXED, REMAINING, SCORE with actual values from the r
 }
 
 function generateBenefitsFrom(ctx: TemplateContext): string {
-  if (!ctx.benefitsFrom || ctx.benefitsFrom.length === 0) return '';
+  if (!ctx.benefitsFrom || ctx.benefitsFrom.length === 0) return "";
 
-  const skillList = ctx.benefitsFrom.map(s => `\`/${s}\``).join(' or ');
+  const skillList = ctx.benefitsFrom.map((s) => `\`/${s}\``).join(" or ");
   const first = ctx.benefitsFrom[0];
 
   return `## Prerequisite Skill Offer
@@ -2159,7 +2213,7 @@ Error handling: all non-blocking. On failure, skip and continue.`;
 
 function generateCodexSecondOpinion(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
   return `## Phase 3.5: Cross-Model Second Opinion (optional)
 
@@ -2246,10 +2300,10 @@ If A: revise the premise and note the revision. If B: proceed (and note that the
 
 function generateAdversarialStep(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
-  const isShip = ctx.skillName === 'ship';
-  const stepNum = isShip ? '3.8' : '5.7';
+  const isShip = ctx.skillName === "ship";
+  const stepNum = isShip ? "3.8" : "5.7";
 
   return `## Step ${stepNum}: Adversarial review (auto-scaled)
 
@@ -2348,7 +2402,7 @@ A) Investigate and fix now (recommended)
 B) Continue — review will still complete
 \`\`\`
 
-If A: address the findings${isShip ? '. After fixing, re-run tests (Step 3) since code has changed' : ''}. Re-run \`codex review\` to verify.
+If A: address the findings${isShip ? ". After fixing, re-run tests (Step 3) since code has changed" : ""}. Re-run \`codex review\` to verify.
 
 Read stderr for errors (same error handling as medium tier).
 
@@ -2390,7 +2444,7 @@ High-confidence findings (agreed on by multiple sources) should be prioritized f
 
 function generateCodexPlanReview(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
   return `## Outside Voice — Independent Plan Challenge (optional, recommended)
 
@@ -2552,19 +2606,23 @@ If you want to persist deploy settings for future runs, suggest the user run \`/
 
 function generateDesignOutsideVoices(ctx: TemplateContext): string {
   // Codex host: strip entirely — Codex should never invoke itself
-  if (ctx.host === 'codex') return '';
+  if (ctx.host === "codex") return "";
 
-  const rejectionList = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const litmusList = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join('\n');
+  const rejectionList = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join("\n");
+  const litmusList = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join("\n");
 
   // Skill-specific configuration
-  const isPlanDesignReview = ctx.skillName === 'plan-design-review';
-  const isDesignReview = ctx.skillName === 'design-review';
-  const isDesignConsultation = ctx.skillName === 'design-consultation';
+  const isPlanDesignReview = ctx.skillName === "plan-design-review";
+  const isDesignReview = ctx.skillName === "design-review";
+  const isDesignConsultation = ctx.skillName === "design-consultation";
 
   // Determine opt-in behavior and reasoning effort
   const isAutomatic = isDesignReview; // design-review runs automatically
-  const reasoningEffort = isDesignConsultation ? 'medium' : 'high'; // creative vs analytical
+  const reasoningEffort = isDesignConsultation ? "medium" : "high"; // creative vs analytical
 
   // Build skill-specific Codex prompt
   let codexPrompt: string;
@@ -2641,14 +2699,16 @@ Be opinionated. Be specific. Do not hedge. This is YOUR design direction — own
 Be bold. Be specific. No hedging.`;
   } else {
     // Unknown skill — return empty
-    return '';
+    return "";
   }
 
   // Build the opt-in section
-  const optInSection = isAutomatic ? `
-**Automatic:** Outside voices run automatically when Codex is available. No opt-in needed.` : `
+  const optInSection = isAutomatic
+    ? `
+**Automatic:** Outside voices run automatically when Codex is available. No opt-in needed.`
+    : `
 Use AskUserQuestion:
-> "Want outside design voices${isPlanDesignReview ? ' before the detailed review' : ''}? Codex evaluates against OpenAI's design hard rules + litmus checks; Claude subagent does an independent ${isDesignConsultation ? 'design direction proposal' : 'completeness review'}."
+> "Want outside design voices${isPlanDesignReview ? " before the detailed review" : ""}? Codex evaluates against OpenAI's design hard rules + litmus checks; Claude subagent does an independent ${isDesignConsultation ? "design direction proposal" : "completeness review"}."
 >
 > A) Yes — run outside design voices
 > B) No — proceed without
@@ -2656,7 +2716,8 @@ Use AskUserQuestion:
 If user chooses B, skip this step and continue.`;
 
   // Build the synthesis section
-  const synthesisSection = isPlanDesignReview ? `
+  const synthesisSection = isPlanDesignReview
+    ? `
 **Synthesis — Litmus scorecard:**
 
 \`\`\`
@@ -2682,18 +2743,22 @@ Fill in each cell from the Codex and subagent outputs. CONFIRMED = both agree. D
 - Hard rejections → raised as the FIRST items in Pass 1, tagged \`[HARD REJECTION]\`
 - Litmus DISAGREE items → raised in the relevant pass with both perspectives
 - Litmus CONFIRMED failures → pre-loaded as known issues in the relevant pass
-- Passes can skip discovery and go straight to fixing for pre-identified issues` :
-  isDesignConsultation ? `
+- Passes can skip discovery and go straight to fixing for pre-identified issues`
+    : isDesignConsultation
+      ? `
 **Synthesis:** Claude main references both Codex and subagent proposals in the Phase 3 proposal. Present:
 - Areas of agreement between all three voices (Claude main + Codex + subagent)
 - Genuine divergences as creative alternatives for the user to choose from
-- "Codex and I agree on X. Codex suggested Y where I'm proposing Z — here's why..."` : `
+- "Codex and I agree on X. Codex suggested Y where I'm proposing Z — here's why..."`
+      : `
 **Synthesis — Litmus scorecard:**
 
 Use the same scorecard format as /plan-design-review (shown above). Fill in from both outputs.
 Merge findings into the triage with \`[codex]\` / \`[subagent]\` / \`[cross-model]\` tags.`;
 
-  const escapedCodexPrompt = codexPrompt.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  const escapedCodexPrompt = codexPrompt
+    .replace(/`/g, "\\`")
+    .replace(/\$/g, "\\$");
 
   return `## Design Outside Voices (parallel)
 ${optInSection}
@@ -2726,8 +2791,8 @@ Dispatch a subagent with this prompt:
 - On any Codex error: proceed with Claude subagent output only, tagged \`[single-model]\`.
 - If Claude subagent also fails: "Outside voices unavailable — continuing with primary review."
 
-Present Codex output under a \`CODEX SAYS (design ${isPlanDesignReview ? 'critique' : isDesignReview ? 'source audit' : 'direction'}):\` header.
-Present subagent output under a \`CLAUDE SUBAGENT (design ${isPlanDesignReview ? 'completeness' : isDesignReview ? 'consistency' : 'direction'}):\` header.
+Present Codex output under a \`CODEX SAYS (design ${isPlanDesignReview ? "critique" : isDesignReview ? "source audit" : "direction"}):\` header.
+Present subagent output under a \`CLAUDE SUBAGENT (design ${isPlanDesignReview ? "completeness" : isDesignReview ? "consistency" : "direction"}):\` header.
 ${synthesisSection}
 
 **Log the result:**
@@ -2740,9 +2805,15 @@ Replace STATUS with "clean" or "issues_found", SOURCE with "codex+subagent", "co
 // ─── Design Hard Rules (OpenAI framework + gstack slop blacklist) ───
 
 function generateDesignHardRules(_ctx: TemplateContext): string {
-  const slopItems = AI_SLOP_BLACKLIST.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const rejectionItems = OPENAI_HARD_REJECTIONS.map((item, i) => `${i + 1}. ${item}`).join('\n');
-  const litmusItems = OPENAI_LITMUS_CHECKS.map((item, i) => `${i + 1}. ${item}`).join('\n');
+  const slopItems = AI_SLOP_BLACKLIST.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join("\n");
+  const rejectionItems = OPENAI_HARD_REJECTIONS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join("\n");
+  const litmusItems = OPENAI_LITMUS_CHECKS.map(
+    (item, i) => `${i + 1}. ${item}`
+  ).join("\n");
 
   return `### Design Hard Rules
 
@@ -2837,24 +2908,27 @@ const RESOLVERS: Record<string, (ctx: TemplateContext) => string> = {
 // ─── Codex Helpers ───────────────────────────────────────────
 
 function codexSkillName(skillDir: string): string {
-  if (skillDir === '.' || skillDir === '') return 'gstack';
+  if (skillDir === "." || skillDir === "") return "gstack";
   // Don't double-prefix: gstack-upgrade → gstack-upgrade (not gstack-gstack-upgrade)
-  if (skillDir.startsWith('gstack-')) return skillDir;
+  if (skillDir.startsWith("gstack-")) return skillDir;
   return `gstack-${skillDir}`;
 }
 
-function extractNameAndDescription(content: string): { name: string; description: string } {
-  const fmStart = content.indexOf('---\n');
-  if (fmStart !== 0) return { name: '', description: '' };
-  const fmEnd = content.indexOf('\n---', fmStart + 4);
-  if (fmEnd === -1) return { name: '', description: '' };
+function extractNameAndDescription(content: string): {
+  name: string;
+  description: string;
+} {
+  const fmStart = content.indexOf("---\n");
+  if (fmStart !== 0) return { name: "", description: "" };
+  const fmEnd = content.indexOf("\n---", fmStart + 4);
+  if (fmEnd === -1) return { name: "", description: "" };
 
   const frontmatter = content.slice(fmStart + 4, fmEnd);
   const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
-  const name = nameMatch ? nameMatch[1].trim() : '';
+  const name = nameMatch ? nameMatch[1].trim() : "";
 
-  let description = '';
-  const lines = frontmatter.split('\n');
+  let description = "";
+  const lines = frontmatter.split("\n");
   let inDescription = false;
   const descLines: string[] = [];
   for (const line of lines) {
@@ -2863,19 +2937,19 @@ function extractNameAndDescription(content: string): { name: string; description
       continue;
     }
     if (line.match(/^description:\s*\S/)) {
-      description = line.replace(/^description:\s*/, '').trim();
+      description = line.replace(/^description:\s*/, "").trim();
       break;
     }
     if (inDescription) {
-      if (line === '' || line.match(/^\s/)) {
-        descLines.push(line.replace(/^  /, ''));
+      if (line === "" || line.match(/^\s/)) {
+        descLines.push(line.replace(/^  /, ""));
       } else {
         break;
       }
     }
   }
   if (descLines.length > 0) {
-    description = descLines.join('\n').trim();
+    description = descLines.join("\n").trim();
   }
 
   return { name, description };
@@ -2885,16 +2959,19 @@ const OPENAI_SHORT_DESCRIPTION_LIMIT = 120;
 
 function condenseOpenAIShortDescription(description: string): string {
   const firstParagraph = description.split(/\n\s*\n/)[0] || description;
-  const collapsed = firstParagraph.replace(/\s+/g, ' ').trim();
+  const collapsed = firstParagraph.replace(/\s+/g, " ").trim();
   if (collapsed.length <= OPENAI_SHORT_DESCRIPTION_LIMIT) return collapsed;
 
   const truncated = collapsed.slice(0, OPENAI_SHORT_DESCRIPTION_LIMIT - 3);
-  const lastSpace = truncated.lastIndexOf(' ');
+  const lastSpace = truncated.lastIndexOf(" ");
   const safe = lastSpace > 40 ? truncated.slice(0, lastSpace) : truncated;
   return `${safe}...`;
 }
 
-function generateOpenAIYaml(displayName: string, shortDescription: string): string {
+function generateOpenAIYaml(
+  displayName: string,
+  shortDescription: string
+): string {
   return `interface:
   display_name: ${JSON.stringify(displayName)}
   short_description: ${JSON.stringify(shortDescription)}
@@ -2910,11 +2987,11 @@ policy:
  * Handles multiline block scalar descriptions (YAML | syntax).
  */
 function transformFrontmatter(content: string, host: Host): string {
-  if (host === 'claude') return content;
+  if (host === "claude") return content;
 
-  const fmStart = content.indexOf('---\n');
+  const fmStart = content.indexOf("---\n");
   if (fmStart !== 0) return content;
-  const fmEnd = content.indexOf('\n---', fmStart + 4);
+  const fmEnd = content.indexOf("\n---", fmStart + 4);
   if (fmEnd === -1) return content;
   const body = content.slice(fmEnd + 4); // includes the leading \n after ---
   const { name, description } = extractNameAndDescription(content);
@@ -2924,12 +3001,15 @@ function transformFrontmatter(content: string, host: Host): string {
   if (description.length > MAX_DESC) {
     throw new Error(
       `Codex description for "${name}" is ${description.length} chars (max ${MAX_DESC}). ` +
-      `Compress the description in the .tmpl file.`
+        `Compress the description in the .tmpl file.`
     );
   }
 
   // Re-emit Codex frontmatter (name + description only)
-  const indentedDesc = description.split('\n').map(l => `  ${l}`).join('\n');
+  const indentedDesc = description
+    .split("\n")
+    .map((l) => `  ${l}`)
+    .join("\n");
   const codexFm = `---\nname: ${name}\ndescription: |\n${indentedDesc}\n---`;
   return codexFm + body;
 }
@@ -2953,14 +3033,15 @@ function extractHookSafetyProse(tmplContent: string): string | null {
 
   // Build safety prose based on what tools are hooked
   const toolDescriptions: Record<string, string> = {
-    Bash: 'check bash commands for destructive operations (rm -rf, DROP TABLE, force-push, git reset --hard, etc.) before execution',
-    Edit: 'verify file edits are within the allowed scope boundary before applying',
-    Write: 'verify file writes are within the allowed scope boundary before applying',
+    Bash: "check bash commands for destructive operations (rm -rf, DROP TABLE, force-push, git reset --hard, etc.) before execution",
+    Edit: "verify file edits are within the allowed scope boundary before applying",
+    Write:
+      "verify file writes are within the allowed scope boundary before applying",
   };
 
   const safetyChecks = matchers
-    .map(t => toolDescriptions[t] || `check ${t} operations for safety`)
-    .join(', and ');
+    .map((t) => toolDescriptions[t] || `check ${t} operations for safety`)
+    .join(", and ");
 
   return `> **Safety Advisory:** This skill includes safety checks that ${safetyChecks}. When using this skill, always pause and verify before executing potentially destructive operations. If uncertain about a command's safety, ask the user for confirmation before proceeding.`;
 }
@@ -2969,10 +3050,13 @@ function extractHookSafetyProse(tmplContent: string): string | null {
 
 const GENERATED_HEADER = `<!-- AUTO-GENERATED from {{SOURCE}} — do not edit directly -->\n<!-- Regenerate: bun run gen:skill-docs -->\n`;
 
-function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath: string; content: string } {
-  const tmplContent = fs.readFileSync(tmplPath, 'utf-8');
+function processTemplate(
+  tmplPath: string,
+  host: Host = "claude"
+): { outputPath: string; content: string } {
+  const tmplContent = fs.readFileSync(tmplPath, "utf-8");
   const relTmplPath = path.relative(ROOT, tmplPath);
-  let outputPath = tmplPath.replace(/\.tmpl$/, '');
+  let outputPath = tmplPath.replace(/\.tmpl$/, "");
 
   // Determine skill directory relative to ROOT
   const skillDir = path.relative(ROOT, path.dirname(tmplPath));
@@ -2980,44 +3064,58 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
   let outputDir: string | null = null;
 
   // For codex host, route output to .agents/skills/{codexSkillName}/SKILL.md
-  if (host === 'codex') {
-    const codexName = codexSkillName(skillDir === '.' ? '' : skillDir);
-    outputDir = path.join(ROOT, '.agents', 'skills', codexName);
+  if (host === "codex") {
+    const codexName = codexSkillName(skillDir === "." ? "" : skillDir);
+    outputDir = path.join(ROOT, ".agents", "skills", codexName);
     fs.mkdirSync(outputDir, { recursive: true });
-    outputPath = path.join(outputDir, 'SKILL.md');
+    outputPath = path.join(outputDir, "SKILL.md");
   }
 
   // Extract skill name from frontmatter for TemplateContext
-  const { name: extractedName, description: extractedDescription } = extractNameAndDescription(tmplContent);
+  const { name: extractedName, description: extractedDescription } =
+    extractNameAndDescription(tmplContent);
   const skillName = extractedName || path.basename(path.dirname(tmplPath));
 
   // Extract benefits-from list from frontmatter (inline YAML: benefits-from: [a, b])
   const benefitsMatch = tmplContent.match(/^benefits-from:\s*\[([^\]]*)\]/m);
   const benefitsFrom = benefitsMatch
-    ? benefitsMatch[1].split(',').map(s => s.trim()).filter(Boolean)
+    ? benefitsMatch[1]
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
     : undefined;
 
   // Extract preamble-tier from frontmatter (1-4, controls which preamble sections are included)
   const tierMatch = tmplContent.match(/^preamble-tier:\s*(\d+)$/m);
   const preambleTier = tierMatch ? parseInt(tierMatch[1], 10) : undefined;
 
-  const ctx: TemplateContext = { skillName, tmplPath, benefitsFrom, host, paths: HOST_PATHS[host], preambleTier };
+  const ctx: TemplateContext = {
+    skillName,
+    tmplPath,
+    benefitsFrom,
+    host,
+    paths: HOST_PATHS[host],
+    preambleTier,
+  };
 
   // Replace placeholders
   let content = tmplContent.replace(/\{\{(\w+)\}\}/g, (match, name) => {
     const resolver = RESOLVERS[name];
-    if (!resolver) throw new Error(`Unknown placeholder {{${name}}} in ${relTmplPath}`);
+    if (!resolver)
+      throw new Error(`Unknown placeholder {{${name}}} in ${relTmplPath}`);
     return resolver(ctx);
   });
 
   // Check for any remaining unresolved placeholders
   const remaining = content.match(/\{\{(\w+)\}\}/g);
   if (remaining) {
-    throw new Error(`Unresolved placeholders in ${relTmplPath}: ${remaining.join(', ')}`);
+    throw new Error(
+      `Unresolved placeholders in ${relTmplPath}: ${remaining.join(", ")}`
+    );
   }
 
   // For codex host: transform frontmatter and replace Claude-specific paths
-  if (host === 'codex') {
+  if (host === "codex") {
     // Extract hook safety prose BEFORE transforming frontmatter (which strips hooks)
     const safetyProse = extractHookSafetyProse(tmplContent);
 
@@ -3026,31 +3124,52 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
 
     // Insert safety advisory at the top of the body (after frontmatter)
     if (safetyProse) {
-      const bodyStart = content.indexOf('\n---') + 4;
-      content = content.slice(0, bodyStart) + '\n' + safetyProse + '\n' + content.slice(bodyStart);
+      const bodyStart = content.indexOf("\n---") + 4;
+      content =
+        content.slice(0, bodyStart) +
+        "\n" +
+        safetyProse +
+        "\n" +
+        content.slice(bodyStart);
     }
 
     // Replace remaining hardcoded Claude paths with host-appropriate paths
-    content = content.replace(/~\/\.claude\/skills\/gstack/g, ctx.paths.skillRoot);
-    content = content.replace(/\.claude\/skills\/gstack/g, ctx.paths.localSkillRoot);
-    content = content.replace(/\.claude\/skills\/review/g, '.agents/skills/gstack/review');
-    content = content.replace(/\.claude\/skills/g, '.agents/skills');
+    content = content.replace(
+      /~\/\.claude\/skills\/gstack/g,
+      ctx.paths.skillRoot
+    );
+    content = content.replace(
+      /\.claude\/skills\/gstack/g,
+      ctx.paths.localSkillRoot
+    );
+    content = content.replace(
+      /\.claude\/skills\/review/g,
+      ".agents/skills/gstack/review"
+    );
+    content = content.replace(/\.claude\/skills/g, ".agents/skills");
 
     if (outputDir) {
-      const codexName = codexSkillName(skillDir === '.' ? '' : skillDir);
-      const agentsDir = path.join(outputDir, 'agents');
+      const codexName = codexSkillName(skillDir === "." ? "" : skillDir);
+      const agentsDir = path.join(outputDir, "agents");
       fs.mkdirSync(agentsDir, { recursive: true });
       const displayName = codexName;
-      const shortDescription = condenseOpenAIShortDescription(extractedDescription);
-      fs.writeFileSync(path.join(agentsDir, 'openai.yaml'), generateOpenAIYaml(displayName, shortDescription));
+      const shortDescription =
+        condenseOpenAIShortDescription(extractedDescription);
+      fs.writeFileSync(
+        path.join(agentsDir, "openai.yaml"),
+        generateOpenAIYaml(displayName, shortDescription)
+      );
     }
   }
 
   // Prepend generated header (after frontmatter)
-  const header = GENERATED_HEADER.replace('{{SOURCE}}', path.basename(tmplPath));
-  const fmEnd = content.indexOf('---', content.indexOf('---') + 3);
+  const header = GENERATED_HEADER.replace(
+    "{{SOURCE}}",
+    path.basename(tmplPath)
+  );
+  const fmEnd = content.indexOf("---", content.indexOf("---") + 3);
   if (fmEnd !== -1) {
-    const insertAt = content.indexOf('\n', fmEnd) + 1;
+    const insertAt = content.indexOf("\n", fmEnd) + 1;
     content = content.slice(0, insertAt) + header + content.slice(insertAt);
   } else {
     content = header + content;
@@ -3062,7 +3181,7 @@ function processTemplate(tmplPath: string, host: Host = 'claude'): { outputPath:
 // ─── Main ───────────────────────────────────────────────────
 
 function findTemplates(): string[] {
-  return discoverTemplates(ROOT).map(t => path.join(ROOT, t.tmpl));
+  return discoverTemplates(ROOT).map((t) => path.join(ROOT, t.tmpl));
 }
 
 let hasChanges = false;
@@ -3070,16 +3189,18 @@ const tokenBudget: Array<{ skill: string; lines: number; tokens: number }> = [];
 
 for (const tmplPath of findTemplates()) {
   // Skip /codex skill for codex host (self-referential — it's a Claude wrapper around codex exec)
-  if (HOST === 'codex') {
+  if (HOST === "codex") {
     const dir = path.basename(path.dirname(tmplPath));
-    if (dir === 'codex') continue;
+    if (dir === "codex") continue;
   }
 
   const { outputPath, content } = processTemplate(tmplPath, HOST);
   const relOutput = path.relative(ROOT, outputPath);
 
   if (DRY_RUN) {
-    const existing = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf-8') : '';
+    const existing = fs.existsSync(outputPath)
+      ? fs.readFileSync(outputPath, "utf-8")
+      : "";
     if (existing !== content) {
       console.log(`STALE: ${relOutput}`);
       hasChanges = true;
@@ -3092,13 +3213,15 @@ for (const tmplPath of findTemplates()) {
   }
 
   // Track token budget
-  const lines = content.split('\n').length;
+  const lines = content.split("\n").length;
   const tokens = Math.round(content.length / 4); // ~4 chars per token
   tokenBudget.push({ skill: relOutput, lines, tokens });
 }
 
 if (DRY_RUN && hasChanges) {
-  console.error('\nGenerated SKILL.md files are stale. Run: bun run gen:skill-docs');
+  console.error(
+    "\nGenerated SKILL.md files are stale. Run: bun run gen:skill-docs"
+  );
   process.exit(1);
 }
 
@@ -3108,14 +3231,20 @@ if (!DRY_RUN && tokenBudget.length > 0) {
   const totalLines = tokenBudget.reduce((s, t) => s + t.lines, 0);
   const totalTokens = tokenBudget.reduce((s, t) => s + t.tokens, 0);
 
-  console.log('');
+  console.log("");
   console.log(`Token Budget (${HOST} host)`);
-  console.log('═'.repeat(60));
+  console.log("═".repeat(60));
   for (const t of tokenBudget) {
-    const name = t.skill.replace(/\/SKILL\.md$/, '').replace(/^\.agents\/skills\//, '');
-    console.log(`  ${name.padEnd(30)} ${String(t.lines).padStart(5)} lines  ~${String(t.tokens).padStart(6)} tokens`);
+    const name = t.skill
+      .replace(/\/SKILL\.md$/, "")
+      .replace(/^\.agents\/skills\//, "");
+    console.log(
+      `  ${name.padEnd(30)} ${String(t.lines).padStart(5)} lines  ~${String(t.tokens).padStart(6)} tokens`
+    );
   }
-  console.log('─'.repeat(60));
-  console.log(`  ${'TOTAL'.padEnd(30)} ${String(totalLines).padStart(5)} lines  ~${String(totalTokens).padStart(6)} tokens`);
-  console.log('');
+  console.log("─".repeat(60));
+  console.log(
+    `  ${"TOTAL".padEnd(30)} ${String(totalLines).padStart(5)} lines  ~${String(totalTokens).padStart(6)} tokens`
+  );
+  console.log("");
 }

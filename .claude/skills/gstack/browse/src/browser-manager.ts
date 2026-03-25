@@ -15,9 +15,24 @@
  *   restores state. Falls back to clean slate on any failure.
  */
 
-import { chromium, type Browser, type BrowserContext, type BrowserContextOptions, type Page, type Locator, type Cookie } from 'playwright';
-import { addConsoleEntry, addNetworkEntry, addDialogEntry, networkBuffer, type DialogEntry } from './buffers';
-import { validateNavigationUrl } from './url-validation';
+import {
+  chromium,
+  type Browser,
+  type BrowserContext,
+  type BrowserContextOptions,
+  type Page,
+  type Locator,
+  type Cookie,
+} from "playwright";
+
+import {
+  addConsoleEntry,
+  addNetworkEntry,
+  addDialogEntry,
+  networkBuffer,
+  type DialogEntry,
+} from "./buffers";
+import { validateNavigationUrl } from "./url-validation";
 
 export interface RefEntry {
   locator: Locator;
@@ -30,7 +45,10 @@ export interface BrowserState {
   pages: Array<{
     url: string;
     isActive: boolean;
-    storage: { localStorage: Record<string, string>; sessionStorage: Record<string, string> } | null;
+    storage: {
+      localStorage: Record<string, string>;
+      sessionStorage: Record<string, string>;
+    } | null;
   }>;
 }
 
@@ -73,15 +91,15 @@ export class BrowserManager {
     // are typically disabled in containers. Detect container environment and
     // add --no-sandbox automatically.
     if (process.env.CI || process.env.CONTAINER) {
-      launchArgs.push('--no-sandbox');
+      launchArgs.push("--no-sandbox");
     }
 
     if (extensionsDir) {
       launchArgs.push(
         `--disable-extensions-except=${extensionsDir}`,
         `--load-extension=${extensionsDir}`,
-        '--window-position=-9999,-9999',
-        '--window-size=1,1',
+        "--window-position=-9999,-9999",
+        "--window-size=1,1"
       );
       useHeadless = false; // extensions require headed mode; off-screen window simulates headless
       console.log(`[browse] Extensions loaded from: ${extensionsDir}`);
@@ -92,14 +110,18 @@ export class BrowserManager {
       // On Windows, Chromium's sandbox fails when the server is spawned through
       // the Bun→Node process chain (GitHub #276). Disable it — local daemon
       // browsing user-specified URLs has marginal sandbox benefit.
-      chromiumSandbox: process.platform !== 'win32',
+      chromiumSandbox: process.platform !== "win32",
       ...(launchArgs.length > 0 ? { args: launchArgs } : {}),
     });
 
     // Chromium crash → exit with clear message
-    this.browser.on('disconnected', () => {
-      console.error('[browse] FATAL: Chromium process crashed or was killed. Server exiting.');
-      console.error('[browse] Console/network logs flushed to .gstack/browse-*.log');
+    this.browser.on("disconnected", () => {
+      console.error(
+        "[browse] FATAL: Chromium process crashed or was killed. Server exiting."
+      );
+      console.error(
+        "[browse] Console/network logs flushed to .gstack/browse-*.log"
+      );
       process.exit(1);
     });
 
@@ -122,11 +144,11 @@ export class BrowserManager {
   async close() {
     if (this.browser) {
       // Remove disconnect handler to avoid exit during intentional close
-      this.browser.removeAllListeners('disconnected');
+      this.browser.removeAllListeners("disconnected");
       // Timeout: headed browser.close() can hang on macOS
       await Promise.race([
         this.browser.close(),
-        new Promise(resolve => setTimeout(resolve, 5000)),
+        new Promise((resolve) => setTimeout(resolve, 5000)),
       ]).catch(() => {});
       this.browser = null;
     }
@@ -139,8 +161,10 @@ export class BrowserManager {
       const page = this.pages.get(this.activeTabId);
       if (!page) return true; // connected but no pages — still healthy
       await Promise.race([
-        page.evaluate('1'),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000)),
+        page.evaluate("1"),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("timeout")), 2000)
+        ),
       ]);
       return true;
     } catch {
@@ -150,7 +174,7 @@ export class BrowserManager {
 
   // ─── Tab Management ────────────────────────────────────────
   async newTab(url?: string): Promise<number> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     // Validate URL before allocating page to avoid zombie tabs on rejection
     if (url) {
@@ -166,7 +190,7 @@ export class BrowserManager {
     this.wirePageEvents(page);
 
     if (url) {
-      await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
     }
 
     return id;
@@ -201,13 +225,20 @@ export class BrowserManager {
     return this.pages.size;
   }
 
-  async getTabListWithTitles(): Promise<Array<{ id: number; url: string; title: string; active: boolean }>> {
-    const tabs: Array<{ id: number; url: string; title: string; active: boolean }> = [];
+  async getTabListWithTitles(): Promise<
+    Array<{ id: number; url: string; title: string; active: boolean }>
+  > {
+    const tabs: Array<{
+      id: number;
+      url: string;
+      title: string;
+      active: boolean;
+    }> = [];
     for (const [id, page] of this.pages) {
       tabs.push({
         id,
         url: page.url(),
-        title: await page.title().catch(() => ''),
+        title: await page.title().catch(() => ""),
         active: id === this.activeTabId,
       });
     }
@@ -217,7 +248,8 @@ export class BrowserManager {
   // ─── Page Access ───────────────────────────────────────────
   getPage(): Page {
     const page = this.pages.get(this.activeTabId);
-    if (!page) throw new Error('No active page. Use "browse goto <url>" first.');
+    if (!page)
+      throw new Error('No active page. Use "browse goto <url>" first.');
     return page;
   }
 
@@ -225,7 +257,7 @@ export class BrowserManager {
     try {
       return this.getPage().url();
     } catch {
-      return 'about:blank';
+      return "about:blank";
     }
   }
 
@@ -242,8 +274,10 @@ export class BrowserManager {
    * Resolve a selector that may be a @ref (e.g., "@e3", "@c1") or a CSS selector.
    * Returns { locator } for refs or { selector } for CSS selectors.
    */
-  async resolveRef(selector: string): Promise<{ locator: Locator } | { selector: string }> {
-    if (selector.startsWith('@e') || selector.startsWith('@c')) {
+  async resolveRef(
+    selector: string
+  ): Promise<{ locator: Locator } | { selector: string }> {
+    if (selector.startsWith("@e") || selector.startsWith("@c")) {
       const ref = selector.slice(1); // "e3" or "c1"
       const entry = this.refMap.get(ref);
       if (!entry) {
@@ -255,7 +289,7 @@ export class BrowserManager {
       if (count === 0) {
         throw new Error(
           `Ref ${selector} (${entry.role} "${entry.name}") is stale — element no longer exists. ` +
-          `Run 'snapshot' for fresh refs.`
+            `Run 'snapshot' for fresh refs.`
         );
       }
       return { locator: entry.locator };
@@ -265,7 +299,7 @@ export class BrowserManager {
 
   /** Get the ARIA role for a ref selector, or null for CSS selectors / unknown refs. */
   getRefRole(selector: string): string | null {
-    if (selector.startsWith('@e') || selector.startsWith('@c')) {
+    if (selector.startsWith("@e") || selector.startsWith("@c")) {
       const entry = this.refMap.get(selector.slice(1));
       return entry?.role ?? null;
     }
@@ -330,10 +364,10 @@ export class BrowserManager {
    * Skips pages that fail storage reads (e.g., already closed).
    */
   async saveState(): Promise<BrowserState> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     const cookies = await this.context.cookies();
-    const pages: BrowserState['pages'] = [];
+    const pages: BrowserState["pages"] = [];
 
     for (const [id, page] of this.pages) {
       const url = page.url();
@@ -345,7 +379,7 @@ export class BrowserManager {
         }));
       } catch {}
       pages.push({
-        url: url === 'about:blank' ? '' : url,
+        url: url === "about:blank" ? "" : url,
         isActive: id === this.activeTabId,
         storage,
       });
@@ -360,7 +394,7 @@ export class BrowserManager {
    * Failures on individual pages are swallowed — partial restore is better than none.
    */
   async restoreState(state: BrowserState): Promise<void> {
-    if (!this.context) throw new Error('Browser not launched');
+    if (!this.context) throw new Error("Browser not launched");
 
     // Restore cookies
     if (state.cookies.length > 0) {
@@ -376,23 +410,31 @@ export class BrowserManager {
       this.wirePageEvents(page);
 
       if (saved.url) {
-        await page.goto(saved.url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+        await page
+          .goto(saved.url, { waitUntil: "domcontentloaded", timeout: 15000 })
+          .catch(() => {});
       }
 
       if (saved.storage) {
         try {
-          await page.evaluate((s: { localStorage: Record<string, string>; sessionStorage: Record<string, string> }) => {
-            if (s.localStorage) {
-              for (const [k, v] of Object.entries(s.localStorage)) {
-                localStorage.setItem(k, v);
+          await page.evaluate(
+            (s: {
+              localStorage: Record<string, string>;
+              sessionStorage: Record<string, string>;
+            }) => {
+              if (s.localStorage) {
+                for (const [k, v] of Object.entries(s.localStorage)) {
+                  localStorage.setItem(k, v);
+                }
               }
-            }
-            if (s.sessionStorage) {
-              for (const [k, v] of Object.entries(s.sessionStorage)) {
-                sessionStorage.setItem(k, v);
+              if (s.sessionStorage) {
+                for (const [k, v] of Object.entries(s.sessionStorage)) {
+                  sessionStorage.setItem(k, v);
+                }
               }
-            }
-          }, saved.storage);
+            },
+            saved.storage
+          );
         } catch {}
       }
 
@@ -417,7 +459,7 @@ export class BrowserManager {
    */
   async recreateContext(): Promise<string | null> {
     if (!this.browser || !this.context) {
-      throw new Error('Browser not launched');
+      throw new Error("Browser not launched");
     }
 
     try {
@@ -486,7 +528,7 @@ export class BrowserManager {
       return `HANDOFF: Already in headed mode at ${this.getCurrentUrl()}`;
     }
     if (!this.browser || !this.context) {
-      throw new Error('Browser not launched');
+      throw new Error("Browser not launched");
     }
 
     // 1. Save state from current browser
@@ -499,7 +541,7 @@ export class BrowserManager {
       newBrowser = await chromium.launch({
         headless: false,
         timeout: 15000,
-        chromiumSandbox: process.platform !== 'win32',
+        chromiumSandbox: process.platform !== "win32",
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -529,9 +571,13 @@ export class BrowserManager {
       this.pages.clear();
 
       // Register crash handler on new browser
-      this.browser.on('disconnected', () => {
-        console.error('[browse] FATAL: Chromium process crashed or was killed. Server exiting.');
-        console.error('[browse] Console/network logs flushed to .gstack/browse-*.log');
+      this.browser.on("disconnected", () => {
+        console.error(
+          "[browse] FATAL: Chromium process crashed or was killed. Server exiting."
+        );
+        console.error(
+          "[browse] Console/network logs flushed to .gstack/browse-*.log"
+        );
         process.exit(1);
       });
 
@@ -540,14 +586,14 @@ export class BrowserManager {
 
       // 4. Close old headless browser (fire-and-forget — close() can hang
       // when another Playwright instance is active, so we don't await it)
-      oldBrowser.removeAllListeners('disconnected');
+      oldBrowser.removeAllListeners("disconnected");
       oldBrowser.close().catch(() => {});
 
       return [
         `HANDOFF: Browser opened at ${currentUrl}`,
         `MESSAGE: ${message}`,
         `STATUS: Waiting for user. Run 'resume' when done.`,
-      ].join('\n');
+      ].join("\n");
     } catch (err: unknown) {
       // Restore failed — close the new browser, keep old one
       await newBrowser.close().catch(() => {});
@@ -590,21 +636,23 @@ export class BrowserManager {
   private wirePageEvents(page: Page) {
     // Clear ref map on navigation — refs point to stale elements after page change
     // (lastSnapshot is NOT cleared — it's a text baseline for diffing)
-    page.on('framenavigated', (frame) => {
+    page.on("framenavigated", (frame) => {
       if (frame === page.mainFrame()) {
         this.clearRefs();
       }
     });
 
     // ─── Dialog auto-handling (prevents browser lockup) ─────
-    page.on('dialog', async (dialog) => {
+    page.on("dialog", async (dialog) => {
       const entry: DialogEntry = {
         timestamp: Date.now(),
         type: dialog.type(),
         message: dialog.message(),
         defaultValue: dialog.defaultValue() || undefined,
-        action: this.dialogAutoAccept ? 'accepted' : 'dismissed',
-        response: this.dialogAutoAccept ? (this.dialogPromptText ?? undefined) : undefined,
+        action: this.dialogAutoAccept ? "accepted" : "dismissed",
+        response: this.dialogAutoAccept
+          ? (this.dialogPromptText ?? undefined)
+          : undefined,
       };
       addDialogEntry(entry);
 
@@ -619,7 +667,7 @@ export class BrowserManager {
       }
     });
 
-    page.on('console', (msg) => {
+    page.on("console", (msg) => {
       addConsoleEntry({
         timestamp: Date.now(),
         level: msg.type(),
@@ -627,7 +675,7 @@ export class BrowserManager {
       });
     });
 
-    page.on('request', (req) => {
+    page.on("request", (req) => {
       addNetworkEntry({
         timestamp: Date.now(),
         method: req.method(),
@@ -635,21 +683,25 @@ export class BrowserManager {
       });
     });
 
-    page.on('response', (res) => {
+    page.on("response", (res) => {
       // Find matching request entry and update it (backward scan)
       const url = res.url();
       const status = res.status();
       for (let i = networkBuffer.length - 1; i >= 0; i--) {
         const entry = networkBuffer.get(i);
         if (entry && entry.url === url && !entry.status) {
-          networkBuffer.set(i, { ...entry, status, duration: Date.now() - entry.timestamp });
+          networkBuffer.set(i, {
+            ...entry,
+            status,
+            duration: Date.now() - entry.timestamp,
+          });
           break;
         }
       }
     });
 
     // Capture response sizes via response finished
-    page.on('requestfinished', async (req) => {
+    page.on("requestfinished", async (req) => {
       try {
         const res = await req.response();
         if (res) {

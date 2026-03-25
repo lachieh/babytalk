@@ -2,13 +2,13 @@ name: Build CI Image
 on:
   # Rebuild weekly (Monday 6am UTC) to pick up CLI updates
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: "0 6 * * 1"
   # Rebuild on Dockerfile or lockfile changes
   push:
     branches: [main]
     paths:
-      - '.github/docker/Dockerfile.ci'
-      - 'package.json'
+      - ".github/docker/Dockerfile.ci"
+      - "package.json"
   # Manual trigger
   workflow_dispatch:
 

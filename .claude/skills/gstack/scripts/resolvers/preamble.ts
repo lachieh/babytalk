@@ -1,14 +1,15 @@
-import type { TemplateContext } from './types';
+import type { TemplateContext } from "./types";
 
 function generatePreambleBash(ctx: TemplateContext): string {
-  const runtimeRoot = ctx.host === 'codex'
-    ? `_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+  const runtimeRoot =
+    ctx.host === "codex"
+      ? `_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 GSTACK_ROOT="$HOME/.codex/skills/gstack"
 [ -n "$_ROOT" ] && [ -d "$_ROOT/.agents/skills/gstack" ] && GSTACK_ROOT="$_ROOT/.agents/skills/gstack"
 GSTACK_BIN="$GSTACK_ROOT/bin"
 GSTACK_BROWSE="$GSTACK_ROOT/browse/dist"
 `
-    : '';
+      : "";
 
   return `## Preamble (run first)
 
@@ -403,7 +404,9 @@ plan's living status.`;
 export function generatePreamble(ctx: TemplateContext): string {
   const tier = ctx.preambleTier ?? 4;
   if (tier < 1 || tier > 4) {
-    throw new Error(`Invalid preamble-tier: ${tier} in ${ctx.tmplPath}. Must be 1-4.`);
+    throw new Error(
+      `Invalid preamble-tier: ${tier} in ${ctx.tmplPath}. Must be 1-4.`
+    );
   }
   const sections = [
     generatePreambleBash(ctx),
@@ -411,10 +414,14 @@ export function generatePreamble(ctx: TemplateContext): string {
     generateLakeIntro(),
     generateTelemetryPrompt(ctx),
     generateProactivePrompt(ctx),
-    ...(tier >= 2 ? [generateAskUserFormat(ctx), generateCompletenessSection()] : []),
-    ...(tier >= 3 ? [generateRepoModeSection(), generateSearchBeforeBuildingSection(ctx)] : []),
+    ...(tier >= 2
+      ? [generateAskUserFormat(ctx), generateCompletenessSection()]
+      : []),
+    ...(tier >= 3
+      ? [generateRepoModeSection(), generateSearchBeforeBuildingSection(ctx)]
+      : []),
     generateContributorMode(),
     generateCompletionStatus(),
   ];
-  return sections.join('\n\n');
+  return sections.join("\n\n");
 }

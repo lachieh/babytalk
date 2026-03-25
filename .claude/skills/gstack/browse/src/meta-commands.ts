@@ -2,24 +2,26 @@
  * Meta commands — tabs, server control, screenshots, chain, diff, snapshot
  */
 
-import type { BrowserManager } from './browser-manager';
-import { handleSnapshot } from './snapshot';
-import { getCleanText } from './read-commands';
-import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from './commands';
-import { validateNavigationUrl } from './url-validation';
-import * as Diff from 'diff';
-import * as fs from 'fs';
-import * as path from 'path';
-import { TEMP_DIR, isPathWithin } from './platform';
+import * as fs from "fs";
+import * as path from "path";
+
+import * as Diff from "diff";
+
+import type { BrowserManager } from "./browser-manager";
+import { READ_COMMANDS, WRITE_COMMANDS, META_COMMANDS } from "./commands";
+import { TEMP_DIR, isPathWithin } from "./platform";
+import { getCleanText } from "./read-commands";
+import { handleSnapshot } from "./snapshot";
+import { validateNavigationUrl } from "./url-validation";
 
 // Security: Path validation to prevent path traversal attacks
 const SAFE_DIRECTORIES = [TEMP_DIR, process.cwd()];
 
 export function validateOutputPath(filePath: string): void {
   const resolved = path.resolve(filePath);
-  const isSafe = SAFE_DIRECTORIES.some(dir => isPathWithin(resolved, dir));
+  const isSafe = SAFE_DIRECTORIES.some((dir) => isPathWithin(resolved, dir));
   if (!isSafe) {
-    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(', ')}`);
+    throw new Error(`Path must be within: ${SAFE_DIRECTORIES.join(", ")}`);
   }
 }
 
@@ -31,34 +33,37 @@ export async function handleMetaCommand(
 ): Promise<string> {
   switch (command) {
     // ─── Tabs ──────────────────────────────────────────
-    case 'tabs': {
+    case "tabs": {
       const tabs = await bm.getTabListWithTitles();
-      return tabs.map(t =>
-        `${t.active ? '→ ' : '  '}[${t.id}] ${t.title || '(untitled)'} — ${t.url}`
-      ).join('\n');
+      return tabs
+        .map(
+          (t) =>
+            `${t.active ? "→ " : "  "}[${t.id}] ${t.title || "(untitled)"} — ${t.url}`
+        )
+        .join("\n");
     }
 
-    case 'tab': {
+    case "tab": {
       const id = parseInt(args[0], 10);
-      if (isNaN(id)) throw new Error('Usage: browse tab <id>');
+      if (isNaN(id)) throw new Error("Usage: browse tab <id>");
       bm.switchTab(id);
       return `Switched to tab ${id}`;
     }
 
-    case 'newtab': {
+    case "newtab": {
       const url = args[0];
       const id = await bm.newTab(url);
-      return `Opened tab ${id}${url ? ` → ${url}` : ''}`;
+      return `Opened tab ${id}${url ? ` → ${url}` : ""}`;
     }
 
-    case 'closetab': {
+    case "closetab": {
       const id = args[0] ? parseInt(args[0], 10) : undefined;
       await bm.closeTab(id);
-      return `Closed tab${id ? ` ${id}` : ''}`;
+      return `Closed tab${id ? ` ${id}` : ""}`;
     }
 
     // ─── Server Control ────────────────────────────────
-    case 'status': {
+    case "status": {
       const page = bm.getPage();
       const tabs = bm.getTabCount();
       return [
@@ -66,46 +71,56 @@ export async function handleMetaCommand(
         `URL: ${page.url()}`,
         `Tabs: ${tabs}`,
         `PID: ${process.pid}`,
-      ].join('\n');
+      ].join("\n");
     }
 
-    case 'url': {
+    case "url": {
       return bm.getCurrentUrl();
     }
 
-    case 'stop': {
+    case "stop": {
       await shutdown();
-      return 'Server stopped';
+      return "Server stopped";
     }
 
-    case 'restart': {
+    case "restart": {
       // Signal that we want a restart — the CLI will detect exit and restart
-      console.log('[browse] Restart requested. Exiting for CLI to restart.');
+      console.log("[browse] Restart requested. Exiting for CLI to restart.");
       await shutdown();
-      return 'Restarting...';
+      return "Restarting...";
     }
 
     // ─── Visual ────────────────────────────────────────
-    case 'screenshot': {
+    case "screenshot": {
       // Parse priority: flags (--viewport, --clip) → selector (@ref, CSS) → output path
       const page = bm.getPage();
       let outputPath = `${TEMP_DIR}/browse-screenshot.png`;
-      let clipRect: { x: number; y: number; width: number; height: number } | undefined;
+      let clipRect:
+        | { x: number; y: number; width: number; height: number }
+        | undefined;
       let targetSelector: string | undefined;
       let viewportOnly = false;
 
       const remaining: string[] = [];
       for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--viewport') {
+        if (args[i] === "--viewport") {
           viewportOnly = true;
-        } else if (args[i] === '--clip') {
+        } else if (args[i] === "--clip") {
           const coords = args[++i];
-          if (!coords) throw new Error('Usage: screenshot --clip x,y,w,h [path]');
-          const parts = coords.split(',').map(Number);
+          if (!coords)
+            throw new Error("Usage: screenshot --clip x,y,w,h [path]");
+          const parts = coords.split(",").map(Number);
           if (parts.length !== 4 || parts.some(isNaN))
-            throw new Error('Usage: screenshot --clip x,y,width,height — all must be numbers');
-          clipRect = { x: parts[0], y: parts[1], width: parts[2], height: parts[3] };
-        } else if (args[i].startsWith('--')) {
+            throw new Error(
+              "Usage: screenshot --clip x,y,width,height — all must be numbers"
+            );
+          clipRect = {
+            x: parts[0],
+            y: parts[1],
+            width: parts[2],
+            height: parts[3],
+          };
+        } else if (args[i].startsWith("--")) {
           throw new Error(`Unknown screenshot flag: ${args[i]}`);
         } else {
           remaining.push(args[i]);
@@ -114,7 +129,13 @@ export async function handleMetaCommand(
 
       // Separate target (selector/@ref) from output path
       for (const arg of remaining) {
-        if (arg.startsWith('@e') || arg.startsWith('@c') || arg.startsWith('.') || arg.startsWith('#') || arg.includes('[')) {
+        if (
+          arg.startsWith("@e") ||
+          arg.startsWith("@c") ||
+          arg.startsWith(".") ||
+          arg.startsWith("#") ||
+          arg.includes("[")
+        ) {
           targetSelector = arg;
         } else {
           outputPath = arg;
@@ -124,15 +145,18 @@ export async function handleMetaCommand(
       validateOutputPath(outputPath);
 
       if (clipRect && targetSelector) {
-        throw new Error('Cannot use --clip with a selector/ref — choose one');
+        throw new Error("Cannot use --clip with a selector/ref — choose one");
       }
       if (viewportOnly && clipRect) {
-        throw new Error('Cannot use --viewport with --clip — choose one');
+        throw new Error("Cannot use --viewport with --clip — choose one");
       }
 
       if (targetSelector) {
         const resolved = await bm.resolveRef(targetSelector);
-        const locator = 'locator' in resolved ? resolved.locator : page.locator(resolved.selector);
+        const locator =
+          "locator" in resolved
+            ? resolved.locator
+            : page.locator(resolved.selector);
         await locator.screenshot({ path: outputPath, timeout: 5000 });
         return `Screenshot saved (element): ${outputPath}`;
       }
@@ -143,25 +167,25 @@ export async function handleMetaCommand(
       }
 
       await page.screenshot({ path: outputPath, fullPage: !viewportOnly });
-      return `Screenshot saved${viewportOnly ? ' (viewport)' : ''}: ${outputPath}`;
+      return `Screenshot saved${viewportOnly ? " (viewport)" : ""}: ${outputPath}`;
     }
 
-    case 'pdf': {
+    case "pdf": {
       const page = bm.getPage();
       const pdfPath = args[0] || `${TEMP_DIR}/browse-page.pdf`;
       validateOutputPath(pdfPath);
-      await page.pdf({ path: pdfPath, format: 'A4' });
+      await page.pdf({ path: pdfPath, format: "A4" });
       return `PDF saved: ${pdfPath}`;
     }
 
-    case 'responsive': {
+    case "responsive": {
       const page = bm.getPage();
       const prefix = args[0] || `${TEMP_DIR}/browse-responsive`;
       validateOutputPath(prefix);
       const viewports = [
-        { name: 'mobile', width: 375, height: 812 },
-        { name: 'tablet', width: 768, height: 1024 },
-        { name: 'desktop', width: 1280, height: 720 },
+        { name: "mobile", width: 375, height: 812 },
+        { name: "tablet", width: 768, height: 1024 },
+        { name: "desktop", width: 1280, height: 720 },
       ];
       const originalViewport = page.viewportSize();
       const results: string[] = [];
@@ -178,35 +202,44 @@ export async function handleMetaCommand(
         await page.setViewportSize(originalViewport);
       }
 
-      return results.join('\n');
+      return results.join("\n");
     }
 
     // ─── Chain ─────────────────────────────────────────
-    case 'chain': {
+    case "chain": {
       // Read JSON array from args[0] (if provided) or expect it was passed as body
       const jsonStr = args[0];
-      if (!jsonStr) throw new Error('Usage: echo \'[["goto","url"],["text"]]\' | browse chain');
+      if (!jsonStr)
+        throw new Error(
+          'Usage: echo \'[["goto","url"],["text"]]\' | browse chain'
+        );
 
       let commands: string[][];
       try {
         commands = JSON.parse(jsonStr);
       } catch {
-        throw new Error('Invalid JSON. Expected: [["command", "arg1", "arg2"], ...]');
+        throw new Error(
+          'Invalid JSON. Expected: [["command", "arg1", "arg2"], ...]'
+        );
       }
 
-      if (!Array.isArray(commands)) throw new Error('Expected JSON array of commands');
+      if (!Array.isArray(commands))
+        throw new Error("Expected JSON array of commands");
 
       const results: string[] = [];
-      const { handleReadCommand } = await import('./read-commands');
-      const { handleWriteCommand } = await import('./write-commands');
+      const { handleReadCommand } = await import("./read-commands");
+      const { handleWriteCommand } = await import("./write-commands");
 
       for (const cmd of commands) {
         const [name, ...cmdArgs] = cmd;
         try {
           let result: string;
-          if (WRITE_COMMANDS.has(name))    result = await handleWriteCommand(name, cmdArgs, bm);
-          else if (READ_COMMANDS.has(name))  result = await handleReadCommand(name, cmdArgs, bm);
-          else if (META_COMMANDS.has(name))  result = await handleMetaCommand(name, cmdArgs, bm, shutdown);
+          if (WRITE_COMMANDS.has(name))
+            result = await handleWriteCommand(name, cmdArgs, bm);
+          else if (READ_COMMANDS.has(name))
+            result = await handleReadCommand(name, cmdArgs, bm);
+          else if (META_COMMANDS.has(name))
+            result = await handleMetaCommand(name, cmdArgs, bm, shutdown);
           else throw new Error(`Unknown command: ${name}`);
           results.push(`[${name}] ${result}`);
         } catch (err: any) {
@@ -214,52 +247,52 @@ export async function handleMetaCommand(
         }
       }
 
-      return results.join('\n\n');
+      return results.join("\n\n");
     }
 
     // ─── Diff ──────────────────────────────────────────
-    case 'diff': {
+    case "diff": {
       const [url1, url2] = args;
-      if (!url1 || !url2) throw new Error('Usage: browse diff <url1> <url2>');
+      if (!url1 || !url2) throw new Error("Usage: browse diff <url1> <url2>");
 
       const page = bm.getPage();
       await validateNavigationUrl(url1);
-      await page.goto(url1, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(url1, { waitUntil: "domcontentloaded", timeout: 15000 });
       const text1 = await getCleanText(page);
 
       await validateNavigationUrl(url2);
-      await page.goto(url2, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      await page.goto(url2, { waitUntil: "domcontentloaded", timeout: 15000 });
       const text2 = await getCleanText(page);
 
       const changes = Diff.diffLines(text1, text2);
-      const output: string[] = [`--- ${url1}`, `+++ ${url2}`, ''];
+      const output: string[] = [`--- ${url1}`, `+++ ${url2}`, ""];
 
       for (const part of changes) {
-        const prefix = part.added ? '+' : part.removed ? '-' : ' ';
-        const lines = part.value.split('\n').filter(l => l.length > 0);
+        const prefix = part.added ? "+" : part.removed ? "-" : " ";
+        const lines = part.value.split("\n").filter((l) => l.length > 0);
         for (const line of lines) {
           output.push(`${prefix} ${line}`);
         }
       }
 
-      return output.join('\n');
+      return output.join("\n");
     }
 
     // ─── Snapshot ─────────────────────────────────────
-    case 'snapshot': {
+    case "snapshot": {
       return await handleSnapshot(args, bm);
     }
 
     // ─── Handoff ────────────────────────────────────
-    case 'handoff': {
-      const message = args.join(' ') || 'User takeover requested';
+    case "handoff": {
+      const message = args.join(" ") || "User takeover requested";
       return await bm.handoff(message);
     }
 
-    case 'resume': {
+    case "resume": {
       bm.resume();
       // Re-snapshot to capture current page state after human interaction
-      const snapshot = await handleSnapshot(['-i'], bm);
+      const snapshot = await handleSnapshot(["-i"], bm);
       return `RESUMED\n${snapshot}`;
     }
 

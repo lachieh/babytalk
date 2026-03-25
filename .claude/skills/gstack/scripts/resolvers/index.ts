@@ -3,16 +3,47 @@
  * Each resolver takes a TemplateContext and returns the replacement string.
  */
 
-import type { TemplateContext } from './types';
-
+import {
+  generateCommandReference,
+  generateSnapshotFlags,
+  generateBrowseSetup,
+} from "./browse";
+import {
+  generateDesignMethodology,
+  generateDesignHardRules,
+  generateDesignOutsideVoices,
+  generateDesignReviewLite,
+  generateDesignSketch,
+} from "./design";
 // Domain modules
-import { generatePreamble } from './preamble';
-import { generateTestFailureTriage } from './preamble';
-import { generateCommandReference, generateSnapshotFlags, generateBrowseSetup } from './browse';
-import { generateDesignMethodology, generateDesignHardRules, generateDesignOutsideVoices, generateDesignReviewLite, generateDesignSketch } from './design';
-import { generateTestBootstrap, generateTestCoverageAuditPlan, generateTestCoverageAuditShip, generateTestCoverageAuditReview } from './testing';
-import { generateReviewDashboard, generatePlanFileReviewReport, generateSpecReviewLoop, generateBenefitsFrom, generateCodexSecondOpinion, generateAdversarialStep, generateCodexPlanReview, generatePlanCompletionAuditShip, generatePlanCompletionAuditReview, generatePlanVerificationExec } from './review';
-import { generateSlugEval, generateSlugSetup, generateBaseBranchDetect, generateDeployBootstrap, generateQAMethodology } from './utility';
+import { generatePreamble } from "./preamble";
+import { generateTestFailureTriage } from "./preamble";
+import {
+  generateReviewDashboard,
+  generatePlanFileReviewReport,
+  generateSpecReviewLoop,
+  generateBenefitsFrom,
+  generateCodexSecondOpinion,
+  generateAdversarialStep,
+  generateCodexPlanReview,
+  generatePlanCompletionAuditShip,
+  generatePlanCompletionAuditReview,
+  generatePlanVerificationExec,
+} from "./review";
+import {
+  generateTestBootstrap,
+  generateTestCoverageAuditPlan,
+  generateTestCoverageAuditShip,
+  generateTestCoverageAuditReview,
+} from "./testing";
+import type { TemplateContext } from "./types";
+import {
+  generateSlugEval,
+  generateSlugSetup,
+  generateBaseBranchDetect,
+  generateDeployBootstrap,
+  generateQAMethodology,
+} from "./utility";
 
 export const RESOLVERS: Record<string, (ctx: TemplateContext) => string> = {
   SLUG_EVAL: generateSlugEval,

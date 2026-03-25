@@ -9,13 +9,14 @@
  *   5. Print response to stdout (or stderr for errors)
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
-import { resolveConfig, ensureStateDir, readVersionHash } from './config';
+import * as fs from "fs";
+import * as path from "path";
+
+import { resolveConfig, ensureStateDir, readVersionHash } from "./config";
 
 const config = resolveConfig();
-const IS_WINDOWS = process.platform === 'win32';
-const MAX_START_WAIT = IS_WINDOWS ? 15000 : (process.env.CI ? 30000 : 8000); // Node+Chromium takes longer on Windows
+const IS_WINDOWS = process.platform === "win32";
+const MAX_START_WAIT = IS_WINDOWS ? 15000 : process.env.CI ? 30000 : 8000; // Node+Chromium takes longer on Windows
 
 export function resolveServerScript(
   env: Record<string, string | undefined> = process.env,
@@ -29,8 +30,8 @@ export function resolveServerScript(
   // Dev mode: cli.ts runs directly from browse/src
   // On macOS/Linux, import.meta.dir starts with /
   // On Windows, it starts with a drive letter (e.g., C:\...)
-  if (!metaDir.includes('$bunfs')) {
-    const direct = path.resolve(metaDir, 'server.ts');
+  if (!metaDir.includes("$bunfs")) {
+    const direct = path.resolve(metaDir, "server.ts");
     if (fs.existsSync(direct)) {
       return direct;
     }
@@ -38,14 +39,19 @@ export function resolveServerScript(
 
   // Compiled binary: derive the source tree from browse/dist/browse
   if (execPath) {
-    const adjacent = path.resolve(path.dirname(execPath), '..', 'src', 'server.ts');
+    const adjacent = path.resolve(
+      path.dirname(execPath),
+      "..",
+      "src",
+      "server.ts"
+    );
     if (fs.existsSync(adjacent)) {
       return adjacent;
     }
   }
 
   throw new Error(
-    'Cannot find server.ts. Set BROWSE_SERVER_SCRIPT env or run from the browse source tree.'
+    "Cannot find server.ts. Set BROWSE_SERVER_SCRIPT env or run from the browse source tree."
   );
 }
 
@@ -60,14 +66,14 @@ export function resolveNodeServerScript(
   execPath: string = process.execPath
 ): string | null {
   // Dev mode
-  if (!metaDir.includes('$bunfs')) {
-    const distScript = path.resolve(metaDir, '..', 'dist', 'server-node.mjs');
+  if (!metaDir.includes("$bunfs")) {
+    const distScript = path.resolve(metaDir, "..", "dist", "server-node.mjs");
     if (fs.existsSync(distScript)) return distScript;
   }
 
   // Compiled binary: browse/dist/browse → browse/dist/server-node.mjs
   if (execPath) {
-    const adjacent = path.resolve(path.dirname(execPath), 'server-node.mjs');
+    const adjacent = path.resolve(path.dirname(execPath), "server-node.mjs");
     if (fs.existsSync(adjacent)) return adjacent;
   }
 
@@ -79,7 +85,7 @@ const NODE_SERVER_SCRIPT = IS_WINDOWS ? resolveNodeServerScript() : null;
 // On Windows, hard-fail if server-node.mjs is missing — the Bun path is known broken.
 if (IS_WINDOWS && !NODE_SERVER_SCRIPT) {
   throw new Error(
-    'server-node.mjs not found. Run `bun run build` to generate the Windows server bundle.'
+    "server-node.mjs not found. Run `bun run build` to generate the Windows server bundle."
   );
 }
 
@@ -95,7 +101,7 @@ interface ServerState {
 // ─── State File ────────────────────────────────────────────────
 function readState(): ServerState | null {
   try {
-    const data = fs.readFileSync(config.stateFile, 'utf-8');
+    const data = fs.readFileSync(config.stateFile, "utf-8");
     return JSON.parse(data);
   } catch {
     return null;
@@ -108,8 +114,8 @@ function isProcessAlive(pid: number): boolean {
     // Use tasklist as a fallback. Only for one-shot calls — too slow for polling loops.
     try {
       const result = Bun.spawnSync(
-        ['tasklist', '/FI', `PID eq ${pid}`, '/NH', '/FO', 'CSV'],
-        { stdout: 'pipe', stderr: 'pipe', timeout: 3000 }
+        ["tasklist", "/FI", `PID eq ${pid}`, "/NH", "/FO", "CSV"],
+        { stdout: "pipe", stderr: "pipe", timeout: 3000 }
       );
       return result.stdout.toString().includes(`"${pid}"`);
     } catch {
@@ -134,8 +140,8 @@ export async function isServerHealthy(port: number): Promise<boolean> {
       signal: AbortSignal.timeout(2000),
     });
     if (!resp.ok) return false;
-    const health = await resp.json() as any;
-    return health.status === 'healthy';
+    const health = (await resp.json()) as any;
+    return health.status === "healthy";
   } catch {
     return false;
   }
@@ -148,10 +154,11 @@ async function killServer(pid: number): Promise<void> {
   if (IS_WINDOWS) {
     // taskkill /T /F kills the process tree (Node + Chromium)
     try {
-      Bun.spawnSync(
-        ['taskkill', '/PID', String(pid), '/T', '/F'],
-        { stdout: 'pipe', stderr: 'pipe', timeout: 5000 }
-      );
+      Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], {
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 5000,
+      });
     } catch {}
     const deadline = Date.now() + 2000;
     while (Date.now() < deadline && isProcessAlive(pid)) {
@@ -160,7 +167,11 @@ async function killServer(pid: number): Promise<void> {
     return;
   }
 
-  try { process.kill(pid, 'SIGTERM'); } catch { return; }
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    return;
+  }
 
   // Wait up to 2s for graceful shutdown
   const deadline = Date.now() + 2000;
@@ -170,7 +181,9 @@ async function killServer(pid: number): Promise<void> {
 
   // Force kill if still alive
   if (isProcessAlive(pid)) {
-    try { process.kill(pid, 'SIGKILL'); } catch {}
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {}
   }
 }
 
@@ -184,19 +197,28 @@ function cleanupLegacyState(): void {
   if (IS_WINDOWS) return;
 
   try {
-    const files = fs.readdirSync('/tmp').filter(f => f.startsWith('browse-server') && f.endsWith('.json'));
+    const files = fs
+      .readdirSync("/tmp")
+      .filter((f) => f.startsWith("browse-server") && f.endsWith(".json"));
     for (const file of files) {
       const fullPath = `/tmp/${file}`;
       try {
-        const data = JSON.parse(fs.readFileSync(fullPath, 'utf-8'));
+        const data = JSON.parse(fs.readFileSync(fullPath, "utf-8"));
         if (data.pid && isProcessAlive(data.pid)) {
           // Verify this is actually a browse server before killing
-          const check = Bun.spawnSync(['ps', '-p', String(data.pid), '-o', 'command='], {
-            stdout: 'pipe', stderr: 'pipe', timeout: 2000,
-          });
+          const check = Bun.spawnSync(
+            ["ps", "-p", String(data.pid), "-o", "command="],
+            {
+              stdout: "pipe",
+              stderr: "pipe",
+              timeout: 2000,
+            }
+          );
           const cmd = check.stdout.toString().trim();
-          if (cmd.includes('bun') || cmd.includes('server.ts')) {
-            try { process.kill(data.pid, 'SIGTERM'); } catch {}
+          if (cmd.includes("bun") || cmd.includes("server.ts")) {
+            try {
+              process.kill(data.pid, "SIGTERM");
+            } catch {}
           }
         }
         fs.unlinkSync(fullPath);
@@ -205,11 +227,18 @@ function cleanupLegacyState(): void {
       }
     }
     // Clean up legacy log files too
-    const logFiles = fs.readdirSync('/tmp').filter(f =>
-      f.startsWith('browse-console') || f.startsWith('browse-network') || f.startsWith('browse-dialog')
-    );
+    const logFiles = fs
+      .readdirSync("/tmp")
+      .filter(
+        (f) =>
+          f.startsWith("browse-console") ||
+          f.startsWith("browse-network") ||
+          f.startsWith("browse-dialog")
+      );
     for (const file of logFiles) {
-      try { fs.unlinkSync(`/tmp/${file}`); } catch {}
+      try {
+        fs.unlinkSync(`/tmp/${file}`);
+      } catch {}
     }
   } catch {
     // /tmp read failed — skip legacy cleanup
@@ -221,8 +250,12 @@ async function startServer(): Promise<ServerState> {
   ensureStateDir(config);
 
   // Clean up stale state file and error log
-  try { fs.unlinkSync(config.stateFile); } catch {}
-  try { fs.unlinkSync(path.join(config.stateDir, 'browse-startup-error.log')); } catch {}
+  try {
+    fs.unlinkSync(config.stateFile);
+  } catch {}
+  try {
+    fs.unlinkSync(path.join(config.stateDir, "browse-startup-error.log"));
+  } catch {}
 
   let proc: any = null;
 
@@ -236,11 +269,13 @@ async function startServer(): Promise<ServerState> {
       `spawn(process.execPath,[${JSON.stringify(NODE_SERVER_SCRIPT)}],` +
       `{detached:true,stdio:['ignore','ignore','ignore'],env:Object.assign({},process.env,` +
       `{BROWSE_STATE_FILE:${JSON.stringify(config.stateFile)}})}).unref()`;
-    Bun.spawnSync(['node', '-e', launcherCode], { stdio: ['ignore', 'ignore', 'ignore'] });
+    Bun.spawnSync(["node", "-e", launcherCode], {
+      stdio: ["ignore", "ignore", "ignore"],
+    });
   } else {
     // macOS/Linux: Bun.spawn + unref works correctly
-    proc = Bun.spawn(['bun', 'run', SERVER_SCRIPT], {
-      stdio: ['ignore', 'pipe', 'pipe'],
+    proc = Bun.spawn(["bun", "run", SERVER_SCRIPT], {
+      stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, BROWSE_STATE_FILE: config.stateFile },
     });
     proc.unref();
@@ -252,7 +287,7 @@ async function startServer(): Promise<ServerState> {
   const start = Date.now();
   while (Date.now() - start < MAX_START_WAIT) {
     const state = readState();
-    if (state && await isServerHealthy(state.port)) {
+    if (state && (await isServerHealthy(state.port))) {
       return state;
     }
     await Bun.sleep(100);
@@ -270,14 +305,14 @@ async function startServer(): Promise<ServerState> {
   } else {
     // Windows: check startup error log (server writes errors to disk since
     // stderr is unavailable due to stdio: 'ignore' for detachment)
-    const errorLogPath = path.join(config.stateDir, 'browse-startup-error.log');
+    const errorLogPath = path.join(config.stateDir, "browse-startup-error.log");
     try {
-      const errorLog = fs.readFileSync(errorLogPath, 'utf-8').trim();
+      const errorLog = fs.readFileSync(errorLogPath, "utf-8").trim();
       if (errorLog) {
         throw new Error(`Server failed to start:\n${errorLog}`);
       }
     } catch (e: any) {
-      if (e.code !== 'ENOENT') throw e;
+      if (e.code !== "ENOENT") throw e;
     }
   }
   throw new Error(`Server failed to start within ${MAX_START_WAIT / 1000}s`);
@@ -291,14 +326,21 @@ function acquireServerLock(): (() => void) | null {
   const lockPath = `${config.stateFile}.lock`;
   try {
     // O_CREAT | O_EXCL — fails if file already exists (atomic check-and-create)
-    const fd = fs.openSync(lockPath, fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY);
+    const fd = fs.openSync(
+      lockPath,
+      fs.constants.O_CREAT | fs.constants.O_EXCL | fs.constants.O_WRONLY
+    );
     fs.writeSync(fd, `${process.pid}\n`);
     fs.closeSync(fd);
-    return () => { try { fs.unlinkSync(lockPath); } catch {} };
+    return () => {
+      try {
+        fs.unlinkSync(lockPath);
+      } catch {}
+    };
   } catch {
     // Lock already held — check if the holder is still alive
     try {
-      const holderPid = parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
+      const holderPid = parseInt(fs.readFileSync(lockPath, "utf8").trim(), 10);
       if (holderPid && isProcessAlive(holderPid)) {
         return null; // Another live process holds the lock
       }
@@ -317,11 +359,15 @@ async function ensureServer(): Promise<ServerState> {
   // Health-check-first: HTTP is definitive proof the server is alive and responsive.
   // This replaces the PID-gated approach which breaks on Windows (Bun's process.kill
   // always throws ESRCH for Windows PIDs in compiled binaries).
-  if (state && await isServerHealthy(state.port)) {
+  if (state && (await isServerHealthy(state.port))) {
     // Check for binary version mismatch (auto-restart on update)
     const currentVersion = readVersionHash();
-    if (currentVersion && state.binaryVersion && currentVersion !== state.binaryVersion) {
-      console.error('[browse] Binary updated, restarting server...');
+    if (
+      currentVersion &&
+      state.binaryVersion &&
+      currentVersion !== state.binaryVersion
+    ) {
+      console.error("[browse] Binary updated, restarting server...");
       await killServer(state.pid);
       return startServer();
     }
@@ -335,20 +381,25 @@ async function ensureServer(): Promise<ServerState> {
   const releaseLock = acquireServerLock();
   if (!releaseLock) {
     // Another process is starting the server — wait for it
-    console.error('[browse] Another instance is starting the server, waiting...');
+    console.error(
+      "[browse] Another instance is starting the server, waiting..."
+    );
     const start = Date.now();
     while (Date.now() - start < MAX_START_WAIT) {
       const freshState = readState();
-      if (freshState && await isServerHealthy(freshState.port)) return freshState;
+      if (freshState && (await isServerHealthy(freshState.port)))
+        return freshState;
       await Bun.sleep(200);
     }
-    throw new Error('Timed out waiting for another instance to start the server');
+    throw new Error(
+      "Timed out waiting for another instance to start the server"
+    );
   }
 
   try {
     // Re-read state under lock in case another process just started the server
     const freshState = readState();
-    if (freshState && await isServerHealthy(freshState.port)) {
+    if (freshState && (await isServerHealthy(freshState.port))) {
       return freshState;
     }
 
@@ -356,7 +407,7 @@ async function ensureServer(): Promise<ServerState> {
     if (state && state.pid) {
       await killServer(state.pid);
     }
-    console.error('[browse] Starting server...');
+    console.error("[browse] Starting server...");
     return await startServer();
   } finally {
     releaseLock();
@@ -364,15 +415,20 @@ async function ensureServer(): Promise<ServerState> {
 }
 
 // ─── Command Dispatch ──────────────────────────────────────────
-async function sendCommand(state: ServerState, command: string, args: string[], retries = 0): Promise<void> {
+async function sendCommand(
+  state: ServerState,
+  command: string,
+  args: string[],
+  retries = 0
+): Promise<void> {
   const body = JSON.stringify({ command, args });
 
   try {
     const resp = await fetch(`http://127.0.0.1:${state.port}/command`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${state.token}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${state.token}`,
       },
       body,
       signal: AbortSignal.timeout(30000),
@@ -380,19 +436,21 @@ async function sendCommand(state: ServerState, command: string, args: string[], 
 
     if (resp.status === 401) {
       // Token mismatch — server may have restarted
-      console.error('[browse] Auth failed — server may have restarted. Retrying...');
+      console.error(
+        "[browse] Auth failed — server may have restarted. Retrying..."
+      );
       const newState = readState();
       if (newState && newState.token !== state.token) {
         return sendCommand(newState, command, args);
       }
-      throw new Error('Authentication failed');
+      throw new Error("Authentication failed");
     }
 
     const text = await resp.text();
 
     if (resp.ok) {
       process.stdout.write(text);
-      if (!text.endsWith('\n')) process.stdout.write('\n');
+      if (!text.endsWith("\n")) process.stdout.write("\n");
     } else {
       // Try to parse as JSON error
       try {
@@ -405,14 +463,19 @@ async function sendCommand(state: ServerState, command: string, args: string[], 
       process.exit(1);
     }
   } catch (err: any) {
-    if (err.name === 'AbortError') {
-      console.error('[browse] Command timed out after 30s');
+    if (err.name === "AbortError") {
+      console.error("[browse] Command timed out after 30s");
       process.exit(1);
     }
     // Connection error — server may have crashed
-    if (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET' || err.message?.includes('fetch failed')) {
-      if (retries >= 1) throw new Error('[browse] Server crashed twice in a row — aborting');
-      console.error('[browse] Server connection lost. Restarting...');
+    if (
+      err.code === "ECONNREFUSED" ||
+      err.code === "ECONNRESET" ||
+      err.message?.includes("fetch failed")
+    ) {
+      if (retries >= 1)
+        throw new Error("[browse] Server crashed twice in a row — aborting");
+      console.error("[browse] Server connection lost. Restarting...");
       // Kill the old server to avoid orphaned chromium processes
       const oldState = readState();
       if (oldState && oldState.pid) {
@@ -429,7 +492,7 @@ async function sendCommand(state: ServerState, command: string, args: string[], 
 async function main() {
   const args = process.argv.slice(2);
 
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
+  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
     console.log(`gstack browse — Fast headless browser for AI coding agents
 
 Usage: browse <command> [args...]
@@ -472,7 +535,7 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
   const commandArgs = args.slice(1);
 
   // Special case: chain reads from stdin
-  if (command === 'chain' && commandArgs.length === 0) {
+  if (command === "chain" && commandArgs.length === 0) {
     const stdin = await Bun.stdin.text();
     commandArgs.push(stdin.trim());
   }

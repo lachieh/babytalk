@@ -17,27 +17,41 @@
  * Later: "click @e3" → look up Locator → locator.click()
  */
 
-import type { Page, Locator } from 'playwright';
-import type { BrowserManager, RefEntry } from './browser-manager';
-import * as Diff from 'diff';
-import { TEMP_DIR, isPathWithin } from './platform';
+import * as Diff from "diff";
+import type { Page, Locator } from "playwright";
+
+import type { BrowserManager, RefEntry } from "./browser-manager";
+import { TEMP_DIR, isPathWithin } from "./platform";
 
 // Roles considered "interactive" for the -i flag
 const INTERACTIVE_ROLES = new Set([
-  'button', 'link', 'textbox', 'checkbox', 'radio', 'combobox',
-  'listbox', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
-  'option', 'searchbox', 'slider', 'spinbutton', 'switch', 'tab',
-  'treeitem',
+  "button",
+  "link",
+  "textbox",
+  "checkbox",
+  "radio",
+  "combobox",
+  "listbox",
+  "menuitem",
+  "menuitemcheckbox",
+  "menuitemradio",
+  "option",
+  "searchbox",
+  "slider",
+  "spinbutton",
+  "switch",
+  "tab",
+  "treeitem",
 ]);
 
 interface SnapshotOptions {
-  interactive?: boolean;       // -i: only interactive elements
-  compact?: boolean;           // -c: remove empty structural elements
-  depth?: number;              // -d N: limit tree depth
-  selector?: string;           // -s SEL: scope to CSS selector
-  diff?: boolean;              // -D / --diff: diff against last snapshot
-  annotate?: boolean;          // -a / --annotate: annotated screenshot
-  outputPath?: string;         // -o / --output: path for annotated screenshot
+  interactive?: boolean; // -i: only interactive elements
+  compact?: boolean; // -c: remove empty structural elements
+  depth?: number; // -d N: limit tree depth
+  selector?: string; // -s SEL: scope to CSS selector
+  diff?: boolean; // -D / --diff: diff against last snapshot
+  annotate?: boolean; // -a / --annotate: annotated screenshot
+  outputPath?: string; // -o / --output: path for annotated screenshot
   cursorInteractive?: boolean; // -C / --cursor-interactive: scan cursor:pointer etc.
 }
 
@@ -56,22 +70,72 @@ export const SNAPSHOT_FLAGS: Array<{
   valueHint?: string;
   optionKey: keyof SnapshotOptions;
 }> = [
-  { short: '-i', long: '--interactive', description: 'Interactive elements only (buttons, links, inputs) with @e refs', optionKey: 'interactive' },
-  { short: '-c', long: '--compact', description: 'Compact (no empty structural nodes)', optionKey: 'compact' },
-  { short: '-d', long: '--depth', description: 'Limit tree depth (0 = root only, default: unlimited)', takesValue: true, valueHint: '<N>', optionKey: 'depth' },
-  { short: '-s', long: '--selector', description: 'Scope to CSS selector', takesValue: true, valueHint: '<sel>', optionKey: 'selector' },
-  { short: '-D', long: '--diff', description: 'Unified diff against previous snapshot (first call stores baseline)', optionKey: 'diff' },
-  { short: '-a', long: '--annotate', description: 'Annotated screenshot with red overlay boxes and ref labels', optionKey: 'annotate' },
-  { short: '-o', long: '--output', description: 'Output path for annotated screenshot (default: <temp>/browse-annotated.png)', takesValue: true, valueHint: '<path>', optionKey: 'outputPath' },
-  { short: '-C', long: '--cursor-interactive', description: 'Cursor-interactive elements (@c refs — divs with pointer, onclick)', optionKey: 'cursorInteractive' },
+  {
+    short: "-i",
+    long: "--interactive",
+    description:
+      "Interactive elements only (buttons, links, inputs) with @e refs",
+    optionKey: "interactive",
+  },
+  {
+    short: "-c",
+    long: "--compact",
+    description: "Compact (no empty structural nodes)",
+    optionKey: "compact",
+  },
+  {
+    short: "-d",
+    long: "--depth",
+    description: "Limit tree depth (0 = root only, default: unlimited)",
+    takesValue: true,
+    valueHint: "<N>",
+    optionKey: "depth",
+  },
+  {
+    short: "-s",
+    long: "--selector",
+    description: "Scope to CSS selector",
+    takesValue: true,
+    valueHint: "<sel>",
+    optionKey: "selector",
+  },
+  {
+    short: "-D",
+    long: "--diff",
+    description:
+      "Unified diff against previous snapshot (first call stores baseline)",
+    optionKey: "diff",
+  },
+  {
+    short: "-a",
+    long: "--annotate",
+    description: "Annotated screenshot with red overlay boxes and ref labels",
+    optionKey: "annotate",
+  },
+  {
+    short: "-o",
+    long: "--output",
+    description:
+      "Output path for annotated screenshot (default: <temp>/browse-annotated.png)",
+    takesValue: true,
+    valueHint: "<path>",
+    optionKey: "outputPath",
+  },
+  {
+    short: "-C",
+    long: "--cursor-interactive",
+    description:
+      "Cursor-interactive elements (@c refs — divs with pointer, onclick)",
+    optionKey: "cursorInteractive",
+  },
 ];
 
 interface ParsedNode {
   indent: number;
   role: string;
   name: string | null;
-  props: string;      // e.g., "[level=1]"
-  children: string;   // inline text content after ":"
+  props: string; // e.g., "[level=1]"
+  children: string; // inline text content after ":"
   rawLine: string;
 }
 
@@ -81,14 +145,16 @@ interface ParsedNode {
 export function parseSnapshotArgs(args: string[]): SnapshotOptions {
   const opts: SnapshotOptions = {};
   for (let i = 0; i < args.length; i++) {
-    const flag = SNAPSHOT_FLAGS.find(f => f.short === args[i] || f.long === args[i]);
+    const flag = SNAPSHOT_FLAGS.find(
+      (f) => f.short === args[i] || f.long === args[i]
+    );
     if (!flag) throw new Error(`Unknown snapshot flag: ${args[i]}`);
     if (flag.takesValue) {
       const value = args[++i];
       if (!value) throw new Error(`Usage: snapshot ${flag.short} <value>`);
-      if (flag.optionKey === 'depth') {
+      if (flag.optionKey === "depth") {
         (opts as any)[flag.optionKey] = parseInt(value, 10);
-        if (isNaN(opts.depth!)) throw new Error('Usage: snapshot -d <number>');
+        if (isNaN(opts.depth!)) throw new Error("Usage: snapshot -d <number>");
       } else {
         (opts as any)[flag.optionKey] = value;
       }
@@ -112,7 +178,9 @@ export function parseSnapshotArgs(args: string[]): SnapshotOptions {
  */
 function parseLine(line: string): ParsedNode | null {
   // Match: (indent)(- )(role)( "name")?( [props])?(: inline)?
-  const match = line.match(/^(\s*)-\s+(\w+)(?:\s+"([^"]*)")?(?:\s+(\[.*?\]))?\s*(?::\s*(.*))?$/);
+  const match = line.match(
+    /^(\s*)-\s+(\w+)(?:\s+"([^"]*)")?(?:\s+(\[.*?\]))?\s*(?::\s*(.*))?$/
+  );
   if (!match) {
     // Skip metadata lines like "- /url: /a"
     return null;
@@ -121,8 +189,8 @@ function parseLine(line: string): ParsedNode | null {
     indent: match[1].length,
     role: match[2],
     name: match[3] ?? null,
-    props: match[4] || '',
-    children: match[5]?.trim() || '',
+    props: match[4] || "",
+    children: match[5]?.trim() || "",
     rawLine: line,
   };
 }
@@ -144,17 +212,17 @@ export async function handleSnapshot(
     const count = await rootLocator.count();
     if (count === 0) throw new Error(`Selector not found: ${opts.selector}`);
   } else {
-    rootLocator = page.locator('body');
+    rootLocator = page.locator("body");
   }
 
   const ariaText = await rootLocator.ariaSnapshot();
   if (!ariaText || ariaText.trim().length === 0) {
     bm.setRefMap(new Map());
-    return '(no accessible elements found)';
+    return "(no accessible elements found)";
   }
 
   // Parse the ariaSnapshot output
-  const lines = ariaText.split('\n');
+  const lines = ariaText.split("\n");
   const refMap = new Map<string, RefEntry>();
   const output: string[] = [];
   let refCounter = 1;
@@ -167,7 +235,7 @@ export async function handleSnapshot(
   for (const line of lines) {
     const node = parseLine(line);
     if (!node) continue;
-    const key = `${node.role}:${node.name || ''}`;
+    const key = `${node.role}:${node.name || ""}`;
     roleNameCounts.set(key, (roleNameCounts.get(key) || 0) + 1);
   }
 
@@ -185,20 +253,21 @@ export async function handleSnapshot(
     // Interactive filter: skip non-interactive but still count for locator indices
     if (opts.interactive && !isInteractive) {
       // Still track for nth() counts
-      const key = `${node.role}:${node.name || ''}`;
+      const key = `${node.role}:${node.name || ""}`;
       roleNameSeen.set(key, (roleNameSeen.get(key) || 0) + 1);
       continue;
     }
 
     // Compact filter: skip elements with no name and no inline content that aren't interactive
-    if (opts.compact && !isInteractive && !node.name && !node.children) continue;
+    if (opts.compact && !isInteractive && !node.name && !node.children)
+      continue;
 
     // Assign ref
     const ref = `e${refCounter++}`;
-    const indent = '  '.repeat(depth);
+    const indent = "  ".repeat(depth);
 
     // Build Playwright locator
-    const key = `${node.role}:${node.name || ''}`;
+    const key = `${node.role}:${node.name || ""}`;
     const seenIndex = roleNameSeen.get(key) || 0;
     roleNameSeen.set(key, seenIndex + 1);
     const totalCount = roleNameCounts.get(key) || 1;
@@ -219,7 +288,7 @@ export async function handleSnapshot(
       locator = locator.nth(seenIndex);
     }
 
-    refMap.set(ref, { locator, role: node.role, name: node.name || '' });
+    refMap.set(ref, { locator, role: node.role, name: node.name || "" });
 
     // Format output line
     let outputLine = `${indent}@${ref} [${node.role}]`;
@@ -235,23 +304,36 @@ export async function handleSnapshot(
     try {
       const cursorElements = await page.evaluate(() => {
         const STANDARD_INTERACTIVE = new Set([
-          'A', 'BUTTON', 'INPUT', 'SELECT', 'TEXTAREA', 'SUMMARY', 'DETAILS',
+          "A",
+          "BUTTON",
+          "INPUT",
+          "SELECT",
+          "TEXTAREA",
+          "SUMMARY",
+          "DETAILS",
         ]);
 
-        const results: Array<{ selector: string; text: string; reason: string }> = [];
-        const allElements = document.querySelectorAll('*');
+        const results: Array<{
+          selector: string;
+          text: string;
+          reason: string;
+        }> = [];
+        const allElements = document.querySelectorAll("*");
 
         for (const el of allElements) {
           // Skip standard interactive elements (already in ARIA tree)
           if (STANDARD_INTERACTIVE.has(el.tagName)) continue;
           // Skip hidden elements
-          if (!(el as HTMLElement).offsetParent && el.tagName !== 'BODY') continue;
+          if (!(el as HTMLElement).offsetParent && el.tagName !== "BODY")
+            continue;
 
           const style = getComputedStyle(el);
-          const hasCursorPointer = style.cursor === 'pointer';
-          const hasOnclick = el.hasAttribute('onclick');
-          const hasTabindex = el.hasAttribute('tabindex') && parseInt(el.getAttribute('tabindex')!, 10) >= 0;
-          const hasRole = el.hasAttribute('role');
+          const hasCursorPointer = style.cursor === "pointer";
+          const hasOnclick = el.hasAttribute("onclick");
+          const hasTabindex =
+            el.hasAttribute("tabindex") &&
+            parseInt(el.getAttribute("tabindex")!, 10) >= 0;
+          const hasRole = el.hasAttribute("role");
 
           if (!hasCursorPointer && !hasOnclick && !hasTabindex) continue;
           // Skip if it has an ARIA role (likely already captured)
@@ -265,36 +347,45 @@ export async function handleSnapshot(
             if (!parent) break;
             const siblings = [...parent.children];
             const index = siblings.indexOf(current) + 1;
-            parts.unshift(`${current.tagName.toLowerCase()}:nth-child(${index})`);
+            parts.unshift(
+              `${current.tagName.toLowerCase()}:nth-child(${index})`
+            );
             current = parent;
           }
-          const selector = parts.join(' > ');
+          const selector = parts.join(" > ");
 
-          const text = (el as HTMLElement).innerText?.trim().slice(0, 80) || el.tagName.toLowerCase();
+          const text =
+            (el as HTMLElement).innerText?.trim().slice(0, 80) ||
+            el.tagName.toLowerCase();
           const reasons: string[] = [];
-          if (hasCursorPointer) reasons.push('cursor:pointer');
-          if (hasOnclick) reasons.push('onclick');
-          if (hasTabindex) reasons.push(`tabindex=${el.getAttribute('tabindex')}`);
+          if (hasCursorPointer) reasons.push("cursor:pointer");
+          if (hasOnclick) reasons.push("onclick");
+          if (hasTabindex)
+            reasons.push(`tabindex=${el.getAttribute("tabindex")}`);
 
-          results.push({ selector, text, reason: reasons.join(', ') });
+          results.push({ selector, text, reason: reasons.join(", ") });
         }
         return results;
       });
 
       if (cursorElements.length > 0) {
-        output.push('');
-        output.push('── cursor-interactive (not in ARIA tree) ──');
+        output.push("");
+        output.push("── cursor-interactive (not in ARIA tree) ──");
         let cRefCounter = 1;
         for (const elem of cursorElements) {
           const ref = `c${cRefCounter++}`;
           const locator = page.locator(elem.selector);
-          refMap.set(ref, { locator, role: 'cursor-interactive', name: elem.text });
+          refMap.set(ref, {
+            locator,
+            role: "cursor-interactive",
+            name: elem.text,
+          });
           output.push(`@${ref} [${elem.reason}] "${elem.text}"`);
         }
       }
     } catch {
-      output.push('');
-      output.push('(cursor scan failed — CSP restriction)');
+      output.push("");
+      output.push("(cursor scan failed — CSP restriction)");
     }
   }
 
@@ -302,23 +393,27 @@ export async function handleSnapshot(
   bm.setRefMap(refMap);
 
   if (output.length === 0) {
-    return '(no interactive elements found)';
+    return "(no interactive elements found)";
   }
 
-  const snapshotText = output.join('\n');
+  const snapshotText = output.join("\n");
 
   // ─── Annotated screenshot (-a) ────────────────────────────
   if (opts.annotate) {
-    const screenshotPath = opts.outputPath || `${TEMP_DIR}/browse-annotated.png`;
+    const screenshotPath =
+      opts.outputPath || `${TEMP_DIR}/browse-annotated.png`;
     // Validate output path (consistent with screenshot/pdf/responsive)
-    const resolvedPath = require('path').resolve(screenshotPath);
+    const resolvedPath = require("path").resolve(screenshotPath);
     const safeDirs = [TEMP_DIR, process.cwd()];
     if (!safeDirs.some((dir: string) => isPathWithin(resolvedPath, dir))) {
-      throw new Error(`Path must be within: ${safeDirs.join(', ')}`);
+      throw new Error(`Path must be within: ${safeDirs.join(", ")}`);
     }
     try {
       // Inject overlay divs at each ref's bounding box
-      const boxes: Array<{ ref: string; box: { x: number; y: number; width: number; height: number } }> = [];
+      const boxes: Array<{
+        ref: string;
+        box: { x: number; y: number; width: number; height: number };
+      }> = [];
       for (const [ref, entry] of refMap) {
         try {
           const box = await entry.locator.boundingBox({ timeout: 1000 });
@@ -332,8 +427,8 @@ export async function handleSnapshot(
 
       await page.evaluate((boxes) => {
         for (const { ref, box } of boxes) {
-          const overlay = document.createElement('div');
-          overlay.className = '__browse_annotation__';
+          const overlay = document.createElement("div");
+          overlay.className = "__browse_annotation__";
           overlay.style.cssText = `
             position: absolute; top: ${box.y}px; left: ${box.x}px;
             width: ${box.width}px; height: ${box.height}px;
@@ -341,9 +436,10 @@ export async function handleSnapshot(
             pointer-events: none; z-index: 99999;
             font-size: 10px; color: red; font-weight: bold;
           `;
-          const label = document.createElement('span');
+          const label = document.createElement("span");
           label.textContent = ref;
-          label.style.cssText = 'position: absolute; top: -14px; left: 0; background: red; color: white; padding: 0 3px; font-size: 10px;';
+          label.style.cssText =
+            "position: absolute; top: -14px; left: 0; background: red; color: white; padding: 0 3px; font-size: 10px;";
           overlay.appendChild(label);
           document.body.appendChild(overlay);
         }
@@ -353,16 +449,20 @@ export async function handleSnapshot(
 
       // Always remove overlays
       await page.evaluate(() => {
-        document.querySelectorAll('.__browse_annotation__').forEach(el => el.remove());
+        document
+          .querySelectorAll(".__browse_annotation__")
+          .forEach((el) => el.remove());
       });
 
-      output.push('');
+      output.push("");
       output.push(`[annotated screenshot: ${screenshotPath}]`);
     } catch {
       // Remove overlays even on screenshot failure
       try {
         await page.evaluate(() => {
-          document.querySelectorAll('.__browse_annotation__').forEach(el => el.remove());
+          document
+            .querySelectorAll(".__browse_annotation__")
+            .forEach((el) => el.remove());
         });
       } catch {}
     }
@@ -373,26 +473,33 @@ export async function handleSnapshot(
     const lastSnapshot = bm.getLastSnapshot();
     if (!lastSnapshot) {
       bm.setLastSnapshot(snapshotText);
-      return snapshotText + '\n\n(no previous snapshot to diff against — this snapshot stored as baseline)';
+      return (
+        snapshotText +
+        "\n\n(no previous snapshot to diff against — this snapshot stored as baseline)"
+      );
     }
 
     const changes = Diff.diffLines(lastSnapshot, snapshotText);
-    const diffOutput: string[] = ['--- previous snapshot', '+++ current snapshot', ''];
+    const diffOutput: string[] = [
+      "--- previous snapshot",
+      "+++ current snapshot",
+      "",
+    ];
 
     for (const part of changes) {
-      const prefix = part.added ? '+' : part.removed ? '-' : ' ';
-      const diffLines = part.value.split('\n').filter(l => l.length > 0);
+      const prefix = part.added ? "+" : part.removed ? "-" : " ";
+      const diffLines = part.value.split("\n").filter((l) => l.length > 0);
       for (const line of diffLines) {
         diffOutput.push(`${prefix} ${line}`);
       }
     }
 
     bm.setLastSnapshot(snapshotText);
-    return diffOutput.join('\n');
+    return diffOutput.join("\n");
   }
 
   // Store for future diffs
   bm.setLastSnapshot(snapshotText);
 
-  return output.join('\n');
+  return output.join("\n");
 }
