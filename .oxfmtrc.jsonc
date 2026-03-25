@@ -20,4 +20,5 @@
   "tabWidth": 2,
   "trailingComma": "es5",
   "useTabs": false,
+  "ignore": [".claude/skills/gstack/**"],
 }
