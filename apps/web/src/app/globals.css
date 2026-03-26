@@ -276,3 +276,11 @@ body {
 .animate-gentle-pulse {
   animation: gentle-pulse 1.8s var(--ease-in-out) infinite;
 }
+
+/* --- Safe area utilities for notched devices --- */
+.safe-top {
+  padding-top: max(var(--spacing-xl), env(safe-area-inset-top));
+}
+.safe-bottom {
+  padding-bottom: max(var(--spacing-xl), env(safe-area-inset-bottom));
+}

@@ -66,7 +66,7 @@ const VerifyContent = () => {
 
   if (error) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
         <div className="animate-fade-up max-w-sm text-center">
           <h1 className="text-[var(--font-size-xl)] font-bold text-danger-500">
             Something went wrong
@@ -86,7 +86,7 @@ const VerifyContent = () => {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
       <div className="text-center">
         <div className="mx-auto h-8 w-8 animate-breathe rounded-full bg-primary-200" />
         <p className="mt-spacing-xl text-[var(--font-size-base)] text-neutral-500">
@@ -100,7 +100,7 @@ const VerifyContent = () => {
 const VerifyPage = () => (
   <Suspense
     fallback={
-      <main className="flex min-h-screen flex-col items-center justify-center bg-surface">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-surface">
         <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
       </main>
     }
