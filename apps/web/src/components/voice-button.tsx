@@ -90,11 +90,12 @@ export const VoiceButton = () => {
           ? "animate-gentle-pulse bg-danger-100 text-danger-500"
           : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 active:scale-[0.96]"
       }`}
+      aria-label={listening ? "Stop recording" : "Start voice input"}
       onClick={listening ? handleStop : handleStart}
-      title={listening ? "Stop recording" : "Start voice input"}
       type="button"
     >
       <svg
+        aria-hidden="true"
         className="h-5 w-5"
         fill="none"
         stroke="currentColor"

@@ -137,11 +137,12 @@ const ChatInput = () => {
         />
         <VoiceButton />
         <button
+          aria-label="Send message"
           className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full bg-primary-500 px-spacing-lg py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform,opacity] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
           disabled={isPending || !value.trim()}
           type="submit"
         >
-          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </button>
