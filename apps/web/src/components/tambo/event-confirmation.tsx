@@ -103,14 +103,14 @@ export const EventConfirmation = ({
         </div>
         <div className="flex gap-spacing-xs">
           <button
-            className="min-h-[36px] min-w-[36px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+            className="min-h-[44px] min-w-[44px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
             onClick={handleEdit}
             type="button"
           >
             Edit
           </button>
           <button
-            className="min-h-[36px] min-w-[36px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-danger-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
+            className="min-h-[44px] min-w-[44px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-danger-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
             onClick={handleDelete}
             type="button"
           >
