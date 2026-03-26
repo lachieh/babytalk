@@ -77,13 +77,15 @@ export default function LoginPage() {
           Sign in with a magic link — no password needed
         </p>
         <form onSubmit={handleSubmit} className="mt-spacing-3xl flex flex-col gap-spacing-md">
+          <label htmlFor="login-email" className="sr-only">Email address</label>
           <input
+            id="login-email"
             type="email"
             value={email}
             onChange={handleEmailChange}
             placeholder="you@example.com"
             required
-            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors duration-[var(--duration-fast)] focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           />
           <button
             type="submit"
