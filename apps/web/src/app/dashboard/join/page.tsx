@@ -27,7 +27,7 @@ export default function JoinPage() {
         router.push("/dashboard");
       } catch (error) {
         setErrorMsg(
-          error instanceof Error ? error.message : "Failed to join household"
+          error instanceof Error ? error.message : "Failed to join"
         );
       } finally {
         setLoading(false);
@@ -42,33 +42,41 @@ export default function JoinPage() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-2xl font-bold">Join a Household</h1>
-      <p className="mt-4 text-gray-600">
-        Enter the invite code from your partner.
-      </p>
-      <form
-        className="mt-6 flex w-full max-w-sm flex-col gap-4"
-        onSubmit={handleSubmit}
-      >
-        <input
-          className="rounded-lg border px-4 py-2 text-center font-mono text-lg tracking-wider"
-          maxLength={8}
-          onChange={handleChange}
-          placeholder="Invite code"
-          required
-          type="text"
-          value={code}
-        />
-        <button
-          className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          disabled={loading || !code.trim()}
-          type="submit"
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+      <div className="animate-fade-up w-full max-w-sm text-center">
+        <h1 className="text-[var(--font-size-xl)] font-bold text-neutral-900">
+          Join your partner
+        </h1>
+        <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">
+          Enter the code they shared with you.
+        </p>
+        <form
+          className="mt-spacing-3xl flex flex-col gap-spacing-md"
+          onSubmit={handleSubmit}
         >
-          {loading ? "Joining..." : "Join"}
-        </button>
-        {errorMsg && <p className="text-red-500">{errorMsg}</p>}
-      </form>
+          <label htmlFor="invite-code" className="sr-only">Invite code</label>
+          <input
+            id="invite-code"
+            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-lg text-center font-mono text-[var(--font-size-xl)] tracking-[0.25em] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            maxLength={8}
+            onChange={handleChange}
+            placeholder="ABC123"
+            required
+            type="text"
+            value={code}
+          />
+          <button
+            className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            disabled={loading || !code.trim()}
+            type="submit"
+          >
+            {loading ? "Joining..." : "Join family"}
+          </button>
+          {errorMsg && (
+            <p className="text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+          )}
+        </form>
+      </div>
     </main>
   );
 }

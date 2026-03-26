@@ -14,6 +14,21 @@ const typeLabels: Record<string, string> = {
   sleep: "Nap",
 };
 
+const typeColors: Record<string, { border: string; bg: string; text: string; btn: string }> = {
+  feed: {
+    border: "border-feed-200",
+    bg: "bg-feed-50",
+    text: "text-feed-600",
+    btn: "bg-feed-500 hover:bg-feed-600",
+  },
+  sleep: {
+    border: "border-sleep-200",
+    bg: "bg-sleep-50",
+    text: "text-sleep-600",
+    btn: "bg-sleep-500 hover:bg-sleep-600",
+  },
+};
+
 const formatElapsed = (ms: number) => {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -49,28 +64,31 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
     }
   }, [setRunning, setValue, submit, eventId, type]);
 
+  const colors = typeColors[type] ?? typeColors.feed;
+
   return (
-    <div className="rounded-lg border-2 border-blue-200 bg-blue-50 p-4">
+    <div className={`animate-fade-up rounded-radius-lg border-2 p-spacing-lg ${colors.border} ${colors.bg}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-medium text-blue-600">
+          <p className={`text-[var(--font-size-sm)] font-medium ${colors.text}`}>
             {typeLabels[type] ?? type} Timer
           </p>
-          <p className="font-mono text-2xl font-bold text-blue-800">
+          <p className="mt-spacing-xs font-mono text-[var(--font-size-2xl)] font-bold tabular-nums text-neutral-800">
             {formatElapsed(elapsed)}
           </p>
         </div>
-        {running && (
+        {running ? (
           <button
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className={`min-h-[44px] rounded-radius-md px-spacing-xl py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] active:scale-[0.96] ${colors.btn}`}
             onClick={handleStop}
             type="button"
           >
             Stop
           </button>
-        )}
-        {!running && (
-          <span className="text-sm font-medium text-gray-500">Stopped</span>
+        ) : (
+          <span className="text-[var(--font-size-sm)] font-medium text-neutral-400">
+            Stopped
+          </span>
         )}
       </div>
     </div>

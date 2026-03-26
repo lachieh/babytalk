@@ -62,6 +62,77 @@ Expansions (~2 hours CC):
 
 - "Share this week" summary cards — great virality/growth feature, but it's data synthesis (intelligence layer). Ship with Context Engine phase.
 
+## Design System (Implemented)
+
+The following design foundation has been implemented in `globals.css` and applied across all components.
+
+### Color Palette
+
+All colors use OKLCH for perceptual uniformity. No stock Tailwind colors remain.
+
+| Token | Purpose | Hue |
+|-------|---------|-----|
+| `neutral-*` | Text, backgrounds, borders | 60 (warm amber undertone) |
+| `primary-*` | CTAs, user messages, active states | 30 (terracotta-rose) |
+| `feed-*` | Feed event type | 230 (sage blue) |
+| `sleep-*` | Sleep event type | 290 (soft lavender) |
+| `diaper-*` | Diaper event type | 80 (soft honey) |
+| `success-*` | Confirmations | 145 (sage green) |
+| `warning-*` | Caution states | 85 (warm honey) |
+| `danger-*` | Errors, destructive actions | 15 (soft rose) |
+| `urgency-ok/soon/overdue` | Timer status colors | 145/85/15 (softened traffic lights) |
+| `surface/surface-raised/surface-sunken` | Background layers | 60 (warm tint) |
+
+### Typography
+
+**Font**: Plus Jakarta Sans (Google Fonts) — humanist sans-serif, warm and readable.
+
+**Scale** (perfect fourth ratio 1.333, fluid with `clamp()`):
+- `xs`: 0.75rem — captions
+- `sm`: 0.875rem — secondary UI
+- `base`: 1rem — body
+- `lg`: 1.333rem — subheadings
+- `xl`: 1.777rem — page titles
+- `2xl`: 2.369rem — timer displays, hero
+- `3xl`: 3.157rem — landing page headline
+
+### Spacing
+
+4pt base system: 4, 8, 12, 16, 24, 32, 48, 64, 96px. Named semantically (`spacing-xs` through `spacing-5xl`).
+
+### Touch Targets
+
+All interactive elements enforce `min-h-[44px]` and `min-w-[44px]` for one-handed use.
+
+### Motion
+
+Three custom animations (all respect `prefers-reduced-motion`):
+- `animate-breathe` — loading states (2s gentle opacity pulse)
+- `animate-fade-up` — entrance animations (translateY + opacity)
+- `animate-gentle-pulse` — voice recording indicator (subtle scale + opacity)
+
+Easing: `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) for natural deceleration.
+
+### Dark Mode
+
+Dark mode overrides use warm-tinted backgrounds (hue 60), not pure grays:
+- `surface`: `oklch(15% 0.01 60)` — cozy, not stark
+- `surface-raised`: `oklch(18% 0.012 60)`
+- `surface-sunken`: `oklch(12% 0.008 60)`
+
+The auto dark mode (8pm-7am) specified in scope decision #4 should toggle a `.dark` class on `<html>` rather than relying solely on `prefers-color-scheme`, enabling the time-based behavior.
+
+### UX Copy Changes
+
+| Before | After | Why |
+|--------|-------|-----|
+| "Create Household" | "Create your family" | Warmer, less administrative |
+| "Join an existing household" | "Join your partner's family" | More personal |
+| "Birth weight in grams (optional)" | Label: "Birth weight" + placeholder: "Grams" + "optional" tag | Less clinical |
+| "Babytalk / Welcome to Babytalk" | "For tired parents / BabyTalk" + value prop | Acknowledges user, communicates purpose |
+| "Thinking..." | Animated dots | Less verbal, more ambient |
+| "No events yet today." | "Nothing logged yet today" + helpful hint | Teaches the interface |
+
 ## Implementation Approach
 
 The approach builds on existing code (voice-button.tsx, tambo/tools.ts, quick-actions.tsx) and adds:

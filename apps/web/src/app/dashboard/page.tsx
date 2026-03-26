@@ -14,7 +14,17 @@ const MessageList = () => {
   }, [messages]);
 
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="flex-1 space-y-spacing-md overflow-y-auto px-spacing-lg py-spacing-xl">
+      {messages.length === 0 && !isStreaming && (
+        <div className="animate-fade-up flex h-full flex-col items-center justify-center text-center">
+          <p className="text-[var(--font-size-lg)] font-semibold text-neutral-800">
+            Hi there
+          </p>
+          <p className="mt-spacing-xs max-w-[280px] text-[var(--font-size-sm)] leading-relaxed text-neutral-400">
+            Tell me what happened — &quot;baby just ate&quot; or &quot;diaper change&quot; — or tap the mic to talk.
+          </p>
+        </div>
+      )}
       {messages.map((msg) => {
         const isUser = msg.role === "user";
 
@@ -24,15 +34,17 @@ const MessageList = () => {
             key={msg.id}
           >
             <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                isUser ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-900"
+              className={`max-w-[80%] rounded-radius-xl px-spacing-lg py-spacing-md ${
+                isUser
+                  ? "bg-primary-500 text-white"
+                  : "bg-neutral-100 text-neutral-800"
               }`}
             >
               {msg.content.map((block) => {
                 if (block.type === "text") {
                   return (
                     <p
-                      className="text-sm whitespace-pre-wrap"
+                      className="text-[var(--font-size-sm)] leading-relaxed whitespace-pre-wrap"
                       key={`${msg.id}-${block.text.slice(0, 32)}`}
                     >
                       {block.text}
@@ -49,7 +61,7 @@ const MessageList = () => {
                     renderedComponent: React.ReactNode;
                   };
                   return (
-                    <div className="my-2" key={componentBlock.id}>
+                    <div className="my-spacing-sm" key={componentBlock.id}>
                       {componentBlock.renderedComponent}
                     </div>
                   );
@@ -62,8 +74,12 @@ const MessageList = () => {
       })}
       {isStreaming && (
         <div className="flex justify-start">
-          <div className="rounded-2xl bg-gray-100 px-4 py-2">
-            <p className="text-sm text-gray-400">Thinking...</p>
+          <div className="flex items-center gap-spacing-sm rounded-radius-xl bg-neutral-100 px-spacing-lg py-spacing-md">
+            <div className="flex gap-1">
+              <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400" />
+              <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400 [animation-delay:200ms]" />
+              <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400 [animation-delay:400ms]" />
+            </div>
           </div>
         </div>
       )}
@@ -104,10 +120,14 @@ const ChatInput = () => {
   );
 
   return (
-    <form className="border-t bg-white p-4" onSubmit={handleSubmit}>
-      <div className="flex gap-2">
+    <form
+      className="border-t border-neutral-100 bg-surface-raised px-spacing-lg py-spacing-md"
+      onSubmit={handleSubmit}
+    >
+      <div className="flex items-center gap-spacing-sm">
         <input
-          className="flex-1 rounded-full border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          aria-label="Message"
+          className="min-h-[44px] flex-1 rounded-radius-full border border-neutral-200 bg-surface px-spacing-lg py-spacing-md text-[var(--font-size-sm)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           disabled={isPending}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -117,11 +137,14 @@ const ChatInput = () => {
         />
         <VoiceButton />
         <button
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          aria-label="Send message"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full bg-primary-500 px-spacing-lg py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform,opacity] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
           disabled={isPending || !value.trim()}
           type="submit"
         >
-          Send
+          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+          </svg>
         </button>
       </div>
     </form>
@@ -130,9 +153,11 @@ const ChatInput = () => {
 
 export default function DashboardPage() {
   return (
-    <div className="flex h-screen flex-col bg-white">
-      <header className="border-b px-4 py-3">
-        <h1 className="text-lg font-semibold">BabyTalk</h1>
+    <div className="flex h-screen flex-col bg-surface">
+      <header className="border-b border-neutral-100 bg-surface-raised px-spacing-lg py-spacing-md">
+        <h1 className="text-[var(--font-size-base)] font-semibold text-neutral-600">
+          BabyTalk
+        </h1>
       </header>
       <MessageList />
       <ChatInput />

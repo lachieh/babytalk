@@ -85,16 +85,17 @@ export const VoiceButton = () => {
 
   return (
     <button
-      className={`rounded-full p-2 transition-colors ${
+      className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full transition-[background-color,color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] ${
         listening
-          ? "bg-red-500 text-white animate-pulse"
-          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          ? "animate-gentle-pulse bg-danger-100 text-danger-500"
+          : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 active:scale-[0.96]"
       }`}
+      aria-label={listening ? "Stop recording" : "Start voice input"}
       onClick={listening ? handleStop : handleStart}
-      title={listening ? "Stop recording" : "Start voice input"}
       type="button"
     >
       <svg
+        aria-hidden="true"
         className="h-5 w-5"
         fill="none"
         stroke="currentColor"

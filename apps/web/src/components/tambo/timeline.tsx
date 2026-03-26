@@ -56,25 +56,33 @@ const formatMeta = (type: string, raw: string) => {
 export const Timeline = ({ events }: TimelineProps) => {
   if (events.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 p-4 text-center text-sm text-gray-500">
-        No events yet today.
+      <div className="rounded-radius-md bg-neutral-50 px-spacing-lg py-spacing-2xl text-center">
+        <p className="text-[var(--font-size-sm)] font-medium text-neutral-500">
+          Nothing logged yet today
+        </p>
+        <p className="mt-spacing-xs text-[var(--font-size-xs)] text-neutral-300">
+          Say &quot;baby just ate&quot; or tap a quick action to get started
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-1">
-      {events.map((event) => (
+    <div className="space-y-spacing-xs">
+      {events.map((event, i) => (
         <div
-          className="flex items-center gap-3 rounded-lg border border-gray-100 bg-white px-3 py-2"
+          className="animate-fade-up flex items-center gap-spacing-md rounded-radius-md bg-surface-raised px-spacing-md py-spacing-sm"
           key={event.id}
+          style={{ animationDelay: `${i * 50}ms` }}
         >
           <span className="text-base">{typeEmoji[event.type] ?? ""}</span>
-          <span className="text-xs text-gray-400">
+          <span className="text-[var(--font-size-xs)] text-neutral-400 tabular-nums">
             {formatTime(event.startedAt)}
           </span>
-          <span className="flex-1 text-sm capitalize">{event.type}</span>
-          <span className="text-sm text-gray-600">
+          <span className="flex-1 text-[var(--font-size-sm)] font-medium capitalize text-neutral-700">
+            {event.type}
+          </span>
+          <span className="text-[var(--font-size-sm)] text-neutral-500">
             {formatMeta(event.type, event.metadata)}
           </span>
         </div>
