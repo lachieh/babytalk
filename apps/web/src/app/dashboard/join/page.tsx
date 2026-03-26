@@ -66,7 +66,7 @@ export default function JoinPage() {
             value={code}
           />
           <button
-            className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
             disabled={loading || !code.trim()}
             type="submit"
           >

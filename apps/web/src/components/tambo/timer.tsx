@@ -79,7 +79,7 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
         </div>
         {running ? (
           <button
-            className={`min-h-[44px] rounded-radius-md px-spacing-xl py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] active:scale-[0.96] ${colors.btn}`}
+            className={`min-h-[44px] rounded-radius-md px-spacing-xl py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] active:scale-[0.96] ${colors.btn}`}
             onClick={handleStop}
             type="button"
           >

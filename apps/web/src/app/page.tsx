@@ -16,7 +16,7 @@ export default function Home() {
         </p>
         <Link
           href="/auth/login"
-          className="mt-spacing-3xl inline-flex items-center justify-center rounded-radius-lg bg-primary-500 px-spacing-3xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white shadow-sm transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 hover:shadow-md active:scale-[0.98]"
+          className="mt-spacing-3xl inline-flex items-center justify-center rounded-radius-lg bg-primary-500 px-spacing-3xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 hover:shadow-md active:scale-[0.98]"
         >
           Get started
         </Link>

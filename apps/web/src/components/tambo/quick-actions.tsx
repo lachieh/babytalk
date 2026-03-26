@@ -55,7 +55,7 @@ const QuickActionButton = ({
 
   return (
     <button
-      className={`flex min-h-[44px] items-center gap-spacing-sm rounded-radius-md border px-spacing-lg py-spacing-md text-left text-[var(--font-size-sm)] font-medium transition-all duration-[var(--duration-fast)] active:scale-[0.97] ${style.bg}`}
+      className={`flex min-h-[44px] items-center gap-spacing-sm rounded-radius-md border px-spacing-lg py-spacing-md text-left text-[var(--font-size-sm)] font-medium transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97] ${style.bg}`}
       onClick={onClick}
       type="button"
     >

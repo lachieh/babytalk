@@ -137,7 +137,7 @@ const ChatInput = () => {
         />
         <VoiceButton />
         <button
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full bg-primary-500 px-spacing-lg py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full bg-primary-500 px-spacing-lg py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform,opacity] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
           disabled={isPending || !value.trim()}
           type="submit"
         >

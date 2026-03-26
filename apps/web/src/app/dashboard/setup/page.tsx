@@ -99,7 +99,7 @@ export default function SetupPage() {
           </p>
           <div className="mt-spacing-3xl flex flex-col gap-spacing-md">
             <button
-              className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+              className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
               disabled={loading}
               onClick={handleCreateHousehold}
               type="button"
@@ -194,7 +194,7 @@ export default function SetupPage() {
             />
           </div>
           <button
-            className="mt-spacing-sm min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            className="mt-spacing-sm min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
             disabled={loading}
             type="submit"
           >
