@@ -57,7 +57,7 @@ export default function JoinPage() {
           <label htmlFor="invite-code" className="sr-only">Invite code</label>
           <input
             id="invite-code"
-            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-lg text-center font-mono text-[var(--font-size-xl)] tracking-[0.25em] text-neutral-800 placeholder:text-neutral-300 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-lg text-center font-mono text-[var(--font-size-xl)] tracking-[0.25em] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
             maxLength={8}
             onChange={handleChange}
             placeholder="ABC123"

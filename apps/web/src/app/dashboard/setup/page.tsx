@@ -152,7 +152,7 @@ export default function SetupPage() {
             </label>
             <input
               id="baby-name"
-              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
               onChange={handleBabyNameChange}
               placeholder="What do you call them?"
               required
@@ -186,7 +186,7 @@ export default function SetupPage() {
             </label>
             <input
               id="birth-weight"
-              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
               onChange={handleWeightChange}
               placeholder="Grams"
               type="number"
