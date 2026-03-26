@@ -10,8 +10,8 @@
 
 "use strict";
 
-const http = require("http");
-const { spawnSync, spawn } = require("child_process");
+const http = require("node:http");
+const { spawnSync, spawn } = require("node:child_process");
 
 globalThis.Bun = {
   serve(options) {
@@ -35,9 +35,9 @@ globalThis.Bun = {
         }
 
         const webReq = new Request(url, {
-          method: nodeReq.method,
-          headers,
           body,
+          headers,
+          method: nodeReq.method,
         });
 
         const webRes = await fetch(webReq);
@@ -49,67 +49,67 @@ globalThis.Bun = {
 
         const resBody = await webRes.arrayBuffer();
         nodeRes.end(Buffer.from(resBody));
-      } catch (err) {
+      } catch (error) {
         nodeRes.statusCode = 500;
-        nodeRes.end(JSON.stringify({ error: err.message }));
+        nodeRes.end(JSON.stringify({ error: error.message }));
       }
     });
 
     server.listen(port, hostname);
 
     return {
+      hostname,
+      port,
       stop() {
         server.close();
-      },
-      port,
-      hostname,
-    };
-  },
-
-  spawnSync(cmd, options = {}) {
-    const [command, ...args] = cmd;
-    const result = spawnSync(command, args, {
-      stdio: [
-        options.stdin || "pipe",
-        options.stdout === "pipe" ? "pipe" : "ignore",
-        options.stderr === "pipe" ? "pipe" : "ignore",
-      ],
-      timeout: options.timeout,
-      env: options.env,
-      cwd: options.cwd,
-    });
-
-    return {
-      exitCode: result.status,
-      stdout: result.stdout || Buffer.from(""),
-      stderr: result.stderr || Buffer.from(""),
-    };
-  },
-
-  spawn(cmd, options = {}) {
-    const [command, ...args] = cmd;
-    const stdio = options.stdio || ["pipe", "pipe", "pipe"];
-    const proc = spawn(command, args, {
-      stdio,
-      env: options.env,
-      cwd: options.cwd,
-    });
-
-    return {
-      pid: proc.pid,
-      stdout: proc.stdout,
-      stderr: proc.stderr,
-      stdin: proc.stdin,
-      unref() {
-        proc.unref();
-      },
-      kill(signal) {
-        proc.kill(signal);
       },
     };
   },
 
   sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+  },
+
+  spawn(cmd, options = {}) {
+    const [command, ...args] = cmd;
+    const stdio = options.stdio || ["pipe", "pipe", "pipe"];
+    const proc = spawn(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio,
+    });
+
+    return {
+      kill(signal) {
+        proc.kill(signal);
+      },
+      pid: proc.pid,
+      stderr: proc.stderr,
+      stdin: proc.stdin,
+      stdout: proc.stdout,
+      unref() {
+        proc.unref();
+      },
+    };
+  },
+
+  spawnSync(cmd, options = {}) {
+    const [command, ...args] = cmd;
+    const result = spawnSync(command, args, {
+      cwd: options.cwd,
+      env: options.env,
+      stdio: [
+        options.stdin || "pipe",
+        options.stdout === "pipe" ? "pipe" : "ignore",
+        options.stderr === "pipe" ? "pipe" : "ignore",
+      ],
+      timeout: options.timeout,
+    });
+
+    return {
+      exitCode: result.status,
+      stderr: result.stderr || Buffer.from(""),
+      stdout: result.stdout || Buffer.from(""),
+    };
   },
 };

@@ -20,8 +20,8 @@ import {
   listDomains,
   importCookies,
   CookieImportError,
-  type PlaywrightCookie,
 } from "./cookie-import-browser";
+import type { PlaywrightCookie } from "./cookie-import-browser";
 import { getCookiePickerHTML } from "./cookie-picker-ui";
 
 // ─── State ──────────────────────────────────────────────────────
@@ -42,11 +42,11 @@ function jsonResponse(
   opts: { port: number; status?: number }
 ): Response {
   return new Response(JSON.stringify(data), {
-    status: opts.status ?? 200,
     headers: {
-      "Content-Type": "application/json",
       "Access-Control-Allow-Origin": corsOrigin(opts.port),
+      "Content-Type": "application/json",
     },
+    status: opts.status ?? 200,
   });
 }
 
@@ -56,7 +56,7 @@ function errorResponse(
   opts: { port: number; status?: number; action?: string }
 ): Response {
   return jsonResponse(
-    { error: message, code, ...(opts.action ? { action: opts.action } : {}) },
+    { code, error: message, ...(opts.action ? { action: opts.action } : {}) },
     { port: opts.port, status: opts.status ?? 400 }
   );
 }
@@ -68,18 +68,18 @@ export async function handleCookiePickerRoute(
   req: Request,
   bm: BrowserManager
 ): Promise<Response> {
-  const pathname = url.pathname;
-  const port = parseInt(url.port, 10) || 9400;
+  const { pathname } = url;
+  const port = Number.parseInt(url.port, 10) || 9400;
 
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
-      status: 204,
       headers: {
-        "Access-Control-Allow-Origin": corsOrigin(port),
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Origin": corsOrigin(port),
       },
+      status: 204,
     });
   }
 
@@ -88,8 +88,8 @@ export async function handleCookiePickerRoute(
     if (pathname === "/cookie-picker" && req.method === "GET") {
       const html = getCookiePickerHTML(port);
       return new Response(html, {
-        status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" },
+        status: 200,
       });
     }
 
@@ -99,8 +99,8 @@ export async function handleCookiePickerRoute(
       return jsonResponse(
         {
           browsers: browsers.map((b) => ({
-            name: b.name,
             aliases: b.aliases,
+            name: b.name,
           })),
         },
         { port }
@@ -170,9 +170,9 @@ export async function handleCookiePickerRoute(
       if (result.cookies.length === 0) {
         return jsonResponse(
           {
-            imported: 0,
-            failed: result.failed,
             domainCounts: {},
+            failed: result.failed,
+            imported: 0,
             message:
               result.failed > 0
                 ? `All ${result.failed} cookies failed to decrypt`
@@ -201,9 +201,9 @@ export async function handleCookiePickerRoute(
 
       return jsonResponse(
         {
-          imported: result.count,
-          failed: result.failed,
           domainCounts: result.domainCounts,
+          failed: result.failed,
+          imported: result.count,
         },
         { port }
       );
@@ -241,8 +241,8 @@ export async function handleCookiePickerRoute(
 
       return jsonResponse(
         {
-          removed: domains.length,
           domains,
+          removed: domains.length,
         },
         { port }
       );
@@ -250,33 +250,33 @@ export async function handleCookiePickerRoute(
 
     // GET /cookie-picker/imported — currently imported domains + counts
     if (pathname === "/cookie-picker/imported" && req.method === "GET") {
-      const entries: Array<{ domain: string; count: number }> = [];
+      const entries: { domain: string; count: number }[] = [];
       for (const domain of importedDomains) {
-        entries.push({ domain, count: importedCounts.get(domain) || 0 });
+        entries.push({ count: importedCounts.get(domain) || 0, domain });
       }
       entries.sort((a, b) => b.count - a.count);
 
       return jsonResponse(
         {
           domains: entries,
-          totalDomains: entries.length,
           totalCookies: entries.reduce((sum, e) => sum + e.count, 0),
+          totalDomains: entries.length,
         },
         { port }
       );
     }
 
     return new Response("Not found", { status: 404 });
-  } catch (err: any) {
-    if (err instanceof CookieImportError) {
-      return errorResponse(err.message, err.code, {
+  } catch (error: any) {
+    if (error instanceof CookieImportError) {
+      return errorResponse(error.message, error.code, {
+        action: error.action,
         port,
         status: 400,
-        action: err.action,
       });
     }
-    console.error(`[cookie-picker] Error: ${err.message}`);
-    return errorResponse(err.message || "Internal error", "internal_error", {
+    console.error(`[cookie-picker] Error: ${error.message}`);
+    return errorResponse(error.message || "Internal error", "internal_error", {
       port,
       status: 500,
     });

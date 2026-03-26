@@ -16,9 +16,9 @@ import {
   mkdirSync,
   symlinkSync,
   utimesSync,
-} from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const SCRIPT = join(import.meta.dir, "..", "..", "bin", "gstack-update-check");
 
@@ -30,17 +30,17 @@ function run(extraEnv: Record<string, string> = {}, args: string[] = []) {
     env: {
       ...process.env,
       GSTACK_DIR: gstackDir,
-      GSTACK_STATE_DIR: stateDir,
       GSTACK_REMOTE_URL: `file://${join(gstackDir, "REMOTE_VERSION")}`,
+      GSTACK_STATE_DIR: stateDir,
       ...extraEnv,
     },
-    stdout: "pipe",
     stderr: "pipe",
+    stdout: "pipe",
   });
   return {
     exitCode: result.exitCode,
-    stdout: result.stdout.toString().trim(),
     stderr: result.stderr.toString().trim(),
+    stdout: result.stdout.toString().trim(),
   };
 }
 
@@ -57,8 +57,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(gstackDir, { recursive: true, force: true });
-  rmSync(stateDir, { recursive: true, force: true });
+  rmSync(gstackDir, { force: true, recursive: true });
+  rmSync(stateDir, { force: true, recursive: true });
 });
 
 function writeSnooze(version: string, level: number, epochSeconds: number) {
@@ -103,7 +103,7 @@ describe("gstack-update-check", () => {
     // Marker should be deleted
     expect(existsSync(join(stateDir, "just-upgraded-from"))).toBe(false);
     // Cache should be written
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -157,7 +157,7 @@ describe("gstack-update-check", () => {
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
     expect(stdout).toBe(""); // Up to date after re-check
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -169,7 +169,7 @@ describe("gstack-update-check", () => {
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -181,7 +181,7 @@ describe("gstack-update-check", () => {
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
     expect(stdout).toBe("UPGRADE_AVAILABLE 0.3.3 0.4.0");
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UPGRADE_AVAILABLE 0.3.3 0.4.0");
   });
 
@@ -196,7 +196,7 @@ describe("gstack-update-check", () => {
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -209,7 +209,7 @@ describe("gstack-update-check", () => {
     });
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -224,7 +224,7 @@ describe("gstack-update-check", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
     // Cache should be overwritten with valid content
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -248,7 +248,7 @@ describe("gstack-update-check", () => {
     const projectRoot = join(import.meta.dir, "..", "..");
     const versionFile = join(projectRoot, "VERSION");
     if (!existsSync(versionFile)) return; // skip if no VERSION
-    const version = readFileSync(versionFile, "utf-8").trim();
+    const version = readFileSync(versionFile, "utf8").trim();
 
     // Copy VERSION into test dir
     writeFileSync(join(gstackDir, "VERSION"), version + "\n");
@@ -259,7 +259,7 @@ describe("gstack-update-check", () => {
     });
     expect(exitCode).toBe(0);
     // Should write UP_TO_DATE cache (not crash)
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 
@@ -307,7 +307,7 @@ describe("gstack-update-check", () => {
       join(stateDir, "last-update-check"),
       "UPGRADE_AVAILABLE 0.3.3 0.4.0"
     );
-    writeSnooze("0.4.0", 1, nowEpoch() - 90000); // 25h ago
+    writeSnooze("0.4.0", 1, nowEpoch() - 90_000); // 25h ago
 
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
@@ -320,7 +320,7 @@ describe("gstack-update-check", () => {
       join(stateDir, "last-update-check"),
       "UPGRADE_AVAILABLE 0.3.3 0.4.0"
     );
-    writeSnooze("0.4.0", 2, nowEpoch() - 86400); // 24h ago (within 48h)
+    writeSnooze("0.4.0", 2, nowEpoch() - 86_400); // 24h ago (within 48h)
 
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
@@ -333,7 +333,7 @@ describe("gstack-update-check", () => {
       join(stateDir, "last-update-check"),
       "UPGRADE_AVAILABLE 0.3.3 0.4.0"
     );
-    writeSnooze("0.4.0", 2, nowEpoch() - 176400); // 49h ago
+    writeSnooze("0.4.0", 2, nowEpoch() - 176_400); // 49h ago
 
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
@@ -346,7 +346,7 @@ describe("gstack-update-check", () => {
       join(stateDir, "last-update-check"),
       "UPGRADE_AVAILABLE 0.3.3 0.4.0"
     );
-    writeSnooze("0.4.0", 3, nowEpoch() - 518400); // 6d ago (within 7d)
+    writeSnooze("0.4.0", 3, nowEpoch() - 518_400); // 6d ago (within 7d)
 
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
@@ -359,7 +359,7 @@ describe("gstack-update-check", () => {
       join(stateDir, "last-update-check"),
       "UPGRADE_AVAILABLE 0.3.3 0.4.0"
     );
-    writeSnooze("0.4.0", 3, nowEpoch() - 691200); // 8d ago
+    writeSnooze("0.4.0", 3, nowEpoch() - 691_200); // 8d ago
 
     const { exitCode, stdout } = run();
     expect(exitCode).toBe(0);
@@ -429,7 +429,7 @@ describe("gstack-update-check", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toBe("");
     // Cache should still be written
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UPGRADE_AVAILABLE 0.3.3 0.4.0");
   });
 
@@ -500,7 +500,7 @@ describe("gstack-update-check", () => {
     const forced = run({}, ["--force"]);
     expect(forced.exitCode).toBe(0);
     expect(forced.stdout).toBe("");
-    const cache = readFileSync(join(stateDir, "last-update-check"), "utf-8");
+    const cache = readFileSync(join(stateDir, "last-update-check"), "utf8");
     expect(cache).toContain("UP_TO_DATE");
   });
 

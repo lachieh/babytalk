@@ -3,7 +3,7 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 
 import { locateBinary } from "../src/find-browse";
 
@@ -26,9 +26,9 @@ describe("locateBinary", () => {
   test("priority chain checks .codex, .agents, .claude markers", () => {
     // Verify the source code implements the correct priority order.
     // We read the function source to confirm the markers array order.
-    const src = require("fs").readFileSync(
-      require("path").join(__dirname, "../src/find-browse.ts"),
-      "utf-8"
+    const src = require("node:fs").readFileSync(
+      require("node:path").join(__dirname, "../src/find-browse.ts"),
+      "utf8"
     );
     // The markers array should list .codex first, then .agents, then .claude
     const markersMatch = src.match(/const markers = \[([^\]]+)\]/);

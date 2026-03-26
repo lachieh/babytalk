@@ -71,7 +71,9 @@ const VerifyContent = () => {
           <h1 className="text-[var(--font-size-xl)] font-bold text-danger-500">
             Something went wrong
           </h1>
-          <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">{error}</p>
+          <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">
+            {error}
+          </p>
           <Link
             href="/auth/login"
             className="mt-spacing-2xl inline-flex min-h-[44px] items-center text-[var(--font-size-base)] font-medium text-primary-500 transition-colors hover:text-primary-600"

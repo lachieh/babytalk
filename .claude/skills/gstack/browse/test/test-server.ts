@@ -3,8 +3,8 @@
  * Serves HTML files from test/fixtures/ on a random available port
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 const FIXTURES_DIR = path.resolve(import.meta.dir, "fixtures");
 
@@ -13,8 +13,6 @@ export function startTestServer(port: number = 0): {
   url: string;
 } {
   const server = Bun.serve({
-    port,
-    hostname: "127.0.0.1",
     fetch(req) {
       const url = new URL(req.url);
 
@@ -39,7 +37,7 @@ export function startTestServer(port: number = 0): {
         return new Response("Not Found", { status: 404 });
       }
 
-      const content = fs.readFileSync(fullPath, "utf-8");
+      const content = fs.readFileSync(fullPath, "utf8");
       const ext = path.extname(fullPath);
       const contentType = ext === ".html" ? "text/html" : "text/plain";
 
@@ -47,6 +45,8 @@ export function startTestServer(port: number = 0): {
         headers: { "Content-Type": contentType },
       });
     },
+    hostname: "127.0.0.1",
+    port,
   });
 
   const url = `http://127.0.0.1:${server.port}`;

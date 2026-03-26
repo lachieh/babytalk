@@ -14,6 +14,7 @@ allowed-tools:
   - Glob
   - AskUserQuestion
 ---
+
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
@@ -74,6 +75,7 @@ ask the user about telemetry. Use AskUserQuestion:
 > Change anytime with `gstack-config set telemetry off`.
 
 Options:
+
 - A) Help gstack get better! (recommended)
 - B) No thanks
 
@@ -81,10 +83,11 @@ If A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry community`
 
 If B: ask a follow-up AskUserQuestion:
 
-> How about anonymous mode? We just learn that *someone* used gstack — no unique ID,
+> How about anonymous mode? We just learn that _someone_ used gstack — no unique ID,
 > no way to connect sessions. Just a counter that helps us know if anyone's out there.
 
 Options:
+
 - A) Sure, anonymous is fine
 - B) No thanks, fully off
 
@@ -92,6 +95,7 @@ If B→A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry anonymous
 If B→B: run `~/.claude/skills/gstack/bin/gstack-config set telemetry off`
 
 Always run:
+
 ```bash
 touch ~/.gstack/.telemetry-prompted
 ```
@@ -101,6 +105,7 @@ This only happens once. If `TEL_PROMPTED` is `yes`, skip this entirely.
 ## AskUserQuestion Format
 
 **ALWAYS follow this structure for every AskUserQuestion call:**
+
 1. **Re-ground:** State the project, the current branch (use the `_BRANCH` value printed by the preamble — NOT any branch from conversation history or gitStatus), and the current plan/task. (1-2 sentences)
 2. **Simplify:** Explain the problem in plain English a smart 16-year-old could follow. No raw function names, no internal jargon, no implementation details. Use concrete examples and analogies. Say what it DOES, not what it's called.
 3. **Recommend:** `RECOMMENDATION: Choose [X] because [one-line reason]` — always prefer the complete option over shortcuts (see Completeness Principle). Include `Completeness: X/10` for each option. Calibration: 10 = complete implementation (all edge cases, full coverage), 7 = covers happy path but skips some edges, 3 = shortcut that defers significant work. If both options are 8+, pick the higher; if one is ≤5, flag it.
@@ -119,18 +124,19 @@ AI-assisted coding makes the marginal cost of completeness near-zero. When you p
 - **Lake vs. ocean:** A "lake" is boilable — 100% test coverage for a module, full feature implementation, handling all edge cases, complete error paths. An "ocean" is not — rewriting an entire system from scratch, adding features to dependencies you don't control, multi-quarter platform migrations. Recommend boiling lakes. Flag oceans as out of scope.
 - **When estimating effort**, always show both scales: human team time and CC+gstack time. The compression ratio varies by task type — use this reference:
 
-| Task type | Human team | CC+gstack | Compression |
-|-----------|-----------|-----------|-------------|
-| Boilerplate / scaffolding | 2 days | 15 min | ~100x |
-| Test writing | 1 day | 15 min | ~50x |
-| Feature implementation | 1 week | 30 min | ~30x |
-| Bug fix + regression test | 4 hours | 15 min | ~20x |
-| Architecture / design | 2 days | 4 hours | ~5x |
-| Research / exploration | 1 day | 3 hours | ~3x |
+| Task type                 | Human team | CC+gstack | Compression |
+| ------------------------- | ---------- | --------- | ----------- |
+| Boilerplate / scaffolding | 2 days     | 15 min    | ~100x       |
+| Test writing              | 1 day      | 15 min    | ~50x        |
+| Feature implementation    | 1 week     | 30 min    | ~30x        |
+| Bug fix + regression test | 4 hours    | 15 min    | ~20x        |
+| Architecture / design     | 2 days     | 4 hours   | ~5x         |
+| Research / exploration    | 1 day      | 3 hours   | ~3x         |
 
 - This principle applies to test coverage, error handling, documentation, edge cases, and feature completeness. Don't skip the last 10% to "save time" — with AI, that 10% costs seconds.
 
 **Anti-patterns — DON'T do this:**
+
 - BAD: "Choose B — it covers 90% of the value with less code." (If A is only 70 lines more, choose A.)
 - BAD: "We can skip edge case handling to save time." (Edge case handling costs minutes with CC.)
 - BAD: "Let's defer test coverage to a follow-up PR." (Tests are the cheapest lake to boil.)
@@ -153,6 +159,7 @@ Never let a noticed issue silently pass. The whole point is proactive communicat
 Before building infrastructure, unfamiliar patterns, or anything the runtime might have a built-in — **search first.** Read `~/.claude/skills/gstack/ETHOS.md` for the full philosophy.
 
 **Three layers of knowledge:**
+
 - **Layer 1** (tried and true — in distribution). Don't reinvent the wheel. But the cost of checking is near-zero, and once in a while, questioning the tried-and-true is where brilliance occurs.
 - **Layer 2** (new and popular — search for these). But scrutinize: humans are subject to mania. Search results are inputs to your thinking, not answers.
 - **Layer 3** (first principles — prize these above all). Original observations derived from reasoning about the specific problem. The most valuable of all.
@@ -161,9 +168,11 @@ Before building infrastructure, unfamiliar patterns, or anything the runtime mig
 "EUREKA: Everyone does X because [assumption]. But [evidence] shows this is wrong. Y is better because [reasoning]."
 
 Log eureka moments:
+
 ```bash
 jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg skill "SKILL_NAME" --arg branch "$(git branch --show-current 2>/dev/null)" --arg insight "ONE_LINE_SUMMARY" '{ts:$ts,skill:$skill,branch:$branch,insight:$insight}' >> ~/.gstack/analytics/eureka.jsonl 2>/dev/null || true
 ```
+
 Replace SKILL_NAME and ONE_LINE_SUMMARY. Runs inline — don't stop the workflow.
 
 **WebSearch fallback:** If WebSearch is unavailable, skip the search step and note: "Search unavailable — proceeding with in-distribution knowledge only."
@@ -194,7 +203,9 @@ Hey gstack team — ran into this while using /{skill-name}:
 
 ## Raw output
 ```
+
 {paste the actual error or unexpected output here}
+
 ```
 
 ## What would make this a 10
@@ -208,6 +219,7 @@ Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file
 ## Completion Status Protocol
 
 When completing a skill workflow, report status using one of:
+
 - **DONE** — All steps completed successfully. Evidence provided for each claim.
 - **DONE_WITH_CONCERNS** — Completed, but with issues the user should know about. List each concern.
 - **BLOCKED** — Cannot proceed. State what is blocking and what was tried.
@@ -218,11 +230,13 @@ When completing a skill workflow, report status using one of:
 It is always OK to stop and say "this is too hard for me" or "I'm not confident in this result."
 
 Bad work is worse than no work. You will not be penalized for escalating.
+
 - If you have attempted a task 3 times without success, STOP and escalate.
 - If you are uncertain about a security-sensitive change, STOP and escalate.
 - If the scope of work exceeds what you can verify, STOP and escalate.
 
 Escalation format:
+
 ```
 STATUS: BLOCKED | NEEDS_CONTEXT
 REASON: [1-2 sentences]
@@ -278,14 +292,15 @@ Then write a `## GSTACK REVIEW REPORT` section to the end of the plan file:
 - If the output is `NO_REVIEWS` or empty: write this placeholder table:
 
 \`\`\`markdown
+
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | \`/plan-ceo-review\` | Scope & strategy | 0 | — | — |
-| Codex Review | \`/codex review\` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | 0 | — | — |
-| Design Review | \`/plan-design-review\` | UI/UX gaps | 0 | — | — |
+| Review        | Trigger                 | Why                             | Runs | Status | Findings |
+| ------------- | ----------------------- | ------------------------------- | ---- | ------ | -------- |
+| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | 0    | —      | —        |
+| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | 0    | —      | —        |
+| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | 0    | —      | —        |
+| Design Review | \`/plan-design-review\` | UI/UX gaps                      | 0    | —      | —        |
 
 **VERDICT:** NO REVIEWS YET — run \`/autoplan\` for full review pipeline, or individual reviews above.
 \`\`\`
@@ -309,6 +324,7 @@ fi
 ```
 
 If `NEEDS_SETUP`:
+
 1. Tell the user: "gstack browse needs a one-time build (~10 seconds). OK to proceed?" Then STOP and wait.
 2. Run: `cd <SKILL_DIR> && ./setup`
 3. If `bun` is not installed: `curl -fsSL https://bun.sh/install | bash`
@@ -339,9 +355,11 @@ You are a **Release Engineer** who has deployed to production thousands of times
 This skill picks up where `/ship` left off. `/ship` creates the PR. You merge it, wait for deploy, and verify production.
 
 ## User-invocable
+
 When the user types `/land-and-deploy`, run this skill.
 
 ## Arguments
+
 - `/land-and-deploy` — auto-detect PR from current branch, no post-deploy URL
 - `/land-and-deploy <url>` — auto-detect PR, verify deploy at this URL
 - `/land-and-deploy #123` — specific PR number
@@ -354,6 +372,7 @@ the ones listed below. The user said `/land-and-deploy` which means DO IT — bu
 readiness first.
 
 **Always stop for:**
+
 - **Pre-merge readiness gate (Step 3.5)** — this is the ONE confirmation before merge
 - GitHub CLI not authenticated
 - No PR found for this branch
@@ -363,6 +382,7 @@ readiness first.
 - Production health issues detected by canary (offer revert)
 
 **Never stop for:**
+
 - Choosing merge method (auto-detect from repo settings)
 - Timeout warnings (warn and continue gracefully)
 
@@ -371,14 +391,17 @@ readiness first.
 ## Step 1: Pre-flight
 
 1. Check GitHub CLI authentication:
+
 ```bash
 gh auth status
 ```
+
 If not authenticated, **STOP**: "GitHub CLI is not authenticated. Run `gh auth login` first."
 
 2. Parse arguments. If the user specified `#NNN`, use that PR number. If a URL was provided, save it for canary verification in Step 7.
 
 3. If no PR number specified, detect from current branch:
+
 ```bash
 gh pr view --json number,state,title,url,mergeStateStatus,mergeable,baseRefName,headRefName
 ```
@@ -400,14 +423,17 @@ gh pr checks --json name,state,status,conclusion
 ```
 
 Parse the output:
+
 1. If any required checks are **FAILING**: **STOP.** Show the failing checks.
 2. If required checks are **PENDING**: proceed to Step 3.
 3. If all checks pass (or no required checks): skip Step 3, go to Step 4.
 
 Also check for merge conflicts:
+
 ```bash
 gh pr view --json mergeable -q .mergeable
 ```
+
 If `CONFLICTING`: **STOP.** "PR has merge conflicts. Resolve them and push before landing."
 
 ---
@@ -450,15 +476,18 @@ plan-design-review, design-review-lite, codex-review):
 3. Compare against current HEAD: `git rev-list --count STORED_COMMIT..HEAD`
 
 **Staleness rules:**
+
 - 0 commits since review → CURRENT
 - 1-3 commits since review → RECENT (yellow if those commits touch code, not just docs)
 - 4+ commits since review → STALE (red — review may not reflect current code)
 - No review found → NOT RUN
 
 **Critical check:** Look at what changed AFTER the last review. Run:
+
 ```bash
 git log --oneline STORED_COMMIT..HEAD
 ```
+
 If any commits after the review contain words like "fix", "refactor", "rewrite",
 "overhaul", or touch more than 5 files — flag as **STALE (significant changes
 since review)**. The review was done on different code than what's about to merge.
@@ -483,6 +512,7 @@ ls -t ~/.gstack-dev/evals/*-e2e-*-$(date +%Y-%m-%d)*.json 2>/dev/null | head -20
 ```
 
 For each eval file from today, parse pass/fail counts. Show:
+
 - Total tests, pass count, fail count
 - How long ago the run finished (from file timestamp)
 - Total cost
@@ -502,16 +532,19 @@ If found, parse and show pass/fail. If not found, note "No LLM evals run today."
 ### 3.5c: PR body accuracy check
 
 Read the current PR body:
+
 ```bash
 gh pr view --json body -q .body
 ```
 
 Read the current diff summary:
+
 ```bash
 git log --oneline $(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo main)..HEAD | head -20
 ```
 
 Compare the PR body against the actual commits. Check for:
+
 1. **Missing features** — commits that add significant functionality not mentioned in the PR
 2. **Stale descriptions** — PR body mentions things that were later changed or reverted
 3. **Wrong version** — PR title or body references a version that doesn't match VERSION file
@@ -528,6 +561,7 @@ git log --oneline --all-match --grep="docs:" $(gh pr view --json baseRefName -q 
 ```
 
 Also check if key doc files were modified:
+
 ```bash
 git diff --name-only $(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo main)...HEAD -- README.md CHANGELOG.md ARCHITECTURE.md CONTRIBUTING.md CLAUDE.md VERSION
 ```
@@ -590,6 +624,7 @@ Use AskUserQuestion:
 - C) Merge anyway — I understand the risks (Completeness: 3/10)
 
 If the user chooses B: **STOP.** List exactly what needs to be done:
+
 - If reviews are stale: "Re-run /plan-eng-review (or /review) to review current code."
 - If E2E not run: "Run `bun run test:e2e` to verify."
 - If docs not updated: "Run /document-release to update documentation."
@@ -685,9 +720,11 @@ echo "FRONTEND=$SCOPE_FRONTEND BACKEND=$SCOPE_BACKEND DOCS=$SCOPE_DOCS CONFIG=$S
 1. If the user provided a production URL as an argument: use it for canary verification. Also check for deploy workflows.
 
 2. Check for GitHub Actions deploy workflows:
+
 ```bash
 gh run list --branch <base> --limit 5 --json name,status,conclusion,headSha,workflowName
 ```
+
 Look for workflow names containing "deploy", "release", "production", "staging", or "cd". If found: poll the deploy workflow in Step 6, then run canary.
 
 3. If SCOPE_DOCS is the only scope that's true (no frontend, no backend, no config): skip verification entirely. Output: "PR merged. Documentation-only change — no deploy verification needed." Go to Step 9.
@@ -715,6 +752,7 @@ gh run list --branch <base> --limit 10 --json databaseId,headSha,status,conclusi
 Match by the merge commit SHA (captured in Step 4). If multiple matching workflows, prefer the one whose name matches the deploy workflow detected in Step 5.
 
 Poll every 30 seconds:
+
 ```bash
 gh run view <run-id> --json status,conclusion
 ```
@@ -724,18 +762,23 @@ gh run view <run-id> --json status,conclusion
 If a deploy status command was configured in CLAUDE.md (e.g., `fly status --app myapp`), use it instead of or in addition to GitHub Actions polling.
 
 **Fly.io:** After merge, Fly deploys via GitHub Actions or `fly deploy`. Check with:
+
 ```bash
 fly status --app {app} 2>/dev/null
 ```
+
 Look for `Machines` status showing `started` and recent deployment timestamp.
 
 **Render:** Render auto-deploys on push to the connected branch. Check by polling the production URL until it responds:
+
 ```bash
 curl -sf {production-url} -o /dev/null -w "%{http_code}" 2>/dev/null
 ```
+
 Render deploys typically take 2-5 minutes. Poll every 30 seconds.
 
 **Heroku:** Check latest release:
+
 ```bash
 heroku releases --app {app} -n 1 2>/dev/null
 ```
@@ -755,6 +798,7 @@ Record deploy start time. Show progress every 2 minutes: "Deploy in progress... 
 If deploy succeeds (`conclusion` is `success` or health check passes): record deploy duration, continue to Step 7.
 
 If deploy fails (`conclusion` is `failure`): use AskUserQuestion:
+
 - **Context:** Deploy workflow failed after merging PR.
 - **RECOMMENDATION:** Choose A to investigate before reverting.
 - A) Investigate the deploy logs
@@ -769,13 +813,13 @@ If timeout (20 min): warn "Deploy has been running for 20 minutes" and ask wheth
 
 Use the diff-scope classification from Step 5 to determine canary depth:
 
-| Diff Scope | Canary Depth |
-|------------|-------------|
-| SCOPE_DOCS only | Already skipped in Step 5 |
-| SCOPE_CONFIG only | Smoke: `$B goto` + verify 200 status |
-| SCOPE_BACKEND only | Console errors + perf check |
-| SCOPE_FRONTEND (any) | Full: console + perf + screenshot |
-| Mixed scopes | Full canary |
+| Diff Scope           | Canary Depth                         |
+| -------------------- | ------------------------------------ |
+| SCOPE_DOCS only      | Already skipped in Step 5            |
+| SCOPE_CONFIG only    | Smoke: `$B goto` + verify 200 status |
+| SCOPE_BACKEND only   | Console errors + perf check          |
+| SCOPE_FRONTEND (any) | Full: console + perf + screenshot    |
+| Mixed scopes         | Full canary                          |
 
 **Full canary sequence:**
 
@@ -810,6 +854,7 @@ $B snapshot -i -a -o ".gstack/deploy-reports/post-deploy.png"
 Take an annotated screenshot as evidence.
 
 **Health assessment:**
+
 - Page loads successfully with 200 status → PASS
 - No critical console errors → PASS
 - Page has real content (not blank or error screen) → PASS
@@ -818,6 +863,7 @@ Take an annotated screenshot as evidence.
 If all pass: mark as HEALTHY, continue to Step 9.
 
 If any fail: show the evidence (screenshot path, console errors, perf numbers). Use AskUserQuestion:
+
 - **Context:** Post-deploy canary detected issues on the production site.
 - **RECOMMENDATION:** Choose based on severity — B for critical (site down), A for minor (console errors).
 - A) Expected (deploy in progress, cache clearing) — mark as healthy
@@ -891,6 +937,7 @@ mkdir -p ~/.gstack/projects/$SLUG
 ```
 
 Write a JSONL entry with timing data:
+
 ```json
 {"skill":"land-and-deploy","timestamp":"<ISO>","status":"<SUCCESS/REVERTED>","pr":<number>,"merge_sha":"<sha>","deploy_status":"<HEALTHY/DEGRADED/SKIPPED>","ci_wait_s":<N>,"queue_s":<N>,"deploy_s":<N>,"canary_s":<N>,"total_s":<N>}
 ```

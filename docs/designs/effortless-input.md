@@ -20,20 +20,20 @@ The 10x version makes the entire tracking experience disappear. You don't "track
 
 ### Platonic Ideal
 
-The user feels *relief*. Not "oh, a baby tracking app" — but "oh thank god, someone actually understands what it's like." Every interaction is warm, contextual, and anticipatory. The design is so minimal it barely feels like software — a gentle pulse showing the baby's rhythm, a voice you can talk to, a partner who always knows what happened. No dashboards. No charts. No settings screens. Just a conversation with something that knows your baby.
+The user feels _relief_. Not "oh, a baby tracking app" — but "oh thank god, someone actually understands what it's like." Every interaction is warm, contextual, and anticipatory. The design is so minimal it barely feels like software — a gentle pulse showing the baby's rhythm, a voice you can talk to, a partner who always knows what happened. No dashboards. No charts. No settings screens. Just a conversation with something that knows your baby.
 
 ## Scope Decisions
 
-| # | Proposal | Effort | Decision | Done when | Reasoning |
-|---|----------|--------|----------|-----------|-----------|
-| 1 | Last-event status widget (color-coded timers) | S (15 min CC) | ACCEPTED | Timers for feed/sleep/diaper visible on dashboard. Colors: green (<2h), yellow (2-3h), red (>3h) for feeds. Thresholds configurable per event type. | Transforms dashboard from chat app to baby status center. |
-| 2 | Voice confirmation with personality | S (15 min CC) | ACCEPTED | Tambo responds with event context after logging: "Got it — left side, 15 minutes. That's 6 feeds today." | Builds emotional trust → retention. |
-| 3 | Smart quick-action reordering | S (20 min CC) | ACCEPTED | Quick actions reorder based on event frequency by hour-of-day from last 7 days of data. Falls back to default order if <7 days of history. | Makes UI feel alive and contextual. |
-| 4 | Auto dark mode (8pm-7am, configurable) | S (10 min CC) | ACCEPTED | App switches to dark theme at 8pm, light at 7am. User can adjust times or disable in settings. Uses Tailwind dark: classes. | Trust signal for 3am UX. |
-| 5 | Haptic vocabulary (with audio fallback for iOS) | S (10 min CC) | ACCEPTED | Android: short vibrate=logged, double=timer, long=reminder. iOS: soft chime=logged, double-tone=timer, bell=reminder. Visual indicator always present. Accessible: all feedback has a visual equivalent for deaf/HoH users. | Supports no-look logging thesis. |
-| 6 | "Share this week" summary cards | M (30 min CC) | DEFERRED | — | Intelligence-layer feature → Context Engine phase. |
-| 7 | Empathetic onboarding (one screen, voice-first) | S (20 min CC) | ACCEPTED | Setup page replaced with single screen: welcome message acknowledging exhaustion, one mic button to start, voice-guided baby name + birth date collection. Falls back to form for non-voice browsers. | First impressions define retention. |
-| 8 | Partner shift handoff summary | S (30 min CC) | ACCEPTED | When a user opens BabyTalk and another household member logged events since their last session (detected via lastSeenAt timestamp per user), Tambo generates a summary of events since that timestamp. Summary includes: event count by type, key details (feed sides, sleep duration), and time since last event. | Bridges input and intelligence layers. |
+| #   | Proposal                                        | Effort        | Decision | Done when                                                                                                                                                                                                                                                                                                          | Reasoning                                                 |
+| --- | ----------------------------------------------- | ------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- |
+| 1   | Last-event status widget (color-coded timers)   | S (15 min CC) | ACCEPTED | Timers for feed/sleep/diaper visible on dashboard. Colors: green (<2h), yellow (2-3h), red (>3h) for feeds. Thresholds configurable per event type.                                                                                                                                                                | Transforms dashboard from chat app to baby status center. |
+| 2   | Voice confirmation with personality             | S (15 min CC) | ACCEPTED | Tambo responds with event context after logging: "Got it — left side, 15 minutes. That's 6 feeds today."                                                                                                                                                                                                           | Builds emotional trust → retention.                       |
+| 3   | Smart quick-action reordering                   | S (20 min CC) | ACCEPTED | Quick actions reorder based on event frequency by hour-of-day from last 7 days of data. Falls back to default order if <7 days of history.                                                                                                                                                                         | Makes UI feel alive and contextual.                       |
+| 4   | Auto dark mode (8pm-7am, configurable)          | S (10 min CC) | ACCEPTED | App switches to dark theme at 8pm, light at 7am. User can adjust times or disable in settings. Uses Tailwind dark: classes.                                                                                                                                                                                        | Trust signal for 3am UX.                                  |
+| 5   | Haptic vocabulary (with audio fallback for iOS) | S (10 min CC) | ACCEPTED | Android: short vibrate=logged, double=timer, long=reminder. iOS: soft chime=logged, double-tone=timer, bell=reminder. Visual indicator always present. Accessible: all feedback has a visual equivalent for deaf/HoH users.                                                                                        | Supports no-look logging thesis.                          |
+| 6   | "Share this week" summary cards                 | M (30 min CC) | DEFERRED | —                                                                                                                                                                                                                                                                                                                  | Intelligence-layer feature → Context Engine phase.        |
+| 7   | Empathetic onboarding (one screen, voice-first) | S (20 min CC) | ACCEPTED | Setup page replaced with single screen: welcome message acknowledging exhaustion, one mic button to start, voice-guided baby name + birth date collection. Falls back to form for non-voice browsers.                                                                                                              | First impressions define retention.                       |
+| 8   | Partner shift handoff summary                   | S (30 min CC) | ACCEPTED | When a user opens BabyTalk and another household member logged events since their last session (detected via lastSeenAt timestamp per user), Tambo generates a summary of events since that timestamp. Summary includes: event count by type, key details (feed sides, sleep duration), and time since last event. | Bridges input and intelligence layers.                    |
 
 ## Critical Discovery: iOS Haptics Gap
 
@@ -42,12 +42,14 @@ The user feels *relief*. Not "oh, a baby tracking app" — but "oh thank god, so
 ## Accepted Scope (added to this plan)
 
 P0 baseline (~4 hours CC, from design doc):
+
 - Enhanced voice input with hold-to-talk + continuous mode
 - Smart NLP defaults via Tambo
 - Quick-action redesign for one-thumb use
 - PWA install with offline queue and background sync
 
 Expansions (~2 hours CC):
+
 - Last-event status widget with color-coded urgency timers
 - Voice confirmation with personality (warm, contextual Tambo responses)
 - Smart quick-action reordering by time-of-day patterns
@@ -70,24 +72,25 @@ The following design foundation has been implemented in `globals.css` and applie
 
 All colors use OKLCH for perceptual uniformity. No stock Tailwind colors remain.
 
-| Token | Purpose | Hue |
-|-------|---------|-----|
-| `neutral-*` | Text, backgrounds, borders | 60 (warm amber undertone) |
-| `primary-*` | CTAs, user messages, active states | 30 (terracotta-rose) |
-| `feed-*` | Feed event type | 230 (sage blue) |
-| `sleep-*` | Sleep event type | 290 (soft lavender) |
-| `diaper-*` | Diaper event type | 80 (soft honey) |
-| `success-*` | Confirmations | 145 (sage green) |
-| `warning-*` | Caution states | 85 (warm honey) |
-| `danger-*` | Errors, destructive actions | 15 (soft rose) |
-| `urgency-ok/soon/overdue` | Timer status colors | 145/85/15 (softened traffic lights) |
-| `surface/surface-raised/surface-sunken` | Background layers | 60 (warm tint) |
+| Token                                   | Purpose                            | Hue                                 |
+| --------------------------------------- | ---------------------------------- | ----------------------------------- |
+| `neutral-*`                             | Text, backgrounds, borders         | 60 (warm amber undertone)           |
+| `primary-*`                             | CTAs, user messages, active states | 30 (terracotta-rose)                |
+| `feed-*`                                | Feed event type                    | 230 (sage blue)                     |
+| `sleep-*`                               | Sleep event type                   | 290 (soft lavender)                 |
+| `diaper-*`                              | Diaper event type                  | 80 (soft honey)                     |
+| `success-*`                             | Confirmations                      | 145 (sage green)                    |
+| `warning-*`                             | Caution states                     | 85 (warm honey)                     |
+| `danger-*`                              | Errors, destructive actions        | 15 (soft rose)                      |
+| `urgency-ok/soon/overdue`               | Timer status colors                | 145/85/15 (softened traffic lights) |
+| `surface/surface-raised/surface-sunken` | Background layers                  | 60 (warm tint)                      |
 
 ### Typography
 
 **Font**: Plus Jakarta Sans (Google Fonts) — humanist sans-serif, warm and readable.
 
 **Scale** (perfect fourth ratio 1.333, fluid with `clamp()`):
+
 - `xs`: 0.75rem — captions
 - `sm`: 0.875rem — secondary UI
 - `base`: 1rem — body
@@ -107,6 +110,7 @@ All interactive elements enforce `min-h-[44px]` and `min-w-[44px]` for one-hande
 ### Motion
 
 Three custom animations (all respect `prefers-reduced-motion`):
+
 - `animate-breathe` — loading states (2s gentle opacity pulse)
 - `animate-fade-up` — entrance animations (translateY + opacity)
 - `animate-gentle-pulse` — voice recording indicator (subtle scale + opacity)
@@ -116,6 +120,7 @@ Easing: `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) for natural deceleration
 ### Dark Mode
 
 Dark mode overrides use warm-tinted backgrounds (hue 60), not pure grays:
+
 - `surface`: `oklch(15% 0.01 60)` — cozy, not stark
 - `surface-raised`: `oklch(18% 0.012 60)`
 - `surface-sunken`: `oklch(12% 0.008 60)`
@@ -124,18 +129,19 @@ The auto dark mode (8pm-7am) specified in scope decision #4 should toggle a `.da
 
 ### UX Copy Changes
 
-| Before | After | Why |
-|--------|-------|-----|
-| "Create Household" | "Create your family" | Warmer, less administrative |
-| "Join an existing household" | "Join your partner's family" | More personal |
-| "Birth weight in grams (optional)" | Label: "Birth weight" + placeholder: "Grams" + "optional" tag | Less clinical |
-| "Babytalk / Welcome to Babytalk" | "For tired parents / BabyTalk" + value prop | Acknowledges user, communicates purpose |
-| "Thinking..." | Animated dots | Less verbal, more ambient |
-| "No events yet today." | "Nothing logged yet today" + helpful hint | Teaches the interface |
+| Before                             | After                                                         | Why                                     |
+| ---------------------------------- | ------------------------------------------------------------- | --------------------------------------- |
+| "Create Household"                 | "Create your family"                                          | Warmer, less administrative             |
+| "Join an existing household"       | "Join your partner's family"                                  | More personal                           |
+| "Birth weight in grams (optional)" | Label: "Birth weight" + placeholder: "Grams" + "optional" tag | Less clinical                           |
+| "Babytalk / Welcome to Babytalk"   | "For tired parents / BabyTalk" + value prop                   | Acknowledges user, communicates purpose |
+| "Thinking..."                      | Animated dots                                                 | Less verbal, more ambient               |
+| "No events yet today."             | "Nothing logged yet today" + helpful hint                     | Teaches the interface                   |
 
 ## Implementation Approach
 
 The approach builds on existing code (voice-button.tsx, tambo/tools.ts, quick-actions.tsx) and adds:
+
 - New: service worker, IndexedDB offline queue, web app manifest, push subscription API endpoint
 - Enhanced: voice button component (hold-to-talk, continuous, silence detection, audio/haptic feedback)
 - Enhanced: Tambo system prompt (smart defaults, warm confirmations, handoff summaries)

@@ -1,5 +1,5 @@
 import { describe, test, expect, afterAll } from "bun:test";
-import * as path from "path";
+import * as path from "node:path";
 
 // Load the polyfill into a fresh object (don't clobber globalThis.Bun)
 const polyfillPath = path.resolve(import.meta.dir, "../src/bun-polyfill.cjs");
@@ -23,7 +23,7 @@ describe("bun-polyfill", () => {
       })();
     `,
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stderr: "pipe", stdout: "pipe" }
     );
     expect(result.stdout.toString().trim()).toBe("OK");
     expect(result.exitCode).toBe(0);
@@ -41,7 +41,7 @@ describe("bun-polyfill", () => {
       console.log('exit:' + r.exitCode);
     `,
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stderr: "pipe", stdout: "pipe" }
     );
     const lines = result.stdout.toString().trim().split("\n");
     expect(lines[0]).toBe("hello");
@@ -61,7 +61,7 @@ describe("bun-polyfill", () => {
       console.log(typeof p.unref === 'function' ? 'HAS_UNREF' : 'NO_UNREF');
     `,
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stderr: "pipe", stdout: "pipe" }
     );
     const lines = result.stdout.toString().trim().split("\n");
     expect(lines[0]).toBe("HAS_PID");
@@ -91,7 +91,7 @@ describe("bun-polyfill", () => {
       server.stop();
     `,
       ],
-      { stdout: "pipe", stderr: "pipe" }
+      { stderr: "pipe", stdout: "pipe" }
     );
     const lines = result.stdout.toString().trim().split("\n");
     expect(lines[0]).toBe("HAS_STOP");

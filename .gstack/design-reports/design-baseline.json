@@ -16,15 +16,75 @@
     "performance": "B"
   },
   "findings": [
-    {"id": "FINDING-001", "title": "Login email input missing label", "impact": "high", "category": "accessibility", "status": "fixed"},
-    {"id": "FINDING-002", "title": "Join invite code input missing label", "impact": "high", "category": "accessibility", "status": "fixed"},
-    {"id": "FINDING-003", "title": "Dashboard chat input missing aria-label", "impact": "high", "category": "accessibility", "status": "fixed"},
-    {"id": "FINDING-004", "title": "focus:outline-none without focus-visible", "impact": "high", "category": "interaction", "status": "fixed"},
-    {"id": "FINDING-005", "title": "transition-all instead of specific properties", "impact": "medium", "category": "motion", "status": "fixed"},
-    {"id": "FINDING-006", "title": "No explicit cursor-pointer on buttons", "impact": "polish", "category": "interaction", "status": "deferred"},
-    {"id": "FINDING-007", "title": "Edit/Delete buttons below 44px minimum", "impact": "medium", "category": "accessibility", "status": "fixed"},
-    {"id": "FINDING-008", "title": "High centered-content count", "impact": "medium", "category": "aiSlop", "status": "deferred"},
-    {"id": "FINDING-009", "title": "Incomplete dark mode overrides", "impact": "high", "category": "color", "status": "fixed"},
-    {"id": "FINDING-010", "title": "No responsive breakpoints", "impact": "high", "category": "responsive", "status": "deferred"}
+    {
+      "id": "FINDING-001",
+      "title": "Login email input missing label",
+      "impact": "high",
+      "category": "accessibility",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-002",
+      "title": "Join invite code input missing label",
+      "impact": "high",
+      "category": "accessibility",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-003",
+      "title": "Dashboard chat input missing aria-label",
+      "impact": "high",
+      "category": "accessibility",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-004",
+      "title": "focus:outline-none without focus-visible",
+      "impact": "high",
+      "category": "interaction",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-005",
+      "title": "transition-all instead of specific properties",
+      "impact": "medium",
+      "category": "motion",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-006",
+      "title": "No explicit cursor-pointer on buttons",
+      "impact": "polish",
+      "category": "interaction",
+      "status": "deferred"
+    },
+    {
+      "id": "FINDING-007",
+      "title": "Edit/Delete buttons below 44px minimum",
+      "impact": "medium",
+      "category": "accessibility",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-008",
+      "title": "High centered-content count",
+      "impact": "medium",
+      "category": "aiSlop",
+      "status": "deferred"
+    },
+    {
+      "id": "FINDING-009",
+      "title": "Incomplete dark mode overrides",
+      "impact": "high",
+      "category": "color",
+      "status": "fixed"
+    },
+    {
+      "id": "FINDING-010",
+      "title": "No responsive breakpoints",
+      "impact": "high",
+      "category": "responsive",
+      "status": "deferred"
+    }
   ]
 }

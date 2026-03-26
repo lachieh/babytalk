@@ -36,10 +36,10 @@
  */
 
 import { Database } from "bun:sqlite";
-import * as crypto from "crypto";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -104,48 +104,48 @@ interface BrowserMatch {
 
 const BROWSER_REGISTRY: BrowserInfo[] = [
   {
-    name: "Comet",
+    aliases: ["comet", "perplexity"],
     dataDir: "Comet/",
     keychainService: "Comet Safe Storage",
-    aliases: ["comet", "perplexity"],
+    name: "Comet",
   },
   {
-    name: "Chrome",
+    aliases: ["chrome", "google-chrome", "google-chrome-stable"],
     dataDir: "Google/Chrome/",
     keychainService: "Chrome Safe Storage",
-    aliases: ["chrome", "google-chrome", "google-chrome-stable"],
-    linuxDataDir: "google-chrome/",
     linuxApplication: "chrome",
+    linuxDataDir: "google-chrome/",
+    name: "Chrome",
   },
   {
-    name: "Chromium",
+    aliases: ["chromium"],
     dataDir: "chromium/",
     keychainService: "Chromium Safe Storage",
-    aliases: ["chromium"],
-    linuxDataDir: "chromium/",
     linuxApplication: "chromium",
+    linuxDataDir: "chromium/",
+    name: "Chromium",
   },
   {
-    name: "Arc",
+    aliases: ["arc"],
     dataDir: "Arc/User Data/",
     keychainService: "Arc Safe Storage",
-    aliases: ["arc"],
+    name: "Arc",
   },
   {
-    name: "Brave",
+    aliases: ["brave"],
     dataDir: "BraveSoftware/Brave-Browser/",
     keychainService: "Brave Safe Storage",
-    aliases: ["brave"],
-    linuxDataDir: "BraveSoftware/Brave-Browser/",
     linuxApplication: "brave",
+    linuxDataDir: "BraveSoftware/Brave-Browser/",
+    name: "Brave",
   },
   {
-    name: "Edge",
+    aliases: ["edge"],
     dataDir: "Microsoft Edge/",
     keychainService: "Microsoft Edge Safe Storage",
-    aliases: ["edge"],
-    linuxDataDir: "microsoft-edge/",
     linuxApplication: "microsoft-edge",
+    linuxDataDir: "microsoft-edge/",
+    name: "Edge",
   },
 ];
 
@@ -231,7 +231,7 @@ export function listProfiles(browserName: string): ProfileEntry[] {
       try {
         const prefsPath = path.join(browserDir, entry.name, "Preferences");
         if (fs.existsSync(prefsPath)) {
-          const prefs = JSON.parse(fs.readFileSync(prefsPath, "utf-8"));
+          const prefs = JSON.parse(fs.readFileSync(prefsPath, "utf8"));
           const email = prefs?.account_info?.[0]?.email;
           if (email && typeof email === "string") {
             displayName = email;
@@ -246,7 +246,7 @@ export function listProfiles(browserName: string): ProfileEntry[] {
         // Ignore — fall back to directory name
       }
 
-      profiles.push({ name: entry.name, displayName });
+      profiles.push({ displayName, name: entry.name });
     }
 
     // Found profiles on this platform — no need to check others
@@ -277,7 +277,7 @@ export function listDomains(
        ORDER BY count DESC`
       )
       .all(now) as DomainEntry[];
-    return { domains: rows, browser: browser.name };
+    return { browser: browser.name, domains: rows };
   } finally {
     db.close();
   }
@@ -292,7 +292,7 @@ export async function importCookies(
   profile = "Default"
 ): Promise<ImportResult> {
   if (domains.length === 0)
-    return { cookies: [], count: 0, failed: 0, domainCounts: {} };
+    return { cookies: [], count: 0, domainCounts: {}, failed: 0 };
 
   const browser = resolveBrowser(browserName);
   const match = getBrowserMatch(browser, profile);
@@ -329,7 +329,7 @@ export async function importCookies(
       }
     }
 
-    return { cookies, count: cookies.length, failed, domainCounts };
+    return { cookies, count: cookies.length, domainCounts, failed };
   } finally {
     db.close();
   }
@@ -353,7 +353,7 @@ function resolveBrowser(nameOrAlias: string): BrowserInfo {
 }
 
 function validateProfile(profile: string): void {
-  if (/[/\\]|\.\./.test(profile) || /[\x00-\x1f]/.test(profile)) {
+  if (/[/\\]|\.\./.test(profile) || /[\u0000-\u001F]/.test(profile)) {
     throw new CookieImportError(
       `Invalid profile name: '${profile}'`,
       "bad_request"
@@ -401,7 +401,7 @@ function findBrowserMatch(
     const dbPath = path.join(getBaseDir(platform), dataDir, profile, "Cookies");
     try {
       if (fs.existsSync(dbPath)) {
-        return { browser, platform, dbPath };
+        return { browser, dbPath, platform };
       }
     } catch {}
   }
@@ -432,23 +432,23 @@ function getBrowserMatch(browser: BrowserInfo, profile: string): BrowserMatch {
 function openDb(dbPath: string, browserName: string): Database {
   try {
     return new Database(dbPath, { readonly: true });
-  } catch (err: any) {
+  } catch (error: any) {
     if (
-      err.message?.includes("SQLITE_BUSY") ||
-      err.message?.includes("database is locked")
+      error.message?.includes("SQLITE_BUSY") ||
+      error.message?.includes("database is locked")
     ) {
       return openDbFromCopy(dbPath, browserName);
     }
     if (
-      err.message?.includes("SQLITE_CORRUPT") ||
-      err.message?.includes("malformed")
+      error.message?.includes("SQLITE_CORRUPT") ||
+      error.message?.includes("malformed")
     ) {
       throw new CookieImportError(
         `Cookie database for ${browserName} is corrupt`,
         "db_corrupt"
       );
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -550,7 +550,7 @@ async function getMacKeychainPassword(service: string): Promise<string> {
   // macOS may show an Allow/Deny dialog that blocks until the user responds.
   const proc = Bun.spawn(
     ["security", "find-generic-password", "-s", service, "-w"],
-    { stdout: "pipe", stderr: "pipe" }
+    { stderr: "pipe", stdout: "pipe" }
   );
 
   const timeout = new Promise<never>((_, reject) =>
@@ -602,10 +602,10 @@ async function getMacKeychainPassword(service: string): Promise<string> {
     }
 
     return stdout.trim();
-  } catch (err) {
-    if (err instanceof CookieImportError) throw err;
+  } catch (error) {
+    if (error instanceof CookieImportError) throw error;
     throw new CookieImportError(
-      `Could not read Keychain: ${(err as Error).message}`,
+      `Could not read Keychain: ${(error as Error).message}`,
       "keychain_error",
       "retry"
     );
@@ -641,7 +641,7 @@ async function getLinuxSecretPassword(
   }
 
   for (const cmd of attempts) {
-    const password = await runPasswordLookup(cmd, 3_000);
+    const password = await runPasswordLookup(cmd, 3000);
     if (password) return password;
   }
 
@@ -653,7 +653,7 @@ async function runPasswordLookup(
   timeoutMs: number
 ): Promise<string | null> {
   try {
-    const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn(cmd, { stderr: "pipe", stdout: "pipe" });
     const timeout = new Promise<never>((_, reject) =>
       setTimeout(() => {
         proc.kill();
@@ -694,7 +694,7 @@ function decryptCookieValue(row: RawCookie, keys: Map<string, Buffer>): string {
   const ev = Buffer.from(row.encrypted_value);
   if (ev.length === 0) return "";
 
-  const prefix = ev.slice(0, 3).toString("utf-8");
+  const prefix = ev.slice(0, 3).toString("utf8");
   const key = keys.get(prefix);
   if (!key)
     throw new Error(`No decryption key available for ${prefix} cookies`);
@@ -709,25 +709,25 @@ function decryptCookieValue(row: RawCookie, keys: Map<string, Buffer>): string {
 
   // Chromium prefixes encrypted cookie payloads with 32 bytes of metadata.
   if (plaintext.length <= 32) return "";
-  return plaintext.slice(32).toString("utf-8");
+  return plaintext.slice(32).toString("utf8");
 }
 
 function toPlaywrightCookie(row: RawCookie, value: string): PlaywrightCookie {
   return {
-    name: row.name,
-    value,
     domain: row.host_key,
-    path: row.path || "/",
     expires: chromiumEpochToUnix(row.expires_utc, row.has_expires),
-    secure: row.is_secure === 1,
     httpOnly: row.is_httponly === 1,
+    name: row.name,
+    path: row.path || "/",
     sameSite: mapSameSite(row.samesite),
+    secure: row.is_secure === 1,
+    value,
   };
 }
 
 // ─── Internal: Chromium Epoch Conversion ────────────────────────
 
-const CHROMIUM_EPOCH_OFFSET = 11644473600000000n;
+const CHROMIUM_EPOCH_OFFSET = 11_644_473_600_000_000n;
 
 function chromiumNow(): bigint {
   // Current time in Chromium epoch (microseconds since 1601-01-01)
@@ -741,18 +741,22 @@ function chromiumEpochToUnix(
   if (hasExpires === 0 || epoch === 0 || epoch === 0n) return -1; // session cookie
   const epochBig = BigInt(epoch);
   const unixMicro = epochBig - CHROMIUM_EPOCH_OFFSET;
-  return Number(unixMicro / 1000000n);
+  return Number(unixMicro / 1_000_000n);
 }
 
 function mapSameSite(value: number): "Strict" | "Lax" | "None" {
   switch (value) {
-    case 0:
+    case 0: {
       return "None";
-    case 1:
+    }
+    case 1: {
       return "Lax";
-    case 2:
+    }
+    case 2: {
       return "Strict";
-    default:
+    }
+    default: {
       return "Lax";
+    }
   }
 }

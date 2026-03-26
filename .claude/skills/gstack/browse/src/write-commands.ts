@@ -5,8 +5,8 @@
  * press, scroll, wait, viewport, cookie, header, useragent
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import type { BrowserManager } from "./browser-manager";
 import {
@@ -30,25 +30,25 @@ export async function handleWriteCommand(
       if (!url) throw new Error("Usage: browse goto <url>");
       await validateNavigationUrl(url);
       const response = await page.goto(url, {
+        timeout: 15_000,
         waitUntil: "domcontentloaded",
-        timeout: 15000,
       });
       const status = response?.status() || "unknown";
       return `Navigated to ${url} (${status})`;
     }
 
     case "back": {
-      await page.goBack({ waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goBack({ timeout: 15_000, waitUntil: "domcontentloaded" });
       return `Back → ${page.url()}`;
     }
 
     case "forward": {
-      await page.goForward({ waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goForward({ timeout: 15_000, waitUntil: "domcontentloaded" });
       return `Forward → ${page.url()}`;
     }
 
     case "reload": {
-      await page.reload({ waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.reload({ timeout: 15_000, waitUntil: "domcontentloaded" });
       return `Reloaded ${page.url()}`;
     }
 
@@ -66,7 +66,7 @@ export async function handleWriteCommand(
             const option = el as HTMLOptionElement;
             const select = option.closest("select");
             if (!select) return null;
-            return { value: option.value, text: option.text };
+            return { text: option.text, value: option.value };
           });
           if (optionInfo) {
             await resolved.locator
@@ -85,7 +85,7 @@ export async function handleWriteCommand(
         } else {
           await page.click(resolved.selector, { timeout: 5000 });
         }
-      } catch (err: any) {
+      } catch (error: any) {
         // Enhanced error guidance: clicking <option> elements always fails (not visible / timeout)
         const isOption =
           "locator" in resolved
@@ -101,10 +101,11 @@ export async function handleWriteCommand(
                 .catch(() => false);
         if (isOption) {
           throw new Error(
-            `Cannot click <option> elements. Use 'browse select <parent-select> <value>' instead of 'click' for dropdown options.`
+            `Cannot click <option> elements. Use 'browse select <parent-select> <value>' instead of 'click' for dropdown options.`,
+            { cause: error }
           );
         }
-        throw err;
+        throw error;
       }
       // Wait briefly for any navigation/DOM update
       await page.waitForLoadState("domcontentloaded").catch(() => {});
@@ -190,7 +191,7 @@ export async function handleWriteCommand(
           "Usage: browse wait <selector|--networkidle|--load|--domcontentloaded>"
         );
       if (selector === "--networkidle") {
-        const timeout = args[1] ? parseInt(args[1], 10) : 15000;
+        const timeout = args[1] ? Number.parseInt(args[1], 10) : 15_000;
         await page.waitForLoadState("networkidle", { timeout });
         return "Network idle";
       }
@@ -202,7 +203,7 @@ export async function handleWriteCommand(
         await page.waitForLoadState("domcontentloaded");
         return "DOM content loaded";
       }
-      const timeout = args[1] ? parseInt(args[1], 10) : 15000;
+      const timeout = args[1] ? Number.parseInt(args[1], 10) : 15_000;
       const resolved = await bm.resolveRef(selector);
       if ("locator" in resolved) {
         await resolved.locator.waitFor({ state: "visible", timeout });
@@ -231,10 +232,10 @@ export async function handleWriteCommand(
       const url = new URL(page.url());
       await page.context().addCookies([
         {
-          name,
-          value,
           domain: url.hostname,
+          name,
           path: "/",
+          value,
         },
       ]);
       return `Cookie set: ${name}=****`;
@@ -329,7 +330,7 @@ export async function handleWriteCommand(
       }
       if (!fs.existsSync(filePath))
         throw new Error(`File not found: ${filePath}`);
-      const raw = fs.readFileSync(filePath, "utf-8");
+      const raw = fs.readFileSync(filePath, "utf8");
       let cookies: any[];
       try {
         cookies = JSON.parse(raw);
@@ -394,7 +395,7 @@ export async function handleWriteCommand(
 
       const pickerUrl = `http://127.0.0.1:${port}/cookie-picker`;
       try {
-        Bun.spawn(["open", pickerUrl], { stdout: "ignore", stderr: "ignore" });
+        Bun.spawn(["open", pickerUrl], { stderr: "ignore", stdout: "ignore" });
       } catch {
         // open may fail silently — URL is in the message below
       }
@@ -402,7 +403,8 @@ export async function handleWriteCommand(
       return `Cookie picker opened at ${pickerUrl}\nDetected browsers: ${browsers.map((b) => b.name).join(", ")}\nSelect domains to import, then close the picker when done.`;
     }
 
-    default:
+    default: {
       throw new Error(`Unknown write command: ${command}`);
+    }
   }
 }

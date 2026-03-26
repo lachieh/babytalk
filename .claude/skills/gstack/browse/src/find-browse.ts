@@ -5,17 +5,17 @@
  * Outputs the absolute path to the browse binary on stdout, or exits 1 if not found.
  */
 
-import { existsSync } from "fs";
-import { homedir } from "os";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 // ─── Binary Discovery ───────────────────────────────────────────
 
 function getGitRoot(): string | null {
   try {
     const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
-      stdout: "pipe",
       stderr: "pipe",
+      stdout: "pipe",
     });
     if (proc.exitCode !== 0) return null;
     return proc.stdout.toString().trim();

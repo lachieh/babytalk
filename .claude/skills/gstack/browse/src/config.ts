@@ -10,8 +10,8 @@
  * spawned server. The server derives all paths from that env var.
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 export interface BrowseConfig {
   projectDir: string;
@@ -28,9 +28,9 @@ export interface BrowseConfig {
 export function getGitRoot(): string | null {
   try {
     const proc = Bun.spawnSync(["git", "rev-parse", "--show-toplevel"], {
-      stdout: "pipe",
       stderr: "pipe",
-      timeout: 2_000, // Don't hang if .git is broken
+      stdout: "pipe",
+      timeout: 2000, // Don't hang if .git is broken
     });
     if (proc.exitCode !== 0) return null;
     return proc.stdout.toString().trim() || null;
@@ -64,12 +64,12 @@ export function resolveConfig(
   }
 
   return {
+    consoleLog: path.join(stateDir, "browse-console.log"),
+    dialogLog: path.join(stateDir, "browse-dialog.log"),
+    networkLog: path.join(stateDir, "browse-network.log"),
     projectDir,
     stateDir,
     stateFile,
-    consoleLog: path.join(stateDir, "browse-console.log"),
-    networkLog: path.join(stateDir, "browse-network.log"),
-    dialogLog: path.join(stateDir, "browse-dialog.log"),
   };
 }
 
@@ -80,36 +80,38 @@ export function resolveConfig(
 export function ensureStateDir(config: BrowseConfig): void {
   try {
     fs.mkdirSync(config.stateDir, { recursive: true });
-  } catch (err: any) {
-    if (err.code === "EACCES") {
+  } catch (error: any) {
+    if (error.code === "EACCES") {
       throw new Error(
-        `Cannot create state directory ${config.stateDir}: permission denied`
+        `Cannot create state directory ${config.stateDir}: permission denied`,
+        { cause: error }
       );
     }
-    if (err.code === "ENOTDIR") {
+    if (error.code === "ENOTDIR") {
       throw new Error(
-        `Cannot create state directory ${config.stateDir}: a file exists at that path`
+        `Cannot create state directory ${config.stateDir}: a file exists at that path`,
+        { cause: error }
       );
     }
-    throw err;
+    throw error;
   }
 
   // Ensure .gstack/ is in the project's .gitignore
   const gitignorePath = path.join(config.projectDir, ".gitignore");
   try {
-    const content = fs.readFileSync(gitignorePath, "utf-8");
-    if (!content.match(/^\.gstack\/?$/m)) {
+    const content = fs.readFileSync(gitignorePath, "utf8");
+    if (!/^\.gstack\/?$/m.test(content)) {
       const separator = content.endsWith("\n") ? "" : "\n";
       fs.appendFileSync(gitignorePath, `${separator}.gstack/\n`);
     }
-  } catch (err: any) {
-    if (err.code !== "ENOENT") {
+  } catch (error: any) {
+    if (error.code !== "ENOENT") {
       // Write warning to server log (visible even in daemon mode)
       const logPath = path.join(config.stateDir, "browse-server.log");
       try {
         fs.appendFileSync(
           logPath,
-          `[${new Date().toISOString()}] Warning: could not update .gitignore at ${gitignorePath}: ${err.message}\n`
+          `[${new Date().toISOString()}] Warning: could not update .gitignore at ${gitignorePath}: ${error.message}\n`
         );
       } catch {
         // stateDir write failed too — nothing more we can do
@@ -126,9 +128,9 @@ export function ensureStateDir(config: BrowseConfig): void {
 export function getRemoteSlug(): string {
   try {
     const proc = Bun.spawnSync(["git", "remote", "get-url", "origin"], {
-      stdout: "pipe",
       stderr: "pipe",
-      timeout: 2_000,
+      stdout: "pipe",
+      timeout: 2000,
     });
     if (proc.exitCode !== 0) throw new Error("no remote");
     const url = proc.stdout.toString().trim();
@@ -152,7 +154,7 @@ export function readVersionHash(
 ): string | null {
   try {
     const versionFile = path.resolve(path.dirname(execPath), ".version");
-    return fs.readFileSync(versionFile, "utf-8").trim() || null;
+    return fs.readFileSync(versionFile, "utf8").trim() || null;
   } catch {
     return null;
   }

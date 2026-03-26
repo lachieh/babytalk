@@ -15,6 +15,7 @@ function mockBrowserManager() {
   const addedCookies: any[] = [];
   const clearedDomains: string[] = [];
   return {
+    addedCookies,
     bm: {
       getPage: () => ({
         context: () => ({
@@ -27,7 +28,6 @@ function mockBrowserManager() {
         }),
       }),
     } as any,
-    addedCookies,
     clearedDomains,
   };
 }
@@ -109,9 +109,9 @@ describe("cookie-picker-routes", () => {
       const { bm } = mockBrowserManager();
       const url = makeUrl("/cookie-picker/import");
       const req = new Request("http://127.0.0.1:9470", {
-        method: "POST",
         body: "not json",
         headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
 
       const res = await handleCookiePickerRoute(url, req, bm);
@@ -150,9 +150,9 @@ describe("cookie-picker-routes", () => {
       const { bm } = mockBrowserManager();
       const url = makeUrl("/cookie-picker/remove");
       const req = new Request("http://127.0.0.1:9470", {
-        method: "POST",
         body: "{bad",
         headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
 
       const res = await handleCookiePickerRoute(url, req, bm);
