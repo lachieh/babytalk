@@ -139,6 +139,36 @@
     --color-surface: oklch(15% 0.01 60);
     --color-surface-raised: oklch(18% 0.012 60);
     --color-surface-sunken: oklch(12% 0.008 60);
+
+    /* Text: off-white, not pure white */
+    --color-neutral-50: oklch(14% 0.008 60);
+    --color-neutral-100: oklch(18% 0.01 60);
+    --color-neutral-200: oklch(24% 0.012 60);
+    --color-neutral-300: oklch(35% 0.01 60);
+    --color-neutral-400: oklch(52% 0.01 60);
+    --color-neutral-500: oklch(62% 0.008 60);
+    --color-neutral-600: oklch(72% 0.008 60);
+    --color-neutral-700: oklch(82% 0.006 60);
+    --color-neutral-800: oklch(90% 0.005 60);
+    --color-neutral-900: oklch(94% 0.003 60);
+
+    /* Primary: slightly desaturated for dark backgrounds */
+    --color-primary-500: oklch(62% 0.12 30);
+    --color-primary-600: oklch(55% 0.12 30);
+
+    /* Event accents: reduced chroma for dark mode */
+    --color-feed-50: oklch(20% 0.02 230);
+    --color-feed-200: oklch(28% 0.04 230);
+    --color-sleep-50: oklch(20% 0.02 290);
+    --color-sleep-200: oklch(28% 0.04 290);
+    --color-diaper-50: oklch(20% 0.02 80);
+    --color-diaper-200: oklch(28% 0.04 80);
+
+    /* Semantic: subdued in dark mode */
+    --color-success-50: oklch(18% 0.02 145);
+    --color-success-200: oklch(25% 0.04 145);
+    --color-danger-50: oklch(18% 0.02 15);
+    --color-danger-100: oklch(22% 0.03 15);
   }
 }
 
