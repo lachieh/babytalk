@@ -6,9 +6,9 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import { spawn } from "child_process";
-import * as fs from "fs";
-import * as path from "path";
+import { spawn } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import { BrowserManager } from "../src/browser-manager";
 import {
@@ -348,11 +348,11 @@ describe("Interaction", () => {
     try {
       await handleWriteCommand("click", ['option[value="admin"]'], bm);
       expect(true).toBe(false); // Should not reach here
-    } catch (err: any) {
-      expect(err.message).toContain("select");
-      expect(err.message).toContain("option");
+    } catch (error: any) {
+      expect(error.message).toContain("select");
+      expect(error.message).toContain("option");
     }
-  }, 15000);
+  }, 15_000);
 
   test("hover works", async () => {
     const result = await handleWriteCommand("hover", ["h1"], bm);
@@ -608,8 +608,8 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Cannot use --clip with a selector/ref");
+    } catch (error: any) {
+      expect(error.message).toContain("Cannot use --clip with a selector/ref");
     }
   });
 
@@ -623,8 +623,8 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Cannot use --viewport with --clip");
+    } catch (error: any) {
+      expect(error.message).toContain("Cannot use --viewport with --clip");
     }
   });
 
@@ -638,8 +638,8 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("all must be numbers");
+    } catch (error: any) {
+      expect(error.message).toContain("all must be numbers");
     }
   });
 
@@ -653,8 +653,8 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown screenshot flag");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown screenshot flag");
     }
   });
 
@@ -668,8 +668,8 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -683,10 +683,10 @@ describe("Visual", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toBeDefined();
+    } catch (error: any) {
+      expect(error.message).toBeDefined();
     }
-  }, 10000);
+  }, 10_000);
 
   test("responsive saves 3 screenshots", async () => {
     await handleWriteCommand("goto", [baseUrl + "/responsive.html"], bm);
@@ -743,7 +743,7 @@ describe("Tabs", () => {
     const before = bm.getTabCount();
     // Close the last opened tab
     const tabs = await bm.getTabListWithTitles();
-    const lastTab = tabs[tabs.length - 1];
+    const lastTab = tabs.at(-1);
     const result = await handleMetaCommand(
       "closetab",
       [String(lastTab.id)],
@@ -845,7 +845,7 @@ describe("CLI server script resolution", () => {
 
     expect(resolved).toBe(serverPath);
 
-    fs.rmSync(root, { recursive: true, force: true });
+    fs.rmSync(root, { force: true, recursive: true });
   });
 });
 
@@ -857,9 +857,9 @@ describe("CLI lifecycle", () => {
     fs.writeFileSync(
       stateFile,
       JSON.stringify({
+        pid: 999_999,
         port: 1,
         token: "fake",
-        pid: 999999,
       })
     );
 
@@ -875,19 +875,19 @@ describe("CLI lifecycle", () => {
       stderr: string;
     }>((resolve) => {
       const proc = spawn("bun", ["run", cliPath, "status"], {
-        timeout: 15000,
         env: cliEnv,
+        timeout: 15_000,
       });
       let stdout = "";
       let stderr = "";
       proc.stdout.on("data", (d) => (stdout += d.toString()));
       proc.stderr.on("data", (d) => (stderr += d.toString()));
-      proc.on("close", (code) => resolve({ code: code ?? 1, stdout, stderr }));
+      proc.on("close", (code) => resolve({ code: code ?? 1, stderr, stdout }));
     });
 
     let restartedPid: number | null = null;
     if (fs.existsSync(stateFile)) {
-      restartedPid = JSON.parse(fs.readFileSync(stateFile, "utf-8")).pid;
+      restartedPid = JSON.parse(fs.readFileSync(stateFile, "utf8")).pid;
       fs.unlinkSync(stateFile);
     }
     if (restartedPid) {
@@ -899,7 +899,7 @@ describe("CLI lifecycle", () => {
     expect(result.code).toBe(0);
     expect(result.stdout).toContain("Status: healthy");
     expect(result.stderr).toContain("Starting server");
-  }, 20000);
+  }, 20_000);
 });
 
 // ─── Buffer bounds ──────────────────────────────────────────────
@@ -908,24 +908,24 @@ describe("Buffer bounds", () => {
   test("console buffer caps at 50000 entries", () => {
     consoleBuffer.clear();
     for (let i = 0; i < 50_010; i++) {
-      addConsoleEntry({ timestamp: i, level: "log", text: `msg-${i}` });
+      addConsoleEntry({ level: "log", text: `msg-${i}`, timestamp: i });
     }
     expect(consoleBuffer.length).toBe(50_000);
     const entries = consoleBuffer.toArray();
     expect(entries[0].text).toBe("msg-10");
-    expect(entries[entries.length - 1].text).toBe("msg-50009");
+    expect(entries.at(-1).text).toBe("msg-50009");
     consoleBuffer.clear();
   });
 
   test("network buffer caps at 50000 entries", () => {
     networkBuffer.clear();
     for (let i = 0; i < 50_010; i++) {
-      addNetworkEntry({ timestamp: i, method: "GET", url: `http://x/${i}` });
+      addNetworkEntry({ method: "GET", timestamp: i, url: `http://x/${i}` });
     }
     expect(networkBuffer.length).toBe(50_000);
     const entries = networkBuffer.toArray();
     expect(entries[0].url).toBe("http://x/10");
-    expect(entries[entries.length - 1].url).toBe("http://x/50009");
+    expect(entries.at(-1).url).toBe("http://x/50009");
     networkBuffer.clear();
   });
 
@@ -933,8 +933,8 @@ describe("Buffer bounds", () => {
     const startConsole = consoleBuffer.totalAdded;
     const startNetwork = networkBuffer.totalAdded;
     for (let i = 0; i < 100; i++) {
-      addConsoleEntry({ timestamp: i, level: "log", text: `t-${i}` });
-      addNetworkEntry({ timestamp: i, method: "GET", url: `http://t/${i}` });
+      addConsoleEntry({ level: "log", text: `t-${i}`, timestamp: i });
+      addNetworkEntry({ method: "GET", timestamp: i, url: `http://t/${i}` });
     }
     expect(consoleBuffer.totalAdded).toBe(startConsole + 100);
     expect(networkBuffer.totalAdded).toBe(startNetwork + 100);
@@ -1211,8 +1211,8 @@ describe("Element state checks", () => {
     try {
       await handleReadCommand("is", ["bogus", "#enabled-input"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown property");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown property");
     }
   });
 
@@ -1220,8 +1220,8 @@ describe("Element state checks", () => {
     try {
       await handleReadCommand("is", ["visible"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1282,8 +1282,8 @@ describe("File upload", () => {
         bm
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("File not found");
+    } catch (error: any) {
+      expect(error.message).toContain("File not found");
     }
   });
 
@@ -1291,8 +1291,8 @@ describe("File upload", () => {
     try {
       await handleWriteCommand("upload", ["#file-input"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1326,8 +1326,8 @@ describe("Eval", () => {
     try {
       await handleReadCommand("eval", ["/tmp/nonexistent-eval.js"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("File not found");
+    } catch (error: any) {
+      expect(error.message).toContain("File not found");
     }
   });
 
@@ -1335,8 +1335,8 @@ describe("Eval", () => {
     try {
       await handleReadCommand("eval", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1355,8 +1355,8 @@ describe("Press", () => {
     try {
       await handleWriteCommand("press", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1382,8 +1382,8 @@ describe("Cookie command", () => {
     try {
       await handleWriteCommand("cookie", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1391,8 +1391,8 @@ describe("Cookie command", () => {
     try {
       await handleWriteCommand("cookie", ["invalid"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1418,8 +1418,8 @@ describe("Header command", () => {
     try {
       await handleWriteCommand("header", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1427,8 +1427,8 @@ describe("Header command", () => {
     try {
       await handleWriteCommand("header", ["invalid"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -1481,8 +1481,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("goto", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1490,8 +1490,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("click", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1499,8 +1499,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("fill", ["#input"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1508,8 +1508,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("select", ["#sel"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1517,8 +1517,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("hover", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1526,8 +1526,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("type", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1535,8 +1535,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("wait", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1544,8 +1544,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("viewport", ["badformat"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1553,8 +1553,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("useragent", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1563,8 +1563,8 @@ describe("Errors", () => {
     try {
       await handleReadCommand("js", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1572,8 +1572,8 @@ describe("Errors", () => {
     try {
       await handleReadCommand("css", ["h1"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1581,8 +1581,8 @@ describe("Errors", () => {
     try {
       await handleReadCommand("attrs", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1591,8 +1591,8 @@ describe("Errors", () => {
     try {
       await handleMetaCommand("tab", ["abc"], bm, async () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1605,8 +1605,8 @@ describe("Errors", () => {
         async () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1614,8 +1614,8 @@ describe("Errors", () => {
     try {
       await handleMetaCommand("chain", ["not json"], bm, async () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Invalid JSON");
+    } catch (error: any) {
+      expect(error.message).toContain("Invalid JSON");
     }
   });
 
@@ -1623,8 +1623,8 @@ describe("Errors", () => {
     try {
       await handleMetaCommand("chain", [], bm, async () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -1632,8 +1632,8 @@ describe("Errors", () => {
     try {
       await handleReadCommand("bogus" as any, [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown");
     }
   });
 
@@ -1641,8 +1641,8 @@ describe("Errors", () => {
     try {
       await handleWriteCommand("bogus" as any, [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown");
     }
   });
 
@@ -1650,8 +1650,8 @@ describe("Errors", () => {
     try {
       await handleMetaCommand("bogus" as any, [], bm, async () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown");
     }
   });
 });
@@ -1786,19 +1786,19 @@ describe("Console --errors", () => {
 
     // Add mixed entries
     addConsoleEntry({
-      timestamp: Date.now(),
       level: "log",
       text: "info message",
+      timestamp: Date.now(),
     });
     addConsoleEntry({
-      timestamp: Date.now(),
       level: "warning",
       text: "warn message",
+      timestamp: Date.now(),
     });
     addConsoleEntry({
-      timestamp: Date.now(),
       level: "error",
       text: "error message",
+      timestamp: Date.now(),
     });
 
     const result = await handleReadCommand("console", ["--errors"], bm);
@@ -1813,9 +1813,9 @@ describe("Console --errors", () => {
   test("console --errors returns empty message when no errors", async () => {
     consoleBuffer.clear();
     addConsoleEntry({
-      timestamp: Date.now(),
       level: "log",
       text: "just a log",
+      timestamp: Date.now(),
     });
 
     const result = await handleReadCommand("console", ["--errors"], bm);
@@ -1833,9 +1833,9 @@ describe("Console --errors", () => {
   test("console without flag still returns all messages", async () => {
     consoleBuffer.clear();
     addConsoleEntry({
-      timestamp: Date.now(),
       level: "log",
       text: "all messages test",
+      timestamp: Date.now(),
     });
 
     const result = await handleReadCommand("console", [], bm);
@@ -1890,10 +1890,10 @@ describe("Cookie import", () => {
     const tempFile = "/tmp/browse-test-cookies-domain.json";
     const cookies = [
       {
-        name: "explicit",
-        value: "domain",
         domain: "example.com",
+        name: "explicit",
         path: "/foo",
+        value: "domain",
       },
     ];
     fs.writeFileSync(tempFile, JSON.stringify(cookies));
@@ -1925,8 +1925,8 @@ describe("Cookie import", () => {
         bm
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("File not found");
+    } catch (error: any) {
+      expect(error.message).toContain("File not found");
     }
   });
 
@@ -1937,8 +1937,8 @@ describe("Cookie import", () => {
     try {
       await handleWriteCommand("cookie-import", [tempFile], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Invalid JSON");
+    } catch (error: any) {
+      expect(error.message).toContain("Invalid JSON");
     }
 
     fs.unlinkSync(tempFile);
@@ -1951,8 +1951,8 @@ describe("Cookie import", () => {
     try {
       await handleWriteCommand("cookie-import", [tempFile], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("JSON array");
+    } catch (error: any) {
+      expect(error.message).toContain("JSON array");
     }
 
     fs.unlinkSync(tempFile);
@@ -1966,8 +1966,8 @@ describe("Cookie import", () => {
     try {
       await handleWriteCommand("cookie-import", [tempFile], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("name");
+    } catch (error: any) {
+      expect(error.message).toContain("name");
     }
 
     fs.unlinkSync(tempFile);
@@ -1977,8 +1977,8 @@ describe("Cookie import", () => {
     try {
       await handleWriteCommand("cookie-import", [], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
@@ -2074,8 +2074,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleMetaCommand("screenshot", ["/etc/evil.png"], bm, () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -2098,8 +2098,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleMetaCommand("pdf", ["/home/evil.pdf"], bm, () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -2108,8 +2108,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleMetaCommand("responsive", ["/var/evil"], bm, () => {});
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -2117,8 +2117,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleReadCommand("eval", ["../../etc/passwd"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path traversal");
+    } catch (error: any) {
+      expect(error.message).toContain("Path traversal");
     }
   });
 
@@ -2126,8 +2126,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleReadCommand("eval", ["/etc/passwd"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Absolute path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Absolute path must be within");
     }
   });
 
@@ -2154,8 +2154,8 @@ describe("Path traversal prevention", () => {
         () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -2163,8 +2163,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleWriteCommand("cookie-import", ["../../etc/shadow"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path traversal");
+    } catch (error: any) {
+      expect(error.message).toContain("Path traversal");
     }
   });
 
@@ -2172,8 +2172,8 @@ describe("Path traversal prevention", () => {
     try {
       await handleWriteCommand("cookie-import", ["/etc/passwd"], bm);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 
@@ -2189,8 +2189,8 @@ describe("Path traversal prevention", () => {
         () => {}
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Path must be within");
+    } catch (error: any) {
+      expect(error.message).toContain("Path must be within");
     }
   });
 });
@@ -2205,10 +2205,10 @@ describe("Chain with cookie-import", () => {
       tmpCookies,
       JSON.stringify([
         {
-          name: "chain_test",
-          value: "chain_value",
           domain: "localhost",
+          name: "chain_test",
           path: "/",
+          value: "chain_value",
         },
       ])
     );

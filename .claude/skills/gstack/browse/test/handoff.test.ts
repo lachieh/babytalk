@@ -7,7 +7,8 @@
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 
-import { BrowserManager, type BrowserState } from "../src/browser-manager";
+import { BrowserManager } from "../src/browser-manager";
+import type { BrowserState } from "../src/browser-manager";
 import { handleMetaCommand } from "../src/meta-commands";
 import { handleWriteCommand } from "../src/write-commands";
 import { startTestServer } from "./test-server";
@@ -90,7 +91,7 @@ describe("saveState", () => {
     expect(state.cookies.some((c) => c.name === "testcookie")).toBe(true);
     expect(state.pages.length).toBeGreaterThanOrEqual(1);
     expect(state.pages.some((p) => p.url.includes("/basic.html"))).toBe(true);
-  }, 15000);
+  }, 15_000);
 
   test("captures localStorage and sessionStorage", async () => {
     await handleWriteCommand("goto", [baseUrl + "/basic.html"], bm);
@@ -113,7 +114,7 @@ describe("saveState", () => {
       "ssKey",
       "ssValue"
     );
-  }, 15000);
+  }, 15_000);
 
   test("captures multiple tabs", async () => {
     while (bm.getTabCount() > 1) {
@@ -129,7 +130,7 @@ describe("saveState", () => {
     expect(activePage!.url).toContain("/form.html");
 
     await bm.closeTab();
-  }, 15000);
+  }, 15_000);
 });
 
 describe("restoreState", () => {
@@ -145,7 +146,7 @@ describe("restoreState", () => {
     const stateAfter = await bm.saveState();
     expect(stateAfter.cookies.some((c) => c.name === "restored")).toBe(true);
     expect(stateAfter.pages.length).toBeGreaterThanOrEqual(1);
-  }, 30000);
+  }, 30_000);
 });
 
 // ─── Unit Tests: Handoff Edge Cases ──────────────────────────────
@@ -156,7 +157,7 @@ describe("handoff edge cases", () => {
     const result = await bm.handoff("test");
     expect(result).toContain("Already in headed mode");
     (bm as any).isHeaded = false;
-  }, 10000);
+  }, 10_000);
 
   test("resume clears refs and resets failures", () => {
     bm.incrementFailures();
@@ -171,7 +172,7 @@ describe("handoff edge cases", () => {
     await handleWriteCommand("goto", [baseUrl + "/basic.html"], bm);
     const result = await handleMetaCommand("resume", [], bm, () => {});
     expect(result).toContain("RESUMED");
-  }, 15000);
+  }, 15_000);
 });
 
 // ─── Integration Tests: Full Handoff Flow ────────────────────────
@@ -210,7 +211,7 @@ describe("handoff integration", () => {
     } finally {
       await hbm.close();
     }
-  }, 45000);
+  }, 45_000);
 
   test("multi-tab handoff preserves all tabs", async () => {
     const hbm = new BrowserManager();
@@ -232,7 +233,7 @@ describe("handoff integration", () => {
     } finally {
       await hbm.close();
     }
-  }, 45000);
+  }, 45_000);
 
   test("handoff meta command joins args as message", async () => {
     const hbm = new BrowserManager();
@@ -250,5 +251,5 @@ describe("handoff integration", () => {
     } finally {
       await hbm.close();
     }
-  }, 45000);
+  }, 45_000);
 });

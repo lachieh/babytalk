@@ -85,7 +85,9 @@ export const EventConfirmation = ({
   const colorClass = typeColors[type] ?? "border-success-200 bg-success-50";
 
   return (
-    <div className={`animate-fade-up rounded-radius-md border p-spacing-md ${colorClass}`}>
+    <div
+      className={`animate-fade-up rounded-radius-md border p-spacing-md ${colorClass}`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-spacing-sm">
           <span className="text-base">{typeEmoji[type] ?? "\u2705"}</span>

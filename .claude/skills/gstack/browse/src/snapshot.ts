@@ -62,71 +62,71 @@ interface SnapshotOptions {
  *   - gen-skill-docs.ts (generates {{SNAPSHOT_FLAGS}} tables)
  *   - skill-parser.ts (validates flags in SKILL.md examples)
  */
-export const SNAPSHOT_FLAGS: Array<{
+export const SNAPSHOT_FLAGS: {
   short: string;
   long: string;
   description: string;
   takesValue?: boolean;
   valueHint?: string;
   optionKey: keyof SnapshotOptions;
-}> = [
+}[] = [
   {
-    short: "-i",
-    long: "--interactive",
     description:
       "Interactive elements only (buttons, links, inputs) with @e refs",
+    long: "--interactive",
     optionKey: "interactive",
+    short: "-i",
   },
   {
-    short: "-c",
-    long: "--compact",
     description: "Compact (no empty structural nodes)",
+    long: "--compact",
     optionKey: "compact",
+    short: "-c",
   },
   {
-    short: "-d",
-    long: "--depth",
     description: "Limit tree depth (0 = root only, default: unlimited)",
+    long: "--depth",
+    optionKey: "depth",
+    short: "-d",
     takesValue: true,
     valueHint: "<N>",
-    optionKey: "depth",
   },
   {
-    short: "-s",
-    long: "--selector",
     description: "Scope to CSS selector",
+    long: "--selector",
+    optionKey: "selector",
+    short: "-s",
     takesValue: true,
     valueHint: "<sel>",
-    optionKey: "selector",
   },
   {
-    short: "-D",
-    long: "--diff",
     description:
       "Unified diff against previous snapshot (first call stores baseline)",
+    long: "--diff",
     optionKey: "diff",
+    short: "-D",
   },
   {
-    short: "-a",
-    long: "--annotate",
     description: "Annotated screenshot with red overlay boxes and ref labels",
+    long: "--annotate",
     optionKey: "annotate",
+    short: "-a",
   },
   {
-    short: "-o",
-    long: "--output",
     description:
       "Output path for annotated screenshot (default: <temp>/browse-annotated.png)",
+    long: "--output",
+    optionKey: "outputPath",
+    short: "-o",
     takesValue: true,
     valueHint: "<path>",
-    optionKey: "outputPath",
   },
   {
-    short: "-C",
-    long: "--cursor-interactive",
     description:
       "Cursor-interactive elements (@c refs — divs with pointer, onclick)",
+    long: "--cursor-interactive",
     optionKey: "cursorInteractive",
+    short: "-C",
   },
 ];
 
@@ -153,7 +153,7 @@ export function parseSnapshotArgs(args: string[]): SnapshotOptions {
       const value = args[++i];
       if (!value) throw new Error(`Usage: snapshot ${flag.short} <value>`);
       if (flag.optionKey === "depth") {
-        (opts as any)[flag.optionKey] = parseInt(value, 10);
+        (opts as any)[flag.optionKey] = Number.parseInt(value, 10);
         if (isNaN(opts.depth!)) throw new Error("Usage: snapshot -d <number>");
       } else {
         (opts as any)[flag.optionKey] = value;
@@ -186,12 +186,12 @@ function parseLine(line: string): ParsedNode | null {
     return null;
   }
   return {
+    children: match[5]?.trim() || "",
     indent: match[1].length,
-    role: match[2],
     name: match[3] ?? null,
     props: match[4] || "",
-    children: match[5]?.trim() || "",
     rawLine: line,
+    role: match[2],
   };
 }
 
@@ -288,7 +288,7 @@ export async function handleSnapshot(
       locator = locator.nth(seenIndex);
     }
 
-    refMap.set(ref, { locator, role: node.role, name: node.name || "" });
+    refMap.set(ref, { locator, name: node.name || "", role: node.role });
 
     // Format output line
     let outputLine = `${indent}@${ref} [${node.role}]`;
@@ -313,11 +313,11 @@ export async function handleSnapshot(
           "DETAILS",
         ]);
 
-        const results: Array<{
+        const results: {
           selector: string;
           text: string;
           reason: string;
-        }> = [];
+        }[] = [];
         const allElements = document.querySelectorAll("*");
 
         for (const el of allElements) {
@@ -332,7 +332,7 @@ export async function handleSnapshot(
           const hasOnclick = el.hasAttribute("onclick");
           const hasTabindex =
             el.hasAttribute("tabindex") &&
-            parseInt(el.getAttribute("tabindex")!, 10) >= 0;
+            Number.parseInt(el.getAttribute("tabindex")!, 10) >= 0;
           const hasRole = el.hasAttribute("role");
 
           if (!hasCursorPointer && !hasOnclick && !hasTabindex) continue;
@@ -355,7 +355,7 @@ export async function handleSnapshot(
           const selector = parts.join(" > ");
 
           const text =
-            (el as HTMLElement).innerText?.trim().slice(0, 80) ||
+            (el as HTMLElement).textContent?.trim().slice(0, 80) ||
             el.tagName.toLowerCase();
           const reasons: string[] = [];
           if (hasCursorPointer) reasons.push("cursor:pointer");
@@ -363,7 +363,7 @@ export async function handleSnapshot(
           if (hasTabindex)
             reasons.push(`tabindex=${el.getAttribute("tabindex")}`);
 
-          results.push({ selector, text, reason: reasons.join(", ") });
+          results.push({ reason: reasons.join(", "), selector, text });
         }
         return results;
       });
@@ -377,8 +377,8 @@ export async function handleSnapshot(
           const locator = page.locator(elem.selector);
           refMap.set(ref, {
             locator,
-            role: "cursor-interactive",
             name: elem.text,
+            role: "cursor-interactive",
           });
           output.push(`@${ref} [${elem.reason}] "${elem.text}"`);
         }
@@ -403,22 +403,22 @@ export async function handleSnapshot(
     const screenshotPath =
       opts.outputPath || `${TEMP_DIR}/browse-annotated.png`;
     // Validate output path (consistent with screenshot/pdf/responsive)
-    const resolvedPath = require("path").resolve(screenshotPath);
+    const resolvedPath = require("node:path").resolve(screenshotPath);
     const safeDirs = [TEMP_DIR, process.cwd()];
     if (!safeDirs.some((dir: string) => isPathWithin(resolvedPath, dir))) {
       throw new Error(`Path must be within: ${safeDirs.join(", ")}`);
     }
     try {
       // Inject overlay divs at each ref's bounding box
-      const boxes: Array<{
+      const boxes: {
         ref: string;
         box: { x: number; y: number; width: number; height: number };
-      }> = [];
+      }[] = [];
       for (const [ref, entry] of refMap) {
         try {
           const box = await entry.locator.boundingBox({ timeout: 1000 });
           if (box) {
-            boxes.push({ ref: `@${ref}`, box });
+            boxes.push({ box, ref: `@${ref}` });
           }
         } catch {
           // Element may be offscreen or hidden — skip
@@ -440,12 +440,12 @@ export async function handleSnapshot(
           label.textContent = ref;
           label.style.cssText =
             "position: absolute; top: -14px; left: 0; background: red; color: white; padding: 0 3px; font-size: 10px;";
-          overlay.appendChild(label);
-          document.body.appendChild(overlay);
+          overlay.append(label);
+          document.body.append(overlay);
         }
       }, boxes);
 
-      await page.screenshot({ path: screenshotPath, fullPage: true });
+      await page.screenshot({ fullPage: true, path: screenshotPath });
 
       // Always remove overlays
       await page.evaluate(() => {

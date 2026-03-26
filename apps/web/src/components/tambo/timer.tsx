@@ -14,18 +14,21 @@ const typeLabels: Record<string, string> = {
   sleep: "Nap",
 };
 
-const typeColors: Record<string, { border: string; bg: string; text: string; btn: string }> = {
+const typeColors: Record<
+  string,
+  { border: string; bg: string; text: string; btn: string }
+> = {
   feed: {
-    border: "border-feed-200",
     bg: "bg-feed-50",
-    text: "text-feed-600",
+    border: "border-feed-200",
     btn: "bg-feed-500 hover:bg-feed-600",
+    text: "text-feed-600",
   },
   sleep: {
-    border: "border-sleep-200",
     bg: "bg-sleep-50",
-    text: "text-sleep-600",
+    border: "border-sleep-200",
     btn: "bg-sleep-500 hover:bg-sleep-600",
+    text: "text-sleep-600",
   },
 };
 
@@ -67,10 +70,14 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
   const colors = typeColors[type] ?? typeColors.feed;
 
   return (
-    <div className={`animate-fade-up rounded-radius-lg border-2 p-spacing-lg ${colors.border} ${colors.bg}`}>
+    <div
+      className={`animate-fade-up rounded-radius-lg border-2 p-spacing-lg ${colors.border} ${colors.bg}`}
+    >
       <div className="flex items-center justify-between">
         <div>
-          <p className={`text-[var(--font-size-sm)] font-medium ${colors.text}`}>
+          <p
+            className={`text-[var(--font-size-sm)] font-medium ${colors.text}`}
+          >
             {typeLabels[type] ?? type} Timer
           </p>
           <p className="mt-spacing-xs font-mono text-[var(--font-size-2xl)] font-bold tabular-nums text-neutral-800">

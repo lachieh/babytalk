@@ -12,9 +12,9 @@ import {
   rmSync,
   readFileSync,
   existsSync,
-} from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const SCRIPT = join(import.meta.dir, "..", "..", "bin", "gstack-config");
 
@@ -27,13 +27,13 @@ function run(args: string[] = [], extraEnv: Record<string, string> = {}) {
       GSTACK_STATE_DIR: stateDir,
       ...extraEnv,
     },
-    stdout: "pipe",
     stderr: "pipe",
+    stdout: "pipe",
   });
   return {
     exitCode: result.exitCode,
-    stdout: result.stdout.toString().trim(),
     stderr: result.stderr.toString().trim(),
+    stdout: result.stdout.toString().trim(),
   };
 }
 
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  rmSync(stateDir, { recursive: true, force: true });
+  rmSync(stateDir, { force: true, recursive: true });
 });
 
 describe("gstack-config", () => {
@@ -78,7 +78,7 @@ describe("gstack-config", () => {
   test("set creates file and writes key on missing file", () => {
     const { exitCode } = run(["set", "auto_upgrade", "true"]);
     expect(exitCode).toBe(0);
-    const content = readFileSync(join(stateDir, "config.yaml"), "utf-8");
+    const content = readFileSync(join(stateDir, "config.yaml"), "utf8");
     expect(content).toContain("auto_upgrade: true");
   });
 
@@ -86,7 +86,7 @@ describe("gstack-config", () => {
     writeFileSync(join(stateDir, "config.yaml"), "foo: bar\n");
     const { exitCode } = run(["set", "auto_upgrade", "true"]);
     expect(exitCode).toBe(0);
-    const content = readFileSync(join(stateDir, "config.yaml"), "utf-8");
+    const content = readFileSync(join(stateDir, "config.yaml"), "utf8");
     expect(content).toContain("foo: bar");
     expect(content).toContain("auto_upgrade: true");
   });
@@ -95,7 +95,7 @@ describe("gstack-config", () => {
     writeFileSync(join(stateDir, "config.yaml"), "auto_upgrade: false\n");
     const { exitCode } = run(["set", "auto_upgrade", "true"]);
     expect(exitCode).toBe(0);
-    const content = readFileSync(join(stateDir, "config.yaml"), "utf-8");
+    const content = readFileSync(join(stateDir, "config.yaml"), "utf8");
     expect(content).toContain("auto_upgrade: true");
     expect(content).not.toContain("auto_upgrade: false");
   });

@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 import {
   resolveConfig,
@@ -64,7 +64,7 @@ describe("config", () => {
       ensureStateDir(config);
       expect(fs.existsSync(config.stateDir)).toBe(true);
       // Cleanup
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("is a no-op if directory already exists", () => {
@@ -77,7 +77,7 @@ describe("config", () => {
       ensureStateDir(config); // should not throw
       expect(fs.existsSync(config.stateDir)).toBe(true);
       // Cleanup
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("adds .gstack/ to .gitignore if not present", () => {
@@ -91,10 +91,10 @@ describe("config", () => {
         BROWSE_STATE_FILE: path.join(tmpDir, ".gstack", "browse.json"),
       });
       ensureStateDir(config);
-      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf-8");
+      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf8");
       expect(content).toContain(".gstack/");
       expect(content).toBe("node_modules/\n.gstack/\n");
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("does not duplicate .gstack/ in .gitignore", () => {
@@ -111,9 +111,9 @@ describe("config", () => {
         BROWSE_STATE_FILE: path.join(tmpDir, ".gstack", "browse.json"),
       });
       ensureStateDir(config);
-      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf-8");
+      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf8");
       expect(content).toBe("node_modules/\n.gstack/\n");
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("handles .gitignore without trailing newline", () => {
@@ -127,9 +127,9 @@ describe("config", () => {
         BROWSE_STATE_FILE: path.join(tmpDir, ".gstack", "browse.json"),
       });
       ensureStateDir(config);
-      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf-8");
+      const content = fs.readFileSync(path.join(tmpDir, ".gitignore"), "utf8");
       expect(content).toBe("node_modules\n.gstack/\n");
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("logs warning to browse-server.log on non-ENOENT gitignore error", () => {
@@ -148,17 +148,17 @@ describe("config", () => {
       // Verify warning was written to server log
       const logPath = path.join(config.stateDir, "browse-server.log");
       expect(fs.existsSync(logPath)).toBe(true);
-      const logContent = fs.readFileSync(logPath, "utf-8");
+      const logContent = fs.readFileSync(logPath, "utf8");
       expect(logContent).toContain("Warning: could not update .gitignore");
       // .gitignore should remain unchanged
       const gitignoreContent = fs.readFileSync(
         path.join(tmpDir, ".gitignore"),
-        "utf-8"
+        "utf8"
       );
       expect(gitignoreContent).toBe("node_modules/\n");
       // Cleanup
       fs.chmodSync(path.join(tmpDir, ".gitignore"), 0o644);
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
 
     test("skips if no .gitignore exists", () => {
@@ -172,7 +172,7 @@ describe("config", () => {
       });
       ensureStateDir(config);
       expect(fs.existsSync(path.join(tmpDir, ".gitignore"))).toBe(false);
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
   });
 
@@ -224,7 +224,7 @@ describe("config", () => {
       const result = readVersionHash(path.join(tmpDir, "browse"));
       expect(result).toBe("abc123def");
       // Cleanup
-      fs.rmSync(tmpDir, { recursive: true, force: true });
+      fs.rmSync(tmpDir, { force: true, recursive: true });
     });
   });
 });
@@ -261,7 +261,7 @@ describe("resolveNodeServerScript", () => {
   test("finds server-node.mjs in dist from dev mode", () => {
     const srcDir = path.resolve(__dirname, "../src");
     const distFile = path.resolve(srcDir, "..", "dist", "server-node.mjs");
-    const fs = require("fs");
+    const fs = require("node:fs");
     // Only test if the file exists (it may not be built yet)
     if (fs.existsSync(distFile)) {
       const result = resolveNodeServerScript(srcDir, "");
@@ -280,7 +280,7 @@ describe("resolveNodeServerScript", () => {
   test("finds server-node.mjs adjacent to compiled binary", () => {
     const distDir = path.resolve(__dirname, "../dist");
     const distFile = path.join(distDir, "server-node.mjs");
-    const fs = require("fs");
+    const fs = require("node:fs");
     if (fs.existsSync(distFile)) {
       const result = resolveNodeServerScript(
         "/$bunfs/something",
@@ -318,7 +318,7 @@ describe("version mismatch detection", () => {
 
 describe("isServerHealthy", () => {
   const { isServerHealthy } = require("../src/cli");
-  const http = require("http");
+  const http = require("node:http");
 
   test("returns true for a healthy server", async () => {
     const server = http.createServer((_req: any, res: any) => {
@@ -326,7 +326,7 @@ describe("isServerHealthy", () => {
       res.end(JSON.stringify({ status: "healthy" }));
     });
     await new Promise<void>((resolve) => server.listen(0, resolve));
-    const port = server.address().port;
+    const { port } = server.address();
     try {
       expect(await isServerHealthy(port)).toBe(true);
     } finally {
@@ -340,7 +340,7 @@ describe("isServerHealthy", () => {
       res.end(JSON.stringify({ status: "unhealthy" }));
     });
     await new Promise<void>((resolve) => server.listen(0, resolve));
-    const port = server.address().port;
+    const { port } = server.address();
     try {
       expect(await isServerHealthy(port)).toBe(false);
     } finally {
@@ -350,7 +350,7 @@ describe("isServerHealthy", () => {
 
   test("returns false when server is not running", async () => {
     // Use a port that's almost certainly not in use
-    expect(await isServerHealthy(59999)).toBe(false);
+    expect(await isServerHealthy(59_999)).toBe(false);
   });
 
   test("returns false on non-200 response", async () => {
@@ -359,7 +359,7 @@ describe("isServerHealthy", () => {
       res.end("Internal Server Error");
     });
     await new Promise<void>((resolve) => server.listen(0, resolve));
-    const port = server.address().port;
+    const { port } = server.address();
     try {
       expect(await isServerHealthy(port)).toBe(false);
     } finally {
@@ -378,9 +378,9 @@ describe("startup error log", () => {
     const errorLogPath = path.join(tmpDir, "browse-startup-error.log");
     const errorMsg = "Cannot find module playwright";
     fs.writeFileSync(errorLogPath, `2026-03-23T00:00:00.000Z ${errorMsg}\n`);
-    const content = fs.readFileSync(errorLogPath, "utf-8").trim();
+    const content = fs.readFileSync(errorLogPath, "utf8").trim();
     expect(content).toContain(errorMsg);
     expect(content).toMatch(/^\d{4}-\d{2}-\d{2}T/); // ISO timestamp prefix
-    fs.rmSync(tmpDir, { recursive: true, force: true });
+    fs.rmSync(tmpDir, { force: true, recursive: true });
   });
 });

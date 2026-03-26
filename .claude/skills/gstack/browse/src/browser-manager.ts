@@ -15,14 +15,14 @@
  *   restores state. Falls back to clean slate on any failure.
  */
 
-import {
-  chromium,
-  type Browser,
-  type BrowserContext,
-  type BrowserContextOptions,
-  type Page,
-  type Locator,
-  type Cookie,
+import { chromium } from "playwright";
+import type {
+  Browser,
+  BrowserContext,
+  BrowserContextOptions,
+  Page,
+  Locator,
+  Cookie,
 } from "playwright";
 
 import {
@@ -30,8 +30,8 @@ import {
   addNetworkEntry,
   addDialogEntry,
   networkBuffer,
-  type DialogEntry,
 } from "./buffers";
+import type { DialogEntry } from "./buffers";
 import { validateNavigationUrl } from "./url-validation";
 
 export interface RefEntry {
@@ -42,20 +42,20 @@ export interface RefEntry {
 
 export interface BrowserState {
   cookies: Cookie[];
-  pages: Array<{
+  pages: {
     url: string;
     isActive: boolean;
     storage: {
       localStorage: Record<string, string>;
       sessionStorage: Record<string, string>;
     } | null;
-  }>;
+  }[];
 }
 
 export class BrowserManager {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
-  private pages: Map<number, Page> = new Map();
+  private pages = new Map<number, Page>();
   private activeTabId: number = 0;
   private nextTabId: number = 1;
   private extraHeaders: Record<string, string> = {};
@@ -65,7 +65,7 @@ export class BrowserManager {
   public serverPort: number = 0;
 
   // ─── Ref Map (snapshot → @e1, @e2, @c1, @c2, ...) ────────
-  private refMap: Map<string, RefEntry> = new Map();
+  private refMap = new Map<string, RefEntry>();
 
   // ─── Snapshot Diffing ─────────────────────────────────────
   // NOT cleared on navigation — it's a text baseline for diffing
@@ -126,7 +126,7 @@ export class BrowserManager {
     });
 
     const contextOptions: BrowserContextOptions = {
-      viewport: { width: 1280, height: 720 },
+      viewport: { height: 720, width: 1280 },
     };
     if (this.customUserAgent) {
       contextOptions.userAgent = this.customUserAgent;
@@ -190,7 +190,7 @@ export class BrowserManager {
     this.wirePageEvents(page);
 
     if (url) {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goto(url, { timeout: 15_000, waitUntil: "domcontentloaded" });
     }
 
     return id;
@@ -208,7 +208,7 @@ export class BrowserManager {
     if (tabId === this.activeTabId) {
       const remaining = [...this.pages.keys()];
       if (remaining.length > 0) {
-        this.activeTabId = remaining[remaining.length - 1];
+        this.activeTabId = remaining.at(-1);
       } else {
         // No tabs left — create a new blank one
         await this.newTab();
@@ -226,20 +226,20 @@ export class BrowserManager {
   }
 
   async getTabListWithTitles(): Promise<
-    Array<{ id: number; url: string; title: string; active: boolean }>
+    { id: number; url: string; title: string; active: boolean }[]
   > {
-    const tabs: Array<{
+    const tabs: {
       id: number;
       url: string;
       title: string;
       active: boolean;
-    }> = [];
+    }[] = [];
     for (const [id, page] of this.pages) {
       tabs.push({
-        id,
-        url: page.url(),
-        title: await page.title().catch(() => ""),
         active: id === this.activeTabId,
+        id,
+        title: await page.title().catch(() => ""),
+        url: page.url(),
       });
     }
     return tabs;
@@ -338,7 +338,7 @@ export class BrowserManager {
 
   // ─── Viewport ──────────────────────────────────────────────
   async setViewport(width: number, height: number) {
-    await this.getPage().setViewportSize({ width, height });
+    await this.getPage().setViewportSize({ height, width });
   }
 
   // ─── Extra Headers ─────────────────────────────────────────
@@ -379,9 +379,9 @@ export class BrowserManager {
         }));
       } catch {}
       pages.push({
-        url: url === "about:blank" ? "" : url,
         isActive: id === this.activeTabId,
         storage,
+        url: url === "about:blank" ? "" : url,
       });
     }
 
@@ -411,7 +411,7 @@ export class BrowserManager {
 
       if (saved.url) {
         await page
-          .goto(saved.url, { waitUntil: "domcontentloaded", timeout: 15000 })
+          .goto(saved.url, { timeout: 15_000, waitUntil: "domcontentloaded" })
           .catch(() => {});
       }
 
@@ -475,7 +475,7 @@ export class BrowserManager {
 
       // 3. Create new context with updated settings
       const contextOptions: BrowserContextOptions = {
-        viewport: { width: 1280, height: 720 },
+        viewport: { height: 720, width: 1280 },
       };
       if (this.customUserAgent) {
         contextOptions.userAgent = this.customUserAgent;
@@ -490,14 +490,14 @@ export class BrowserManager {
       await this.restoreState(state);
 
       return null; // success
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       // Fallback: create a clean context + blank tab
       try {
         this.pages.clear();
         if (this.context) await this.context.close().catch(() => {});
 
         const contextOptions: BrowserContextOptions = {
-          viewport: { width: 1280, height: 720 },
+          viewport: { height: 720, width: 1280 },
         };
         if (this.customUserAgent) {
           contextOptions.userAgent = this.customUserAgent;
@@ -508,7 +508,7 @@ export class BrowserManager {
       } catch {
         // If even the fallback fails, we're in trouble — but browser is still alive
       }
-      return `Context recreation failed: ${err instanceof Error ? err.message : String(err)}. Browser reset to blank tab.`;
+      return `Context recreation failed: ${error instanceof Error ? error.message : String(error)}. Browser reset to blank tab.`;
     }
   }
 
@@ -539,19 +539,19 @@ export class BrowserManager {
     let newBrowser: Browser;
     try {
       newBrowser = await chromium.launch({
-        headless: false,
-        timeout: 15000,
         chromiumSandbox: process.platform !== "win32",
+        headless: false,
+        timeout: 15_000,
       });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
       return `ERROR: Cannot open headed browser — ${msg}. Headless browser still running.`;
     }
 
     // 3. Create context and restore state into new headed browser
     try {
       const contextOptions: BrowserContextOptions = {
-        viewport: { width: 1280, height: 720 },
+        viewport: { height: 720, width: 1280 },
       };
       if (this.customUserAgent) {
         contextOptions.userAgent = this.customUserAgent;
@@ -594,10 +594,10 @@ export class BrowserManager {
         `MESSAGE: ${message}`,
         `STATUS: Waiting for user. Run 'resume' when done.`,
       ].join("\n");
-    } catch (err: unknown) {
+    } catch (error: unknown) {
       // Restore failed — close the new browser, keep old one
       await newBrowser.close().catch(() => {});
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = error instanceof Error ? error.message : String(error);
       return `ERROR: Handoff failed during state restore — ${msg}. Headless browser still running.`;
     }
   }
@@ -645,14 +645,14 @@ export class BrowserManager {
     // ─── Dialog auto-handling (prevents browser lockup) ─────
     page.on("dialog", async (dialog) => {
       const entry: DialogEntry = {
-        timestamp: Date.now(),
-        type: dialog.type(),
-        message: dialog.message(),
-        defaultValue: dialog.defaultValue() || undefined,
         action: this.dialogAutoAccept ? "accepted" : "dismissed",
+        defaultValue: dialog.defaultValue() || undefined,
+        message: dialog.message(),
         response: this.dialogAutoAccept
           ? (this.dialogPromptText ?? undefined)
           : undefined,
+        timestamp: Date.now(),
+        type: dialog.type(),
       };
       addDialogEntry(entry);
 
@@ -669,16 +669,16 @@ export class BrowserManager {
 
     page.on("console", (msg) => {
       addConsoleEntry({
-        timestamp: Date.now(),
         level: msg.type(),
         text: msg.text(),
+        timestamp: Date.now(),
       });
     });
 
     page.on("request", (req) => {
       addNetworkEntry({
-        timestamp: Date.now(),
         method: req.method(),
+        timestamp: Date.now(),
         url: req.url(),
       });
     });
@@ -692,8 +692,8 @@ export class BrowserManager {
         if (entry && entry.url === url && !entry.status) {
           networkBuffer.set(i, {
             ...entry,
-            status,
             duration: Date.now() - entry.timestamp,
+            status,
           });
           break;
         }

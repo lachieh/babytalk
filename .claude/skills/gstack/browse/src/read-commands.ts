@@ -5,8 +5,8 @@
  * console, network, cookies, storage, perf
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import type { Page } from "playwright";
 
@@ -17,8 +17,8 @@ import { TEMP_DIR, isPathWithin } from "./platform";
 /** Detect await keyword, ignoring comments. Accepted risk: await in string literals triggers wrapping (harmless). */
 function hasAwait(code: string): boolean {
   const stripped = code
-    .replace(/\/\/.*$/gm, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
+    .replaceAll(/\/\/.*$/gm, "")
+    .replaceAll(/\/\*[\s\S]*?\*\//g, "");
   return /\bawait\b/.test(stripped);
 }
 
@@ -70,13 +70,13 @@ export function validateReadPath(filePath: string): void {
  */
 export async function getCleanText(page: Page): Promise<string> {
   return await page.evaluate(() => {
-    const body = document.body;
+    const { body } = document;
     if (!body) return "";
     const clone = body.cloneNode(true) as HTMLElement;
     clone
       .querySelectorAll("script, style, noscript, svg")
       .forEach((el) => el.remove());
-    return clone.innerText
+    return clone.textContent
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
@@ -112,8 +112,8 @@ export async function handleReadCommand(
       const links = await page.evaluate(() =>
         [...document.querySelectorAll("a[href]")]
           .map((a) => ({
-            text: a.textContent?.trim().slice(0, 120) || "",
             href: (a as HTMLAnchorElement).href,
+            text: a.textContent?.trim().slice(0, 120) || "",
           }))
           .filter((l) => l.text && l.href)
       );
@@ -121,41 +121,41 @@ export async function handleReadCommand(
     }
 
     case "forms": {
-      const forms = await page.evaluate(() => {
-        return [...document.querySelectorAll("form")].map((form, i) => {
+      const forms = await page.evaluate(() =>
+        [...document.querySelectorAll("form")].map((form, i) => {
           const fields = [
             ...form.querySelectorAll("input, select, textarea"),
           ].map((el) => {
             const input = el as HTMLInputElement;
             return {
-              tag: el.tagName.toLowerCase(),
-              type: input.type || undefined,
-              name: input.name || undefined,
               id: input.id || undefined,
+              name: input.name || undefined,
+              options:
+                el.tagName === "SELECT"
+                  ? [...(el as HTMLSelectElement).options].map((o) => ({
+                      text: o.text,
+                      value: o.value,
+                    }))
+                  : undefined,
               placeholder: input.placeholder || undefined,
               required: input.required || undefined,
+              tag: el.tagName.toLowerCase(),
+              type: input.type || undefined,
               value:
                 input.type === "password"
                   ? "[redacted]"
                   : input.value || undefined,
-              options:
-                el.tagName === "SELECT"
-                  ? [...(el as HTMLSelectElement).options].map((o) => ({
-                      value: o.value,
-                      text: o.text,
-                    }))
-                  : undefined,
             };
           });
           return {
-            index: i,
             action: form.action || undefined,
-            method: form.method || "get",
-            id: form.id || undefined,
             fields,
+            id: form.id || undefined,
+            index: i,
+            method: form.method || "get",
           };
-        });
-      });
+        })
+      );
       return JSON.stringify(forms, null, 2);
     }
 
@@ -180,7 +180,7 @@ export async function handleReadCommand(
       validateReadPath(filePath);
       if (!fs.existsSync(filePath))
         throw new Error(`File not found: ${filePath}`);
-      const code = fs.readFileSync(filePath, "utf-8");
+      const code = fs.readFileSync(filePath, "utf8");
       const wrapped = wrapForEvaluate(code);
       const result = await page.evaluate(wrapped);
       return typeof result === "object"
@@ -301,34 +301,41 @@ export async function handleReadCommand(
       const resolved = await bm.resolveRef(selector);
       let locator;
       if ("locator" in resolved) {
-        locator = resolved.locator;
+        ({ locator } = resolved);
       } else {
         locator = page.locator(resolved.selector);
       }
 
       switch (property) {
-        case "visible":
+        case "visible": {
           return String(await locator.isVisible());
-        case "hidden":
+        }
+        case "hidden": {
           return String(await locator.isHidden());
-        case "enabled":
+        }
+        case "enabled": {
           return String(await locator.isEnabled());
-        case "disabled":
+        }
+        case "disabled": {
           return String(await locator.isDisabled());
-        case "checked":
+        }
+        case "checked": {
           return String(await locator.isChecked());
-        case "editable":
+        }
+        case "editable": {
           return String(await locator.isEditable());
+        }
         case "focused": {
           const isFocused = await locator.evaluate(
             (el) => el === document.activeElement
           );
           return String(isFocused);
         }
-        default:
+        default: {
           throw new Error(
             `Unknown property: ${property}. Use: visible, hidden, enabled, disabled, checked, editable, focused`
           );
+        }
       }
     }
 
@@ -378,18 +385,18 @@ export async function handleReadCommand(
         if (!nav) return "No navigation timing data available.";
         return {
           dns: Math.round(nav.domainLookupEnd - nav.domainLookupStart),
-          tcp: Math.round(nav.connectEnd - nav.connectStart),
+          domParse: Math.round(nav.domInteractive - nav.responseEnd),
+          domReady: Math.round(nav.domContentLoadedEventEnd - nav.startTime),
+          download: Math.round(nav.responseEnd - nav.responseStart),
+          load: Math.round(nav.loadEventEnd - nav.startTime),
           ssl: Math.round(
             nav.secureConnectionStart > 0
               ? nav.connectEnd - nav.secureConnectionStart
               : 0
           ),
-          ttfb: Math.round(nav.responseStart - nav.requestStart),
-          download: Math.round(nav.responseEnd - nav.responseStart),
-          domParse: Math.round(nav.domInteractive - nav.responseEnd),
-          domReady: Math.round(nav.domContentLoadedEventEnd - nav.startTime),
-          load: Math.round(nav.loadEventEnd - nav.startTime),
+          tcp: Math.round(nav.connectEnd - nav.connectStart),
           total: Math.round(nav.loadEventEnd - nav.startTime),
+          ttfb: Math.round(nav.responseStart - nav.requestStart),
         };
       });
       if (typeof timings === "string") return timings;
@@ -398,7 +405,8 @@ export async function handleReadCommand(
         .join("\n");
     }
 
-    default:
+    default: {
       throw new Error(`Unknown read command: ${command}`);
+    }
   }
 }

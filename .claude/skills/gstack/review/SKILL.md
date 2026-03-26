@@ -18,6 +18,7 @@ allowed-tools:
   - AskUserQuestion
   - WebSearch
 ---
+
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
@@ -78,6 +79,7 @@ ask the user about telemetry. Use AskUserQuestion:
 > Change anytime with `gstack-config set telemetry off`.
 
 Options:
+
 - A) Help gstack get better! (recommended)
 - B) No thanks
 
@@ -85,10 +87,11 @@ If A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry community`
 
 If B: ask a follow-up AskUserQuestion:
 
-> How about anonymous mode? We just learn that *someone* used gstack — no unique ID,
+> How about anonymous mode? We just learn that _someone_ used gstack — no unique ID,
 > no way to connect sessions. Just a counter that helps us know if anyone's out there.
 
 Options:
+
 - A) Sure, anonymous is fine
 - B) No thanks, fully off
 
@@ -96,6 +99,7 @@ If B→A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry anonymous
 If B→B: run `~/.claude/skills/gstack/bin/gstack-config set telemetry off`
 
 Always run:
+
 ```bash
 touch ~/.gstack/.telemetry-prompted
 ```
@@ -105,6 +109,7 @@ This only happens once. If `TEL_PROMPTED` is `yes`, skip this entirely.
 ## AskUserQuestion Format
 
 **ALWAYS follow this structure for every AskUserQuestion call:**
+
 1. **Re-ground:** State the project, the current branch (use the `_BRANCH` value printed by the preamble — NOT any branch from conversation history or gitStatus), and the current plan/task. (1-2 sentences)
 2. **Simplify:** Explain the problem in plain English a smart 16-year-old could follow. No raw function names, no internal jargon, no implementation details. Use concrete examples and analogies. Say what it DOES, not what it's called.
 3. **Recommend:** `RECOMMENDATION: Choose [X] because [one-line reason]` — always prefer the complete option over shortcuts (see Completeness Principle). Include `Completeness: X/10` for each option. Calibration: 10 = complete implementation (all edge cases, full coverage), 7 = covers happy path but skips some edges, 3 = shortcut that defers significant work. If both options are 8+, pick the higher; if one is ≤5, flag it.
@@ -123,18 +128,19 @@ AI-assisted coding makes the marginal cost of completeness near-zero. When you p
 - **Lake vs. ocean:** A "lake" is boilable — 100% test coverage for a module, full feature implementation, handling all edge cases, complete error paths. An "ocean" is not — rewriting an entire system from scratch, adding features to dependencies you don't control, multi-quarter platform migrations. Recommend boiling lakes. Flag oceans as out of scope.
 - **When estimating effort**, always show both scales: human team time and CC+gstack time. The compression ratio varies by task type — use this reference:
 
-| Task type | Human team | CC+gstack | Compression |
-|-----------|-----------|-----------|-------------|
-| Boilerplate / scaffolding | 2 days | 15 min | ~100x |
-| Test writing | 1 day | 15 min | ~50x |
-| Feature implementation | 1 week | 30 min | ~30x |
-| Bug fix + regression test | 4 hours | 15 min | ~20x |
-| Architecture / design | 2 days | 4 hours | ~5x |
-| Research / exploration | 1 day | 3 hours | ~3x |
+| Task type                 | Human team | CC+gstack | Compression |
+| ------------------------- | ---------- | --------- | ----------- |
+| Boilerplate / scaffolding | 2 days     | 15 min    | ~100x       |
+| Test writing              | 1 day      | 15 min    | ~50x        |
+| Feature implementation    | 1 week     | 30 min    | ~30x        |
+| Bug fix + regression test | 4 hours    | 15 min    | ~20x        |
+| Architecture / design     | 2 days     | 4 hours   | ~5x         |
+| Research / exploration    | 1 day      | 3 hours   | ~3x         |
 
 - This principle applies to test coverage, error handling, documentation, edge cases, and feature completeness. Don't skip the last 10% to "save time" — with AI, that 10% costs seconds.
 
 **Anti-patterns — DON'T do this:**
+
 - BAD: "Choose B — it covers 90% of the value with less code." (If A is only 70 lines more, choose A.)
 - BAD: "We can skip edge case handling to save time." (Edge case handling costs minutes with CC.)
 - BAD: "Let's defer test coverage to a follow-up PR." (Tests are the cheapest lake to boil.)
@@ -157,6 +163,7 @@ Never let a noticed issue silently pass. The whole point is proactive communicat
 Before building infrastructure, unfamiliar patterns, or anything the runtime might have a built-in — **search first.** Read `~/.claude/skills/gstack/ETHOS.md` for the full philosophy.
 
 **Three layers of knowledge:**
+
 - **Layer 1** (tried and true — in distribution). Don't reinvent the wheel. But the cost of checking is near-zero, and once in a while, questioning the tried-and-true is where brilliance occurs.
 - **Layer 2** (new and popular — search for these). But scrutinize: humans are subject to mania. Search results are inputs to your thinking, not answers.
 - **Layer 3** (first principles — prize these above all). Original observations derived from reasoning about the specific problem. The most valuable of all.
@@ -165,9 +172,11 @@ Before building infrastructure, unfamiliar patterns, or anything the runtime mig
 "EUREKA: Everyone does X because [assumption]. But [evidence] shows this is wrong. Y is better because [reasoning]."
 
 Log eureka moments:
+
 ```bash
 jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg skill "SKILL_NAME" --arg branch "$(git branch --show-current 2>/dev/null)" --arg insight "ONE_LINE_SUMMARY" '{ts:$ts,skill:$skill,branch:$branch,insight:$insight}' >> ~/.gstack/analytics/eureka.jsonl 2>/dev/null || true
 ```
+
 Replace SKILL_NAME and ONE_LINE_SUMMARY. Runs inline — don't stop the workflow.
 
 **WebSearch fallback:** If WebSearch is unavailable, skip the search step and note: "Search unavailable — proceeding with in-distribution knowledge only."
@@ -198,7 +207,9 @@ Hey gstack team — ran into this while using /{skill-name}:
 
 ## Raw output
 ```
+
 {paste the actual error or unexpected output here}
+
 ```
 
 ## What would make this a 10
@@ -212,6 +223,7 @@ Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file
 ## Completion Status Protocol
 
 When completing a skill workflow, report status using one of:
+
 - **DONE** — All steps completed successfully. Evidence provided for each claim.
 - **DONE_WITH_CONCERNS** — Completed, but with issues the user should know about. List each concern.
 - **BLOCKED** — Cannot proceed. State what is blocking and what was tried.
@@ -222,11 +234,13 @@ When completing a skill workflow, report status using one of:
 It is always OK to stop and say "this is too hard for me" or "I'm not confident in this result."
 
 Bad work is worse than no work. You will not be penalized for escalating.
+
 - If you have attempted a task 3 times without success, STOP and escalate.
 - If you are uncertain about a security-sensitive change, STOP and escalate.
 - If the scope of work exceeds what you can verify, STOP and escalate.
 
 Escalation format:
+
 ```
 STATUS: BLOCKED | NEEDS_CONTEXT
 REASON: [1-2 sentences]
@@ -282,14 +296,15 @@ Then write a `## GSTACK REVIEW REPORT` section to the end of the plan file:
 - If the output is `NO_REVIEWS` or empty: write this placeholder table:
 
 \`\`\`markdown
+
 ## GSTACK REVIEW REPORT
 
-| Review | Trigger | Why | Runs | Status | Findings |
-|--------|---------|-----|------|--------|----------|
-| CEO Review | \`/plan-ceo-review\` | Scope & strategy | 0 | — | — |
-| Codex Review | \`/codex review\` | Independent 2nd opinion | 0 | — | — |
-| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | 0 | — | — |
-| Design Review | \`/plan-design-review\` | UI/UX gaps | 0 | — | — |
+| Review        | Trigger                 | Why                             | Runs | Status | Findings |
+| ------------- | ----------------------- | ------------------------------- | ---- | ------ | -------- |
+| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | 0    | —      | —        |
+| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | 0    | —      | —        |
+| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | 0    | —      | —        |
+| Design Review | \`/plan-design-review\` | UI/UX gaps                      | 0    | —      | —        |
 
 **VERDICT:** NO REVIEWS YET — run \`/autoplan\` for full review pipeline, or individual reviews above.
 \`\`\`
@@ -362,6 +377,7 @@ PLAN=$(ls -t ~/.claude/plans/*.md 2>/dev/null | xargs grep -l "$BRANCH" 2>/dev/n
 3. **Validation:** If a plan file was found via content-based search (not conversation context), read the first 20 lines and verify it is relevant to the current branch's work. If it appears to be from a different project or feature, treat as "no plan file found."
 
 **Error handling:**
+
 - No plan file found → skip with "No plan file detected — skipping."
 - Plan file found but unreadable (permissions, encoding) → skip with "Plan file found but unreadable — skipping."
 
@@ -377,6 +393,7 @@ Read the plan file. Extract every actionable item — anything that describes wo
 - **Data model changes:** "Add column X to table Y", "Create migration for Z"
 
 **Ignore:**
+
 - Context/Background sections (`## Context`, `## Background`, `## Problem`)
 - Questions and open items (marked with ?, "TBD", "TODO: decide")
 - Review report sections (`## GSTACK REVIEW REPORT`)
@@ -388,6 +405,7 @@ Read the plan file. Extract every actionable item — anything that describes wo
 **No items found:** If the plan contains no extractable actionable items, skip with: "Plan file contains no actionable items — skipping completion audit."
 
 For each item, note:
+
 - The item text (verbatim or concise summary)
 - Its category: CODE | TEST | MIGRATION | CONFIG | DOCS
 
@@ -466,6 +484,7 @@ Plan items: N DONE, M PARTIAL, K NOT DONE
    - Partial implementations (started but not finished)
 
 5. Output (before the main review begins):
+
    ```
    Scope Check: [CLEAN / DRIFT DETECTED / REQUIREMENTS MISSING]
    Intent: <1-line summary of what was requested>
@@ -518,6 +537,7 @@ Apply the checklist against the diff in two passes:
 **Enum & Value Completeness requires reading code OUTSIDE the diff.** When the diff introduces a new enum value, status, tier, or type constant, use Grep to find all files that reference sibling values, then Read those files to check if the new value is handled. This is the one category where within-diff review is insufficient.
 
 **Search-before-recommending:** When recommending a fix pattern (especially for concurrency, caching, auth, or framework-specific behavior):
+
 - Verify the pattern is current best practice for the framework version in use
 - Check if a built-in solution exists in newer versions before recommending a workaround
 - Verify API signatures against current docs (APIs change between versions)
@@ -577,6 +597,7 @@ codex exec "Review the git diff on this branch. Run 7 litmus checks (YES/NO each
 ```
 
 Use a 5-minute timeout (`timeout: 300000`). After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_DRL" && rm -f "$TMPERR_DRL"
 ```
@@ -655,6 +676,7 @@ Add these to your diagram alongside the code branches. A user flow with no test 
 **Step 3. Check each branch against existing tests:**
 
 Go through your diagram branch by branch — both code paths AND user flows. For each one, search for a test that exercises it:
+
 - Function `processPayment()` → look for `billing.test.ts`, `billing.spec.ts`, `test/billing_test.rb`
 - An if/else → look for tests covering BOTH the true AND false path
 - An error handler → look for a test that triggers that specific error condition
@@ -663,24 +685,28 @@ Go through your diagram branch by branch — both code paths AND user flows. For
 - An interaction edge case → look for a test that simulates the unexpected action
 
 Quality scoring rubric:
-- ★★★  Tests behavior with edge cases AND error paths
-- ★★   Tests correct behavior, happy path only
-- ★    Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
+
+- ★★★ Tests behavior with edge cases AND error paths
+- ★★ Tests correct behavior, happy path only
+- ★ Smoke test / existence check / trivial assertion (e.g., "it renders", "it doesn't throw")
 
 ### E2E Test Decision Matrix
 
 When checking each branch, also determine whether a unit test or E2E/integration test is the right tool:
 
 **RECOMMEND E2E (mark as [→E2E] in the diagram):**
+
 - Common user flow spanning 3+ components/services (e.g., signup → verify email → first login)
 - Integration point where mocking hides real failures (e.g., API → queue → worker → DB)
 - Auth/payment/data-destruction flows — too important to trust unit tests alone
 
 **RECOMMEND EVAL (mark as [→EVAL] in the diagram):**
+
 - Critical LLM call that needs a quality eval (e.g., prompt change → test output still meets quality bar)
 - Changes to prompt templates, system instructions, or tool definitions
 
 **STICK WITH UNIT TESTS:**
+
 - Pure function with clear inputs/outputs
 - Internal helper with no side effects
 - Edge case of a single function (null input, empty array)
@@ -691,6 +717,7 @@ When checking each branch, also determine whether a unit test or E2E/integration
 **IRON RULE:** When the coverage audit identifies a REGRESSION — code that previously worked but the diff broke — a regression test is written immediately. No AskUserQuestion. No skipping. Regressions are the highest-priority test because they prove something broke.
 
 A regression is when:
+
 - The diff modifies existing behavior (not new code)
 - The existing test suite (if any) doesn't cover the changed path
 - The change introduces a new failure mode for existing callers
@@ -750,6 +777,7 @@ GAPS: 8 paths need tests (2 need E2E, 1 needs eval)
 **Step 5. Generate tests for gaps (Fix-First):**
 
 If test framework is detected and gaps were identified:
+
 - Classify each gap as AUTO-FIX or ASK per the Fix-First Heuristic:
   - **AUTO-FIX:** Simple unit tests for pure functions, edge cases of existing tested functions
   - **ASK:** E2E tests, tests requiring new test infrastructure, tests for ambiguous behavior
@@ -792,6 +820,7 @@ If there are ASK items remaining, present them in ONE AskUserQuestion:
 - Include an overall RECOMMENDATION
 
 Example format:
+
 ```
 I auto-fixed 5 issues. 2 need your input:
 
@@ -817,6 +846,7 @@ If no ASK items exist (everything was AUTO-FIX), skip the question entirely.
 ### Verification of claims
 
 Before producing the final review output:
+
 - If you claim "this pattern is safe" → cite the specific line proving safety
 - If you claim "this is handled elsewhere" → read and cite the handling code
 - If you claim "tests cover this" → name the test file and method
@@ -900,6 +930,7 @@ If `OLD_CFG` is `disabled`: skip this step silently. Continue to the next step.
 **User override:** If the user explicitly requested a specific tier (e.g., "run all passes", "paranoid review", "full adversarial", "do all 4 passes", "thorough review"), honor that request regardless of diff size. Jump to the matching tier section.
 
 **Auto-select tier based on diff size:**
+
 - **Small (< 50 lines changed):** Skip adversarial review entirely. Print: "Small diff ($DIFF_TOTAL lines) — adversarial review skipped." Continue to the next step.
 - **Medium (50–199 lines changed):** Run Codex adversarial challenge (or Claude adversarial subagent if Codex unavailable). Jump to the "Medium tier" section.
 - **Large (200+ lines changed):** Run all remaining passes — Codex structured review + Claude adversarial subagent + Codex adversarial. Jump to the "Large tier" section.
@@ -920,6 +951,7 @@ codex exec "Review the changes on this branch against the base branch. Run git d
 ```
 
 Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the `timeout` shell command — it doesn't exist on macOS. After the command completes, read stderr:
+
 ```bash
 cat "$TMPERR_ADV"
 ```
@@ -927,6 +959,7 @@ cat "$TMPERR_ADV"
 Present the full output verbatim. This is informational — it never blocks shipping.
 
 **Error handling:** All errors are non-blocking — adversarial review is a quality enhancement, not a prerequisite.
+
 - **Auth failure:** If stderr contains "auth", "login", "unauthorized", or "API key": "Codex authentication failed. Run \`codex login\` to authenticate."
 - **Timeout:** "Codex timed out after 5 minutes."
 - **Empty response:** "Codex returned no response. Stderr: <paste relevant error>."
@@ -945,9 +978,11 @@ Present findings under an `ADVERSARIAL REVIEW (Claude subagent):` header. **FIXA
 If the subagent fails or times out: "Claude adversarial subagent unavailable. Continuing without adversarial review."
 
 **Persist the review result:**
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"adversarial-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"medium","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
+
 Substitute STATUS: "clean" if no findings, "issues_found" if findings exist. SOURCE: "codex" if Codex ran, "claude" if subagent ran. If both failed, do NOT persist.
 
 **Cleanup:** Run `rm -f "$TMPERR_ADV"` after processing (if Codex was used).
@@ -959,6 +994,7 @@ Substitute STATUS: "clean" if no findings, "issues_found" if findings exist. SOU
 Claude's structured review already ran. Now run **all three remaining passes** for maximum coverage:
 
 **1. Codex structured review (if available):**
+
 ```bash
 TMPERR=$(mktemp /tmp/codex-review-XXXXXXXX)
 codex review --base <base> -c 'model_reasoning_effort="xhigh"' --enable web_search_cached 2>"$TMPERR"
@@ -968,6 +1004,7 @@ Set the Bash tool's `timeout` parameter to `300000` (5 minutes). Do NOT use the 
 Check for `[P1]` markers: found → `GATE: FAIL`, not found → `GATE: PASS`.
 
 If GATE is FAIL, use AskUserQuestion:
+
 ```
 Codex found N critical issues in the diff.
 
@@ -988,9 +1025,11 @@ After stderr: `rm -f "$TMPERR"`
 If Codex is not available for steps 1 and 3, note to the user: "Codex CLI not found — large-diff review ran Claude structured + Claude adversarial (2 of 4 passes). Install Codex for full 4-pass coverage: `npm install -g @openai/codex`"
 
 **Persist the review result AFTER all passes complete** (not after each sub-step):
+
 ```bash
 ~/.claude/skills/gstack/bin/gstack-review-log '{"skill":"adversarial-review","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","status":"STATUS","source":"SOURCE","tier":"large","gate":"GATE","commit":"'"$(git rev-parse --short HEAD)"'"}'
 ```
+
 Substitute: STATUS = "clean" if no findings across ALL passes, "issues_found" if any pass found issues. SOURCE = "both" if Codex ran, "claude" if only Claude subagent ran. GATE = the Codex structured review gate result ("pass"/"fail"), or "informational" if Codex was unavailable. If all passes failed, do NOT persist.
 
 ---
@@ -1026,6 +1065,7 @@ Run:
 ```
 
 Substitute:
+
 - `TIMESTAMP` = ISO 8601 datetime
 - `STATUS` = `"clean"` if there are no remaining unresolved findings after Fix-First handling and adversarial review, otherwise `"issues_found"`
 - `issues_found` = total remaining unresolved findings

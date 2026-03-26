@@ -2,8 +2,8 @@
  * Meta commands — tabs, server control, screenshots, chain, diff, snapshot
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import * as Diff from "diff";
 
@@ -44,7 +44,7 @@ export async function handleMetaCommand(
     }
 
     case "tab": {
-      const id = parseInt(args[0], 10);
+      const id = Number.parseInt(args[0], 10);
       if (isNaN(id)) throw new Error("Usage: browse tab <id>");
       bm.switchTab(id);
       return `Switched to tab ${id}`;
@@ -57,7 +57,7 @@ export async function handleMetaCommand(
     }
 
     case "closetab": {
-      const id = args[0] ? parseInt(args[0], 10) : undefined;
+      const id = args[0] ? Number.parseInt(args[0], 10) : undefined;
       await bm.closeTab(id);
       return `Closed tab${id ? ` ${id}` : ""}`;
     }
@@ -115,10 +115,10 @@ export async function handleMetaCommand(
               "Usage: screenshot --clip x,y,width,height — all must be numbers"
             );
           clipRect = {
+            height: parts[3],
+            width: parts[2],
             x: parts[0],
             y: parts[1],
-            width: parts[2],
-            height: parts[3],
           };
         } else if (args[i].startsWith("--")) {
           throw new Error(`Unknown screenshot flag: ${args[i]}`);
@@ -162,11 +162,11 @@ export async function handleMetaCommand(
       }
 
       if (clipRect) {
-        await page.screenshot({ path: outputPath, clip: clipRect });
+        await page.screenshot({ clip: clipRect, path: outputPath });
         return `Screenshot saved (clip ${clipRect.x},${clipRect.y},${clipRect.width},${clipRect.height}): ${outputPath}`;
       }
 
-      await page.screenshot({ path: outputPath, fullPage: !viewportOnly });
+      await page.screenshot({ fullPage: !viewportOnly, path: outputPath });
       return `Screenshot saved${viewportOnly ? " (viewport)" : ""}: ${outputPath}`;
     }
 
@@ -174,7 +174,7 @@ export async function handleMetaCommand(
       const page = bm.getPage();
       const pdfPath = args[0] || `${TEMP_DIR}/browse-page.pdf`;
       validateOutputPath(pdfPath);
-      await page.pdf({ path: pdfPath, format: "A4" });
+      await page.pdf({ format: "A4", path: pdfPath });
       return `PDF saved: ${pdfPath}`;
     }
 
@@ -183,17 +183,17 @@ export async function handleMetaCommand(
       const prefix = args[0] || `${TEMP_DIR}/browse-responsive`;
       validateOutputPath(prefix);
       const viewports = [
-        { name: "mobile", width: 375, height: 812 },
-        { name: "tablet", width: 768, height: 1024 },
-        { name: "desktop", width: 1280, height: 720 },
+        { height: 812, name: "mobile", width: 375 },
+        { height: 1024, name: "tablet", width: 768 },
+        { height: 720, name: "desktop", width: 1280 },
       ];
       const originalViewport = page.viewportSize();
       const results: string[] = [];
 
       for (const vp of viewports) {
-        await page.setViewportSize({ width: vp.width, height: vp.height });
+        await page.setViewportSize({ height: vp.height, width: vp.width });
         const path = `${prefix}-${vp.name}.png`;
-        await page.screenshot({ path, fullPage: true });
+        await page.screenshot({ fullPage: true, path });
         results.push(`${vp.name} (${vp.width}x${vp.height}): ${path}`);
       }
 
@@ -242,8 +242,8 @@ export async function handleMetaCommand(
             result = await handleMetaCommand(name, cmdArgs, bm, shutdown);
           else throw new Error(`Unknown command: ${name}`);
           results.push(`[${name}] ${result}`);
-        } catch (err: any) {
-          results.push(`[${name}] ERROR: ${err.message}`);
+        } catch (error: any) {
+          results.push(`[${name}] ERROR: ${error.message}`);
         }
       }
 
@@ -257,11 +257,11 @@ export async function handleMetaCommand(
 
       const page = bm.getPage();
       await validateNavigationUrl(url1);
-      await page.goto(url1, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goto(url1, { timeout: 15_000, waitUntil: "domcontentloaded" });
       const text1 = await getCleanText(page);
 
       await validateNavigationUrl(url2);
-      await page.goto(url2, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await page.goto(url2, { timeout: 15_000, waitUntil: "domcontentloaded" });
       const text2 = await getCleanText(page);
 
       const changes = Diff.diffLines(text1, text2);
@@ -296,7 +296,8 @@ export async function handleMetaCommand(
       return `RESUMED\n${snapshot}`;
     }
 
-    default:
+    default: {
       throw new Error(`Unknown meta command: ${command}`);
+    }
   }
 }

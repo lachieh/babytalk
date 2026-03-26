@@ -26,9 +26,7 @@ export default function JoinPage() {
         await gqlRequest(JOIN_HOUSEHOLD, { inviteCode: code });
         router.push("/dashboard");
       } catch (error) {
-        setErrorMsg(
-          error instanceof Error ? error.message : "Failed to join"
-        );
+        setErrorMsg(error instanceof Error ? error.message : "Failed to join");
       } finally {
         setLoading(false);
       }
@@ -54,7 +52,9 @@ export default function JoinPage() {
           className="mt-spacing-3xl flex flex-col gap-spacing-md"
           onSubmit={handleSubmit}
         >
-          <label htmlFor="invite-code" className="sr-only">Invite code</label>
+          <label htmlFor="invite-code" className="sr-only">
+            Invite code
+          </label>
           <input
             id="invite-code"
             className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-lg text-center font-mono text-[var(--font-size-xl)] tracking-[0.25em] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
@@ -73,7 +73,9 @@ export default function JoinPage() {
             {loading ? "Joining..." : "Join family"}
           </button>
           {errorMsg && (
-            <p className="text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+            <p className="text-[var(--font-size-sm)] text-danger-500">
+              {errorMsg}
+            </p>
           )}
         </form>
       </div>

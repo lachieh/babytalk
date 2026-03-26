@@ -9,14 +9,14 @@
  *   5. Print response to stdout (or stderr for errors)
  */
 
-import * as fs from "fs";
-import * as path from "path";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import { resolveConfig, ensureStateDir, readVersionHash } from "./config";
 
 const config = resolveConfig();
 const IS_WINDOWS = process.platform === "win32";
-const MAX_START_WAIT = IS_WINDOWS ? 15000 : process.env.CI ? 30000 : 8000; // Node+Chromium takes longer on Windows
+const MAX_START_WAIT = IS_WINDOWS ? 15_000 : process.env.CI ? 30000 : 8000; // Node+Chromium takes longer on Windows
 
 export function resolveServerScript(
   env: Record<string, string | undefined> = process.env,
@@ -101,7 +101,7 @@ interface ServerState {
 // ─── State File ────────────────────────────────────────────────
 function readState(): ServerState | null {
   try {
-    const data = fs.readFileSync(config.stateFile, "utf-8");
+    const data = fs.readFileSync(config.stateFile, "utf8");
     return JSON.parse(data);
   } catch {
     return null;
@@ -115,7 +115,7 @@ function isProcessAlive(pid: number): boolean {
     try {
       const result = Bun.spawnSync(
         ["tasklist", "/FI", `PID eq ${pid}`, "/NH", "/FO", "CSV"],
-        { stdout: "pipe", stderr: "pipe", timeout: 3000 }
+        { stderr: "pipe", stdout: "pipe", timeout: 3000 }
       );
       return result.stdout.toString().includes(`"${pid}"`);
     } catch {
@@ -155,8 +155,8 @@ async function killServer(pid: number): Promise<void> {
     // taskkill /T /F kills the process tree (Node + Chromium)
     try {
       Bun.spawnSync(["taskkill", "/PID", String(pid), "/T", "/F"], {
-        stdout: "pipe",
         stderr: "pipe",
+        stdout: "pipe",
         timeout: 5000,
       });
     } catch {}
@@ -203,14 +203,14 @@ function cleanupLegacyState(): void {
     for (const file of files) {
       const fullPath = `/tmp/${file}`;
       try {
-        const data = JSON.parse(fs.readFileSync(fullPath, "utf-8"));
+        const data = JSON.parse(fs.readFileSync(fullPath, "utf8"));
         if (data.pid && isProcessAlive(data.pid)) {
           // Verify this is actually a browse server before killing
           const check = Bun.spawnSync(
             ["ps", "-p", String(data.pid), "-o", "command="],
             {
-              stdout: "pipe",
               stderr: "pipe",
+              stdout: "pipe",
               timeout: 2000,
             }
           );
@@ -275,8 +275,8 @@ async function startServer(): Promise<ServerState> {
   } else {
     // macOS/Linux: Bun.spawn + unref works correctly
     proc = Bun.spawn(["bun", "run", SERVER_SCRIPT], {
-      stdio: ["ignore", "pipe", "pipe"],
       env: { ...process.env, BROWSE_STATE_FILE: config.stateFile },
+      stdio: ["ignore", "pipe", "pipe"],
     });
     proc.unref();
   }
@@ -307,12 +307,12 @@ async function startServer(): Promise<ServerState> {
     // stderr is unavailable due to stdio: 'ignore' for detachment)
     const errorLogPath = path.join(config.stateDir, "browse-startup-error.log");
     try {
-      const errorLog = fs.readFileSync(errorLogPath, "utf-8").trim();
+      const errorLog = fs.readFileSync(errorLogPath, "utf8").trim();
       if (errorLog) {
         throw new Error(`Server failed to start:\n${errorLog}`);
       }
-    } catch (e: any) {
-      if (e.code !== "ENOENT") throw e;
+    } catch (error: any) {
+      if (error.code !== "ENOENT") throw error;
     }
   }
   throw new Error(`Server failed to start within ${MAX_START_WAIT / 1000}s`);
@@ -340,7 +340,10 @@ function acquireServerLock(): (() => void) | null {
   } catch {
     // Lock already held — check if the holder is still alive
     try {
-      const holderPid = parseInt(fs.readFileSync(lockPath, "utf8").trim(), 10);
+      const holderPid = Number.parseInt(
+        fs.readFileSync(lockPath, "utf8").trim(),
+        10
+      );
       if (holderPid && isProcessAlive(holderPid)) {
         return null; // Another live process holds the lock
       }
@@ -421,17 +424,17 @@ async function sendCommand(
   args: string[],
   retries = 0
 ): Promise<void> {
-  const body = JSON.stringify({ command, args });
+  const body = JSON.stringify({ args, command });
 
   try {
     const resp = await fetch(`http://127.0.0.1:${state.port}/command`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${state.token}`,
-      },
       body,
-      signal: AbortSignal.timeout(30000),
+      headers: {
+        Authorization: `Bearer ${state.token}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+      signal: AbortSignal.timeout(30_000),
     });
 
     if (resp.status === 401) {
@@ -462,19 +465,21 @@ async function sendCommand(
       }
       process.exit(1);
     }
-  } catch (err: any) {
-    if (err.name === "AbortError") {
+  } catch (error: any) {
+    if (error.name === "AbortError") {
       console.error("[browse] Command timed out after 30s");
       process.exit(1);
     }
     // Connection error — server may have crashed
     if (
-      err.code === "ECONNREFUSED" ||
-      err.code === "ECONNRESET" ||
-      err.message?.includes("fetch failed")
+      error.code === "ECONNREFUSED" ||
+      error.code === "ECONNRESET" ||
+      error.message?.includes("fetch failed")
     ) {
       if (retries >= 1)
-        throw new Error("[browse] Server crashed twice in a row — aborting");
+        throw new Error("[browse] Server crashed twice in a row — aborting", {
+          cause: error,
+        });
       console.error("[browse] Server connection lost. Restarting...");
       // Kill the old server to avoid orphaned chromium processes
       const oldState = readState();
@@ -484,7 +489,7 @@ async function sendCommand(
       const newState = await startServer();
       return sendCommand(newState, command, args, retries + 1);
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -545,8 +550,8 @@ Refs:           After 'snapshot', use @e1, @e2... as selectors:
 }
 
 if (import.meta.main) {
-  main().catch((err) => {
-    console.error(`[browse] ${err.message}`);
+  main().catch((error) => {
+    console.error(`[browse] ${error.message}`);
     process.exit(1);
   });
 }

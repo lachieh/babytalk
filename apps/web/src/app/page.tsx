@@ -11,8 +11,8 @@ export default function Home() {
           BabyTalk
         </h1>
         <p className="mt-spacing-lg text-[var(--font-size-base)] leading-relaxed text-neutral-500">
-          Track feeds, sleep, and diapers with your voice.
-          No tapping, no typing — just talk.
+          Track feeds, sleep, and diapers with your voice. No tapping, no typing
+          — just talk.
         </p>
         <Link
           href="/auth/login"

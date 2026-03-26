@@ -15,10 +15,10 @@
 
 import { Database } from "bun:sqlite";
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import * as crypto from "crypto";
-import * as fs from "fs";
-import * as os from "os";
-import * as path from "path";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 // ─── Test Constants ─────────────────────────────────────────────
 
@@ -47,7 +47,7 @@ const LINUX_V11_KEY = crypto.pbkdf2Sync(
   "sha1"
 );
 const IV = Buffer.alloc(16, 0x20);
-const CHROMIUM_EPOCH_OFFSET = 11644473600000000n;
+const CHROMIUM_EPOCH_OFFSET = 11_644_473_600_000_000n;
 
 // Fixture DB path
 const FIXTURE_DIR = path.join(import.meta.dir, "fixtures");
@@ -64,7 +64,7 @@ function encryptCookieValue(
   const prefix = options?.prefix ?? "v10";
   // 32-byte HMAC tag (random for test) + actual value
   const hmacTag = crypto.randomBytes(32);
-  const plaintext = Buffer.concat([hmacTag, Buffer.from(value, "utf-8")]);
+  const plaintext = Buffer.concat([hmacTag, Buffer.from(value, "utf8")]);
 
   // PKCS7 pad to AES block size (16 bytes)
   const blockSize = 16;
@@ -79,7 +79,7 @@ function encryptCookieValue(
 }
 
 function chromiumEpoch(unixSeconds: number): bigint {
-  return BigInt(unixSeconds) * 1000000n + CHROMIUM_EPOCH_OFFSET;
+  return BigInt(unixSeconds) * 1_000_000n + CHROMIUM_EPOCH_OFFSET;
 }
 
 // ─── Create Fixture Database ────────────────────────────────────
@@ -111,10 +111,10 @@ function createMacFixtureDb() {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
   const futureExpiry = Number(
-    chromiumEpoch(Math.floor(Date.now() / 1000) + 86400 * 365)
+    chromiumEpoch(Math.floor(Date.now() / 1000) + 86_400 * 365)
   );
   const pastExpiry = Number(
-    chromiumEpoch(Math.floor(Date.now() / 1000) - 86400)
+    chromiumEpoch(Math.floor(Date.now() / 1000) - 86_400)
   );
 
   // Domain 1: .github.com — 3 encrypted cookies
@@ -273,7 +273,7 @@ function createLinuxFixtureDb() {
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
   const futureExpiry = Number(
-    chromiumEpoch(Math.floor(Date.now() / 1000) + 86400 * 365)
+    chromiumEpoch(Math.floor(Date.now() / 1000) + 86_400 * 365)
   );
 
   insert.run(
@@ -340,8 +340,8 @@ beforeAll(async () => {
 
   // Mock Bun.spawn to return test password for keychain access
   originalSpawn = Bun.spawn;
-  // @ts-ignore - monkey-patching for test
-  Bun.spawn = function (cmd: any, opts: any) {
+  // @ts-expect-error - monkey-patching for test
+  Bun.spawn = function spawn(cmd: any, opts: any) {
     // Intercept security find-generic-password calls
     if (
       Array.isArray(cmd) &&
@@ -350,23 +350,30 @@ beforeAll(async () => {
     ) {
       // Return test password for any known test service
       return {
+        exited: Promise.resolve(0),
+        kill: () => {},
+        stderr: new ReadableStream({
+          start(controller) {
+            controller.close();
+          },
+        }),
         stdout: new ReadableStream({
           start(controller) {
             controller.enqueue(new TextEncoder().encode(TEST_PASSWORD + "\n"));
             controller.close();
           },
         }),
+      };
+    }
+    if (Array.isArray(cmd) && cmd[0] === "secret-tool" && cmd[1] === "lookup") {
+      return {
+        exited: Promise.resolve(0),
+        kill: () => {},
         stderr: new ReadableStream({
           start(controller) {
             controller.close();
           },
         }),
-        exited: Promise.resolve(0),
-        kill: () => {},
-      };
-    }
-    if (Array.isArray(cmd) && cmd[0] === "secret-tool" && cmd[1] === "lookup") {
-      return {
         stdout: new ReadableStream({
           start(controller) {
             controller.enqueue(
@@ -375,13 +382,6 @@ beforeAll(async () => {
             controller.close();
           },
         }),
-        stderr: new ReadableStream({
-          start(controller) {
-            controller.close();
-          },
-        }),
-        exited: Promise.resolve(0),
-        kill: () => {},
       };
     }
     // Pass through other spawn calls
@@ -390,15 +390,15 @@ beforeAll(async () => {
 
   // Import the module (uses our mocked Bun.spawn)
   const mod = await import("../src/cookie-import-browser");
-  findInstalledBrowsers = mod.findInstalledBrowsers;
-  listDomains = mod.listDomains;
-  importCookies = mod.importCookies;
-  CookieImportError = mod.CookieImportError;
+  ({ findInstalledBrowsers } = mod);
+  ({ listDomains } = mod);
+  ({ importCookies } = mod);
+  ({ CookieImportError } = mod);
 });
 
 afterAll(() => {
   // Restore Bun.spawn
-  // @ts-ignore - monkey-patching for test
+  // @ts-expect-error - monkey-patching for test
   Bun.spawn = originalSpawn;
   // Clean up fixture DB
   try {
@@ -477,7 +477,7 @@ describe("Cookie Import Browser", () => {
         decipher.final(),
       ]);
       // Skip 32-byte HMAC tag
-      const value = plaintext.slice(32).toString("utf-8");
+      const value = plaintext.slice(32).toString("utf8");
       expect(value).toBe("hello-world");
     });
 
@@ -503,7 +503,7 @@ describe("Cookie Import Browser", () => {
         decipher.update(ciphertext),
         decipher.final(),
       ]);
-      expect(plaintext.slice(32).toString("utf-8")).toBe(specialValue);
+      expect(plaintext.slice(32).toString("utf8")).toBe(specialValue);
     });
   });
 
@@ -555,8 +555,8 @@ describe("Cookie Import Browser", () => {
 
       const expected: Record<string, string> = {
         session_id: "abc123",
-        user_token: "token-xyz",
         theme: "dark",
+        user_token: "token-xyz",
       };
 
       for (const row of rows) {
@@ -568,7 +568,7 @@ describe("Cookie Import Browser", () => {
           decipher.update(ciphertext),
           decipher.final(),
         ]);
-        const value = plaintext.slice(32).toString("utf-8");
+        const value = plaintext.slice(32).toString("utf8");
         expect(value).toBe(expected[row.name]);
       }
     });
@@ -617,9 +617,9 @@ describe("Cookie Import Browser", () => {
   describe("Chromium Epoch Conversion", () => {
     test("converts Chromium epoch to Unix timestamp correctly", () => {
       // Round-trip: pick a known Unix timestamp, convert to Chromium, convert back
-      const knownUnix = 1704067200; // 2024-01-01T00:00:00Z
-      const chromiumTs = BigInt(knownUnix) * 1000000n + CHROMIUM_EPOCH_OFFSET;
-      const unixTs = Number((chromiumTs - CHROMIUM_EPOCH_OFFSET) / 1000000n);
+      const knownUnix = 1_704_067_200; // 2024-01-01T00:00:00Z
+      const chromiumTs = BigInt(knownUnix) * 1_000_000n + CHROMIUM_EPOCH_OFFSET;
+      const unixTs = Number((chromiumTs - CHROMIUM_EPOCH_OFFSET) / 1_000_000n);
       expect(unixTs).toBe(knownUnix);
     });
 
@@ -761,7 +761,7 @@ describe("Cookie Import Browser", () => {
     });
 
     test("rejects control characters in profile names", () => {
-      expect(() => listDomains("chrome", "Default\x00evil")).toThrow(
+      expect(() => listDomains("chrome", "Default\u0000evil")).toThrow(
         /Invalid profile/
       );
     });
@@ -776,10 +776,10 @@ describe("Cookie Import Browser", () => {
       try {
         listDomains("firefox");
         throw new Error("Should have thrown");
-      } catch (err: any) {
-        expect(err.code).toBe("unknown_browser");
-        expect(err.message).toContain("comet");
-        expect(err.message).toContain("chrome");
+      } catch (error: any) {
+        expect(error.code).toBe("unknown_browser");
+        expect(error.message).toContain("comet");
+        expect(error.message).toContain("chrome");
       }
     });
   });

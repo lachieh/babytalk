@@ -13,9 +13,9 @@
  *   Port:       random 10000-60000 (or BROWSE_PORT env for debug override)
  */
 
-import * as crypto from "crypto";
-import * as fs from "fs";
-import * as path from "path";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 import { BrowserManager } from "./browser-manager";
 import { COMMAND_DESCRIPTIONS } from "./commands";
@@ -32,8 +32,8 @@ ensureStateDir(config);
 
 // ─── Auth ───────────────────────────────────────────────────────
 const AUTH_TOKEN = crypto.randomUUID();
-const BROWSE_PORT = parseInt(process.env.BROWSE_PORT || "0", 10);
-const IDLE_TIMEOUT_MS = parseInt(
+const BROWSE_PORT = Number.parseInt(process.env.BROWSE_PORT || "0", 10);
+const IDLE_TIMEOUT_MS = Number.parseInt(
   process.env.BROWSE_IDLE_TIMEOUT || "1800000",
   10
 ); // 30 min
@@ -105,10 +105,8 @@ import {
   addConsoleEntry,
   addNetworkEntry,
   addDialogEntry,
-  type LogEntry,
-  type NetworkEntry,
-  type DialogEntry,
 } from "./buffers";
+import type { LogEntry, NetworkEntry, DialogEntry } from "./buffers";
 export {
   consoleBuffer,
   networkBuffer,
@@ -222,8 +220,8 @@ async function findPort(): Promise<number> {
   if (BROWSE_PORT) {
     try {
       const testServer = Bun.serve({
-        port: BROWSE_PORT,
         fetch: () => new Response("ok"),
+        port: BROWSE_PORT,
       });
       testServer.stop();
       return BROWSE_PORT;
@@ -235,13 +233,13 @@ async function findPort(): Promise<number> {
   }
 
   // Random port with retry
-  const MIN_PORT = 10000;
-  const MAX_PORT = 60000;
+  const MIN_PORT = 10_000;
+  const MAX_PORT = 60_000;
   const MAX_RETRIES = 5;
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const port = MIN_PORT + Math.floor(Math.random() * (MAX_PORT - MIN_PORT));
     try {
-      const testServer = Bun.serve({ port, fetch: () => new Response("ok") });
+      const testServer = Bun.serve({ fetch: () => new Response("ok"), port });
       testServer.stop();
       return port;
     } catch {
@@ -289,8 +287,8 @@ async function handleCommand(body: any): Promise<Response> {
 
   if (!command) {
     return new Response(JSON.stringify({ error: 'Missing "command" field' }), {
-      status: 400,
       headers: { "Content-Type": "application/json" },
+      status: 400,
     });
   }
 
@@ -306,35 +304,35 @@ async function handleCommand(body: any): Promise<Response> {
     } else if (command === "help") {
       const helpText = generateHelpText();
       return new Response(helpText, {
-        status: 200,
         headers: { "Content-Type": "text/plain" },
+        status: 200,
       });
     } else {
       return new Response(
         JSON.stringify({
           error: `Unknown command: ${command}`,
-          hint: `Available commands: ${[...READ_COMMANDS, ...WRITE_COMMANDS, ...META_COMMANDS].sort().join(", ")}`,
+          hint: `Available commands: ${[...READ_COMMANDS, ...WRITE_COMMANDS, ...META_COMMANDS].toSorted().join(", ")}`,
         }),
         {
-          status: 400,
           headers: { "Content-Type": "application/json" },
+          status: 400,
         }
       );
     }
 
     browserManager.resetFailures();
     return new Response(result, {
-      status: 200,
       headers: { "Content-Type": "text/plain" },
+      status: 200,
     });
-  } catch (err: any) {
+  } catch (error: any) {
     browserManager.incrementFailures();
-    let errorMsg = wrapError(err);
+    let errorMsg = wrapError(error);
     const hint = browserManager.getFailureHint();
     if (hint) errorMsg += "\n" + hint;
     return new Response(JSON.stringify({ error: errorMsg }), {
-      status: 500,
       headers: { "Content-Type": "application/json" },
+      status: 500,
     });
   }
 }
@@ -391,8 +389,6 @@ async function start() {
 
   const startTime = Date.now();
   const server = Bun.serve({
-    port,
-    hostname: "127.0.0.1",
     fetch: async (req) => {
       resetIdleTimer();
 
@@ -408,14 +404,14 @@ async function start() {
         const healthy = await browserManager.isHealthy();
         return new Response(
           JSON.stringify({
-            status: healthy ? "healthy" : "unhealthy",
-            uptime: Math.floor((Date.now() - startTime) / 1000),
-            tabs: browserManager.getTabCount(),
             currentUrl: browserManager.getCurrentUrl(),
+            status: healthy ? "healthy" : "unhealthy",
+            tabs: browserManager.getTabCount(),
+            uptime: Math.floor((Date.now() - startTime) / 1000),
           }),
           {
-            status: 200,
             headers: { "Content-Type": "application/json" },
+            status: 200,
           }
         );
       }
@@ -423,8 +419,8 @@ async function start() {
       // All other endpoints require auth
       if (!validateAuth(req)) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
           headers: { "Content-Type": "application/json" },
+          status: 401,
         });
       }
 
@@ -435,16 +431,18 @@ async function start() {
 
       return new Response("Not found", { status: 404 });
     },
+    hostname: "127.0.0.1",
+    port,
   });
 
   // Write state file (atomic: write .tmp then rename)
   const state = {
+    binaryVersion: readVersionHash() || undefined,
     pid: process.pid,
     port,
-    token: AUTH_TOKEN,
-    startedAt: new Date().toISOString(),
     serverPath: path.resolve(import.meta.dir, "server.ts"),
-    binaryVersion: readVersionHash() || undefined,
+    startedAt: new Date().toISOString(),
+    token: AUTH_TOKEN,
   };
   const tmpFile = config.stateFile + ".tmp";
   fs.writeFileSync(tmpFile, JSON.stringify(state, null, 2), { mode: 0o600 });
@@ -458,8 +456,8 @@ async function start() {
   console.log(`[browse] Idle timeout: ${IDLE_TIMEOUT_MS / 1000}s`);
 }
 
-start().catch((err) => {
-  console.error(`[browse] Failed to start: ${err.message}`);
+start().catch((error) => {
+  console.error(`[browse] Failed to start: ${error.message}`);
   // Write error to disk for the CLI to read — on Windows, the CLI can't capture
   // stderr because the server is launched with detached: true, stdio: 'ignore'.
   try {
@@ -467,7 +465,7 @@ start().catch((err) => {
     fs.mkdirSync(config.stateDir, { recursive: true });
     fs.writeFileSync(
       errorLogPath,
-      `${new Date().toISOString()} ${err.message}\n${err.stack || ""}\n`
+      `${new Date().toISOString()} ${error.message}\n${error.stack || ""}\n`
     );
   } catch {
     // stateDir may not exist — nothing more we can do

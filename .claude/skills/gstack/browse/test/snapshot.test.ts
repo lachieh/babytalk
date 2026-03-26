@@ -6,7 +6,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
-import * as fs from "fs";
+import * as fs from "node:fs";
 
 import { BrowserManager } from "../src/browser-manager";
 import { handleMetaCommand } from "../src/meta-commands";
@@ -210,9 +210,9 @@ describe("Ref invalidation", () => {
     try {
       await handleWriteCommand("click", ["@e1"], bm);
       expect(true).toBe(false); // Should not reach here
-    } catch (err: any) {
-      expect(err.message).toContain("not found");
-      expect(err.message).toContain("snapshot");
+    } catch (error: any) {
+      expect(error.message).toContain("not found");
+      expect(error.message).toContain("snapshot");
     }
   });
 
@@ -259,11 +259,11 @@ describe("Ref staleness detection", () => {
     try {
       await handleWriteCommand("click", [ref], bm);
       expect(true).toBe(false); // Should not reach here
-    } catch (err: any) {
-      expect(err.message).toContain("stale");
-      expect(err.message).toContain("button");
-      expect(err.message).toContain("Submit");
-      expect(err.message).toContain("snapshot");
+    } catch (error: any) {
+      expect(error.message).toContain("stale");
+      expect(error.message).toContain("button");
+      expect(error.message).toContain("Submit");
+      expect(error.message).toContain("snapshot");
     }
   });
 
@@ -478,8 +478,8 @@ describe("Snapshot errors", () => {
     try {
       await handleMetaCommand("snapshot", ["--bogus"], bm, shutdown);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Unknown snapshot flag");
+    } catch (error: any) {
+      expect(error.message).toContain("Unknown snapshot flag");
     }
   });
 
@@ -487,8 +487,8 @@ describe("Snapshot errors", () => {
     try {
       await handleMetaCommand("snapshot", ["-d"], bm, shutdown);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -496,8 +496,8 @@ describe("Snapshot errors", () => {
     try {
       await handleMetaCommand("snapshot", ["-s"], bm, shutdown);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 
@@ -511,8 +511,8 @@ describe("Snapshot errors", () => {
         shutdown
       );
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Selector not found");
+    } catch (error: any) {
+      expect(error.message).toContain("Selector not found");
     }
   });
 
@@ -520,8 +520,8 @@ describe("Snapshot errors", () => {
     try {
       await handleMetaCommand("snapshot", ["-o"], bm, shutdown);
       expect(true).toBe(false);
-    } catch (err: any) {
-      expect(err.message).toContain("Usage");
+    } catch (error: any) {
+      expect(error.message).toContain("Usage");
     }
   });
 });
