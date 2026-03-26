@@ -86,80 +86,125 @@ export default function SetupPage() {
 
   if (step === "household") {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-8">
-        <h1 className="text-2xl font-bold">Welcome to BabyTalk</h1>
-        <p className="mt-4 text-center text-gray-600">
-          Create a household to start tracking, or join an existing one.
-        </p>
-        <div className="mt-8 flex flex-col gap-3">
-          <button
-            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 disabled:opacity-50"
-            disabled={loading}
-            onClick={handleCreateHousehold}
-            type="button"
-          >
-            {loading ? "Creating..." : "Create Household"}
-          </button>
-          <Link
-            className="text-center text-sm text-blue-600 hover:underline"
-            href="/dashboard/join"
-          >
-            Join an existing household
-          </Link>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+        <div className="animate-fade-up max-w-sm text-center">
+          <p className="text-[var(--font-size-sm)] font-medium text-neutral-400">
+            You look like you could use a hand
+          </p>
+          <h1 className="mt-spacing-xs text-[var(--font-size-2xl)] font-bold tracking-tight text-neutral-900">
+            Welcome to BabyTalk
+          </h1>
+          <p className="mt-spacing-lg text-[var(--font-size-base)] leading-relaxed text-neutral-500">
+            Let&apos;s set up your family so you can start tracking with just your voice.
+          </p>
+          <div className="mt-spacing-3xl flex flex-col gap-spacing-md">
+            <button
+              className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+              disabled={loading}
+              onClick={handleCreateHousehold}
+              type="button"
+            >
+              {loading ? "Setting up..." : "Create your family"}
+            </button>
+            <Link
+              className="min-h-[44px] flex items-center justify-center text-[var(--font-size-sm)] font-medium text-primary-500 transition-colors hover:text-primary-600"
+              href="/dashboard/join"
+            >
+              Join your partner&apos;s family
+            </Link>
+          </div>
+          {errorMsg && (
+            <p className="mt-spacing-lg text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+          )}
         </div>
-        {errorMsg && <p className="mt-4 text-red-500">{errorMsg}</p>}
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-2xl font-bold">Add Your Baby</h1>
-      {inviteCode && (
-        <div className="mt-4 rounded-lg bg-blue-50 p-3 text-center">
-          <p className="text-xs text-gray-500">
-            Share this code with your partner
-          </p>
-          <p className="font-mono text-lg font-bold text-blue-600">
-            {inviteCode}
-          </p>
-        </div>
-      )}
-      <form
-        className="mt-6 flex w-full max-w-sm flex-col gap-4"
-        onSubmit={handleAddBaby}
-      >
-        <input
-          className="rounded-lg border px-4 py-2"
-          onChange={handleBabyNameChange}
-          placeholder="Baby's name"
-          required
-          type="text"
-          value={babyName}
-        />
-        <input
-          className="rounded-lg border px-4 py-2"
-          onChange={handleBirthDateChange}
-          required
-          type="date"
-          value={birthDate}
-        />
-        <input
-          className="rounded-lg border px-4 py-2"
-          onChange={handleWeightChange}
-          placeholder="Birth weight in grams (optional)"
-          type="number"
-          value={birthWeightG}
-        />
-        <button
-          className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
-          disabled={loading}
-          type="submit"
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+      <div className="animate-fade-up w-full max-w-sm">
+        <h1 className="text-center text-[var(--font-size-xl)] font-bold text-neutral-900">
+          Tell us about your baby
+        </h1>
+
+        {inviteCode && (
+          <div className="mt-spacing-xl rounded-radius-md bg-primary-50 p-spacing-lg text-center">
+            <p className="text-[var(--font-size-xs)] font-medium text-neutral-400">
+              Share this code with your partner
+            </p>
+            <p className="mt-spacing-xs font-mono text-[var(--font-size-lg)] font-bold tracking-widest text-primary-500">
+              {inviteCode}
+            </p>
+          </div>
+        )}
+
+        <form
+          className="mt-spacing-2xl flex flex-col gap-spacing-md"
+          onSubmit={handleAddBaby}
         >
-          {loading ? "Adding..." : "Add Baby"}
-        </button>
-        {errorMsg && <p className="text-red-500">{errorMsg}</p>}
-      </form>
+          <div>
+            <label
+              htmlFor="baby-name"
+              className="block text-[var(--font-size-sm)] font-medium text-neutral-600"
+            >
+              Name
+            </label>
+            <input
+              id="baby-name"
+              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              onChange={handleBabyNameChange}
+              placeholder="What do you call them?"
+              required
+              type="text"
+              value={babyName}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="birth-date"
+              className="block text-[var(--font-size-sm)] font-medium text-neutral-600"
+            >
+              Birthday
+            </label>
+            <input
+              id="birth-date"
+              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 transition-colors focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              onChange={handleBirthDateChange}
+              required
+              type="date"
+              value={birthDate}
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="birth-weight"
+              className="block text-[var(--font-size-sm)] font-medium text-neutral-600"
+            >
+              Birth weight
+              <span className="ml-spacing-xs text-neutral-300">optional</span>
+            </label>
+            <input
+              id="birth-weight"
+              className="mt-spacing-xs w-full rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-300 transition-colors focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+              onChange={handleWeightChange}
+              placeholder="Grams"
+              type="number"
+              value={birthWeightG}
+            />
+          </div>
+          <button
+            className="mt-spacing-sm min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-all duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            disabled={loading}
+            type="submit"
+          >
+            {loading ? "Adding..." : "Continue"}
+          </button>
+          {errorMsg && (
+            <p className="text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+          )}
+        </form>
+      </div>
     </main>
   );
 }

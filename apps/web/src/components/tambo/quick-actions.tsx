@@ -12,19 +12,31 @@ interface QuickActionsProps {
   actions: QuickAction[];
 }
 
-const actionColors: Record<string, string> = {
-  diaper: "bg-amber-50 border-amber-200 hover:bg-amber-100",
-  feed: "bg-blue-50 border-blue-200 hover:bg-blue-100",
-  note: "bg-gray-50 border-gray-200 hover:bg-gray-100",
-  sleep: "bg-purple-50 border-purple-200 hover:bg-purple-100",
+const actionStyles: Record<string, { bg: string; icon: string }> = {
+  diaper: {
+    bg: "bg-diaper-50 border-diaper-200 hover:bg-diaper-100 text-diaper-600",
+    icon: "\u{1F6BC}",
+  },
+  feed: {
+    bg: "bg-feed-50 border-feed-200 hover:bg-feed-100 text-feed-600",
+    icon: "\u{1F37C}",
+  },
+  note: {
+    bg: "bg-note-50 border-note-200 hover:bg-note-100 text-neutral-600",
+    icon: "\u{1F4DD}",
+  },
+  sleep: {
+    bg: "bg-sleep-50 border-sleep-200 hover:bg-sleep-100 text-sleep-600",
+    icon: "\u{1F634}",
+  },
 };
 
-const getColor = (label: string) => {
+const getStyle = (label: string) => {
   const lower = label.toLowerCase();
-  for (const [key, value] of Object.entries(actionColors)) {
+  for (const [key, value] of Object.entries(actionStyles)) {
     if (lower.includes(key)) return value;
   }
-  return actionColors.note;
+  return actionStyles.note;
 };
 
 const QuickActionButton = ({
@@ -39,12 +51,15 @@ const QuickActionButton = ({
     [handleAction, action.prompt]
   );
 
+  const style = getStyle(action.label);
+
   return (
     <button
-      className={`rounded-lg border p-3 text-left text-sm font-medium transition-colors ${getColor(action.label)}`}
+      className={`flex min-h-[44px] items-center gap-spacing-sm rounded-radius-md border px-spacing-lg py-spacing-md text-left text-[var(--font-size-sm)] font-medium transition-all duration-[var(--duration-fast)] active:scale-[0.97] ${style.bg}`}
       onClick={onClick}
       type="button"
     >
+      <span className="text-base">{style.icon}</span>
       {action.label}
     </button>
   );
@@ -62,7 +77,7 @@ export const QuickActions = ({ actions }: QuickActionsProps) => {
   );
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-2 gap-spacing-sm">
       {actions.map((action) => (
         <QuickActionButton
           action={action}

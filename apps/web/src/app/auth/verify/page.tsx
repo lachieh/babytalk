@@ -66,20 +66,31 @@ const VerifyContent = () => {
 
   if (error) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-24">
-        <h1 className="text-2xl font-bold text-red-600">Error</h1>
-        <p className="mt-4 text-gray-600">{error}</p>
-        <Link href="/auth/login" className="mt-8 text-blue-600 hover:underline">
-          Try again
-        </Link>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+        <div className="animate-fade-up max-w-sm text-center">
+          <h1 className="text-[var(--font-size-xl)] font-bold text-danger-500">
+            Something went wrong
+          </h1>
+          <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">{error}</p>
+          <Link
+            href="/auth/login"
+            className="mt-spacing-2xl inline-block text-[var(--font-size-base)] font-medium text-primary-500 transition-colors hover:text-primary-600"
+          >
+            Try again
+          </Link>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-2xl font-bold">Verifying...</h1>
-      <p className="mt-4 text-gray-600">Please wait while we sign you in.</p>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+      <div className="text-center">
+        <div className="mx-auto h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+        <p className="mt-spacing-xl text-[var(--font-size-base)] text-neutral-500">
+          Signing you in...
+        </p>
+      </div>
     </main>
   );
 };
@@ -87,8 +98,8 @@ const VerifyContent = () => {
 const VerifyPage = () => (
   <Suspense
     fallback={
-      <main className="flex min-h-screen flex-col items-center justify-center p-24">
-        <p>Loading...</p>
+      <main className="flex min-h-screen flex-col items-center justify-center bg-surface">
+        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
       </main>
     }
   >
