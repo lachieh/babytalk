@@ -126,7 +126,8 @@ const ChatInput = () => {
     >
       <div className="flex items-center gap-spacing-sm">
         <input
-          className="min-h-[44px] flex-1 rounded-radius-full border border-neutral-200 bg-surface px-spacing-lg py-spacing-md text-[var(--font-size-sm)] text-neutral-800 placeholder:text-neutral-300 transition-colors duration-[var(--duration-fast)] focus:border-primary-300 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          aria-label="Message"
+          className="min-h-[44px] flex-1 rounded-radius-full border border-neutral-200 bg-surface px-spacing-lg py-spacing-md text-[var(--font-size-sm)] text-neutral-800 placeholder:text-neutral-300 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           disabled={isPending}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
