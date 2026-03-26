@@ -20,7 +20,7 @@ const ADD_BABY = `
 
 export default function SetupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"household" | "baby">("household");
+  const [step, setStep] = useState<"welcome" | "baby">("welcome");
   const [inviteCode, setInviteCode] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
@@ -84,27 +84,29 @@ export default function SetupPage() {
     []
   );
 
-  if (step === "household") {
+  if (step === "welcome") {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
         <div className="animate-fade-up max-w-sm text-center">
-          <p className="text-[var(--font-size-sm)] font-medium text-neutral-400">
-            You look like you could use a hand
+          <p className="text-[var(--font-size-lg)] leading-relaxed text-neutral-500">
+            Hey, you look tired.
           </p>
-          <h1 className="mt-spacing-xs text-[var(--font-size-2xl)] font-bold tracking-tight text-neutral-900">
-            Welcome to BabyTalk
+          <h1 className="mt-spacing-sm text-[var(--font-size-2xl)] font-bold tracking-tight text-neutral-900">
+            We&apos;ve got this.
           </h1>
-          <p className="mt-spacing-lg text-[var(--font-size-base)] leading-relaxed text-neutral-500">
-            Let&apos;s set up your family so you can start tracking with just your voice.
+          <p className="mt-spacing-xl text-[var(--font-size-base)] leading-relaxed text-neutral-400">
+            BabyTalk tracks feeds, sleep, and diapers with just your voice. No
+            typing, no tapping through menus — just talk.
           </p>
+
           <div className="mt-spacing-3xl flex flex-col gap-spacing-md">
             <button
-              className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+              className="min-h-[56px] rounded-radius-lg bg-primary-500 px-spacing-xl py-spacing-lg text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
               disabled={loading}
               onClick={handleCreateHousehold}
               type="button"
             >
-              {loading ? "Setting up..." : "Create your family"}
+              {loading ? "Setting up..." : "Let\u2019s get started"}
             </button>
             <Link
               className="min-h-[44px] flex items-center justify-center text-[var(--font-size-sm)] font-medium text-primary-500 transition-colors hover:text-primary-600"
@@ -114,7 +116,9 @@ export default function SetupPage() {
             </Link>
           </div>
           {errorMsg && (
-            <p className="mt-spacing-lg text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+            <p className="mt-spacing-lg text-[var(--font-size-sm)] text-danger-500">
+              {errorMsg}
+            </p>
           )}
         </div>
       </main>
@@ -125,8 +129,11 @@ export default function SetupPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
       <div className="animate-fade-up w-full max-w-sm">
         <h1 className="text-center text-[var(--font-size-xl)] font-bold text-neutral-900">
-          Tell us about your baby
+          Tell us about your little one
         </h1>
+        <p className="mt-spacing-sm text-center text-[var(--font-size-sm)] text-neutral-400">
+          Just the basics — you can always update later.
+        </p>
 
         {inviteCode && (
           <div className="mt-spacing-xl rounded-radius-md bg-primary-50 p-spacing-lg text-center">
@@ -194,14 +201,16 @@ export default function SetupPage() {
             />
           </div>
           <button
-            className="mt-spacing-sm min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
-            disabled={loading}
+            className="mt-spacing-sm min-h-[56px] rounded-radius-lg bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            disabled={loading || !babyName || !birthDate}
             type="submit"
           >
-            {loading ? "Adding..." : "Continue"}
+            {loading ? "Adding..." : "Start tracking"}
           </button>
           {errorMsg && (
-            <p className="text-[var(--font-size-sm)] text-danger-500">{errorMsg}</p>
+            <p className="text-[var(--font-size-sm)] text-danger-500">
+              {errorMsg}
+            </p>
           )}
         </form>
       </div>

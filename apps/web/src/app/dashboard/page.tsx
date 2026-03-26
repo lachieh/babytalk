@@ -3,7 +3,9 @@
 import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback, useEffect, useRef } from "react";
 
+import { StatusWidget } from "@/components/status-widget";
 import { VoiceButton } from "@/components/voice-button";
+import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 const MessageList = () => {
   const { messages, isStreaming } = useTambo();
@@ -21,7 +23,8 @@ const MessageList = () => {
             Hi there
           </p>
           <p className="mt-spacing-xs max-w-[280px] text-[var(--font-size-sm)] leading-relaxed text-neutral-400">
-            Tell me what happened — &quot;baby just ate&quot; or &quot;diaper change&quot; — or tap the mic to talk.
+            Tell me what happened — &quot;baby just ate&quot; or &quot;diaper
+            change&quot; — or hold the mic to talk.
           </p>
         </div>
       )}
@@ -142,7 +145,12 @@ const ChatInput = () => {
           disabled={isPending || !value.trim()}
           type="submit"
         >
-          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <svg
+            className="h-5 w-5"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+            aria-hidden="true"
+          >
             <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
           </svg>
         </button>
@@ -152,12 +160,17 @@ const ChatInput = () => {
 };
 
 export default function DashboardPage() {
+  useAutoDarkMode();
+
   return (
     <div className="flex h-screen flex-col bg-surface">
-      <header className="border-b border-neutral-100 bg-surface-raised px-spacing-lg py-spacing-md">
-        <h1 className="text-[var(--font-size-base)] font-semibold text-neutral-600">
-          BabyTalk
-        </h1>
+      <header className="border-b border-neutral-100 bg-surface-raised">
+        <div className="px-spacing-lg py-spacing-md">
+          <h1 className="text-[var(--font-size-base)] font-semibold text-neutral-600">
+            BabyTalk
+          </h1>
+        </div>
+        <StatusWidget />
       </header>
       <MessageList />
       <ChatInput />
