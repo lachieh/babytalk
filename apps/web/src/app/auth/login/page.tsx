@@ -49,8 +49,8 @@ export default function LoginPage() {
 
   if (sent) {
     return (
-      <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
-        <div className="animate-fade-up max-w-sm text-center">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
+        <div className="animate-fade-up w-full max-w-sm text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-100">
             <svg
               className="h-8 w-8 text-success-600"
@@ -80,7 +80,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
       <div className="animate-fade-up w-full max-w-sm">
         <h1 className="text-center text-[var(--font-size-xl)] font-bold text-neutral-900">
           Welcome back
@@ -102,11 +102,11 @@ export default function LoginPage() {
             onChange={handleEmailChange}
             placeholder="you@example.com"
             required
-            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            className="min-h-[48px] rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           />
           <button
             type="submit"
-            className="rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98]"
+            className="min-h-[48px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98]"
           >
             Send magic link
           </button>
