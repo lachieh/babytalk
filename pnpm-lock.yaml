@@ -53,19 +53,19 @@ importers:
         version: 1.19.11(hono@4.12.8)
       '@pothos/core':
         specifier: ^4.12.0
-        version: 4.12.0(graphql@16.13.1)
+        version: 4.12.0(graphql@16.13.2)
       '@pothos/plugin-drizzle':
         specifier: ^0.17.0
-        version: 0.17.0(@pothos/core@4.12.0(graphql@16.13.1))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.1)
+        version: 0.17.0(@pothos/core@4.12.0(graphql@16.13.2))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.2)
       drizzle-orm:
         specifier: 1.0.0-beta.19-d95b7a4
         version: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       graphql:
-        specifier: ^16.13.1
-        version: 16.13.1
+        specifier: ^16.13.2
+        version: 16.13.2
       graphql-yoga:
         specifier: ^5.18.1
-        version: 5.18.1(graphql@16.13.1)
+        version: 5.18.1(graphql@16.13.2)
       hono:
         specifier: ^4.12.8
         version: 4.12.8
@@ -108,13 +108,13 @@ importers:
         version: 1.2.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(@types/json-schema@7.0.15)(@types/node@25.5.0)(@types/react@19.2.14)(quansync@0.2.11)(react@19.2.4)(typescript@5.9.3)(valibot@1.3.1(typescript@5.9.3))(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6)
       '@urql/core':
         specifier: ^6.0.1
-        version: 6.0.1(graphql@16.13.1)
+        version: 6.0.1(graphql@16.13.2)
       '@urql/next':
         specifier: ^2.0.0
-        version: 2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4))
+        version: 2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4))
       graphql:
-        specifier: ^16.13.1
-        version: 16.13.1
+        specifier: ^16.13.2
+        version: 16.13.2
       next:
         specifier: ^16.2.1
         version: 16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -126,7 +126,7 @@ importers:
         version: 19.2.4(react@19.2.4)
       urql:
         specifier: ^5.0.1
-        version: 5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4)
+        version: 5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -357,8 +357,8 @@ packages:
     resolution: {integrity: sha512-fCqPIfOcLE+CGqGPd66c8bZpwAji98tZ4JI9i/mlTNTlsIWslCfpg48s/ypyLxZTump5sypjrKn2/kY7q8oAbA==}
     engines: {node: '>=20.0.0'}
 
-  '@azure/msal-browser@5.6.1':
-    resolution: {integrity: sha512-Ylmp8yngH7YRLV5mA1aF4CNS6WsJTPbVXaA0Tb1x1Gv/J3BM3hE4Q7nDaf7dRfU00FcxDBBudTjqlpH74ZSsgw==}
+  '@azure/msal-browser@5.6.2':
+    resolution: {integrity: sha512-ZgcN9ToRJ80f+wNPBBKYJ+DG0jlW7ktEjYtSNkNsTrlHVMhKB8tKMdI1yIG1I9BJtykkXtqnuOjlJaEMC7J6aw==}
     engines: {node: '>=0.8.0'}
 
   '@azure/msal-common@16.4.0':
@@ -2531,8 +2531,8 @@ packages:
     peerDependencies:
       graphql: ^15.2.0 || ^16.0.0
 
-  graphql@16.13.1:
-    resolution: {integrity: sha512-gGgrVCoDKlIZ8fIqXBBb0pPKqDgki0Z/FSKNiQzSGj2uEYHr1tq5wmBegGwJx6QB5S5cM0khSBpi/JFHMCvsmQ==}
+  graphql@16.13.2:
+    resolution: {integrity: sha512-5bJ+nf/UCpAjHM8i06fl7eLyVC9iuNAjm9qzkiu2ZGhM0VscSvS6WDPfAwkdkBuoXGM9FJSbKl6wylMwP9Ktig==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
   has-flag@4.0.0:
@@ -3704,9 +3704,9 @@ packages:
 
 snapshots:
 
-  '@0no-co/graphql.web@1.2.0(graphql@16.13.1)':
+  '@0no-co/graphql.web@1.2.0(graphql@16.13.2)':
     optionalDependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
   '@ag-ui/core@0.0.44':
     dependencies:
@@ -3802,7 +3802,7 @@ snapshots:
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
       '@azure/logger': 1.3.0
-      '@azure/msal-browser': 5.6.1
+      '@azure/msal-browser': 5.6.2
       '@azure/msal-node': 5.1.1
       open: 10.2.0
       tslib: 2.8.1
@@ -3847,7 +3847,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@azure/msal-browser@5.6.1':
+  '@azure/msal-browser@5.6.2':
     dependencies:
       '@azure/msal-common': 16.4.0
 
@@ -4225,48 +4225,48 @@ snapshots:
 
   '@fastify/busboy@3.2.0': {}
 
-  '@graphql-tools/executor@1.5.1(graphql@16.13.1)':
+  '@graphql-tools/executor@1.5.1(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@repeaterjs/repeater': 3.0.6
       '@whatwg-node/disposablestack': 0.0.6
       '@whatwg-node/promise-helpers': 1.3.2
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/merge@9.1.7(graphql@16.13.1)':
+  '@graphql-tools/merge@9.1.7(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      graphql: 16.13.1
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/schema@10.0.31(graphql@16.13.1)':
+  '@graphql-tools/schema@10.0.31(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/merge': 9.1.7(graphql@16.13.1)
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      graphql: 16.13.1
+      '@graphql-tools/merge': 9.1.7(graphql@16.13.2)
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/utils@10.11.0(graphql@16.13.1)':
+  '@graphql-tools/utils@10.11.0(graphql@16.13.2)':
     dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@whatwg-node/promise-helpers': 1.3.2
       cross-inspect: 1.0.1
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/utils@11.0.0(graphql@16.13.1)':
+  '@graphql-tools/utils@11.0.0(graphql@16.13.2)':
     dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@whatwg-node/promise-helpers': 1.3.2
       cross-inspect: 1.0.1
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-typed-document-node/core@3.2.0(graphql@16.13.1)':
+  '@graphql-typed-document-node/core@3.2.0(graphql@16.13.2)':
     dependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
   '@graphql-yoga/logger@2.0.1':
     dependencies:
@@ -4664,15 +4664,15 @@ snapshots:
     dependencies:
       playwright: 1.58.2
 
-  '@pothos/core@4.12.0(graphql@16.13.1)':
+  '@pothos/core@4.12.0(graphql@16.13.2)':
     dependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
-  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.13.1))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.1)':
+  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.13.2))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.2)':
     dependencies:
-      '@pothos/core': 4.12.0(graphql@16.13.1)
+      '@pothos/core': 4.12.0(graphql@16.13.2)
       drizzle-orm: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
-      graphql: 16.13.1
+      graphql: 16.13.2
 
   '@repeaterjs/repeater@3.0.6': {}
 
@@ -5009,18 +5009,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@urql/core@6.0.1(graphql@16.13.1)':
+  '@urql/core@6.0.1(graphql@16.13.2)':
     dependencies:
-      '@0no-co/graphql.web': 1.2.0(graphql@16.13.1)
+      '@0no-co/graphql.web': 1.2.0(graphql@16.13.2)
       wonka: 6.3.5
     transitivePeerDependencies:
       - graphql
 
-  '@urql/next@2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4))':
+  '@urql/next@2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4))':
     dependencies:
       next: 16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
-      urql: 5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4)
+      urql: 5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4)
 
   '@vitest/expect@4.1.0':
     dependencies:
@@ -5718,23 +5718,23 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graphql-yoga@5.18.1(graphql@16.13.1):
+  graphql-yoga@5.18.1(graphql@16.13.2):
     dependencies:
       '@envelop/core': 5.5.1
       '@envelop/instrumentation': 1.0.0
-      '@graphql-tools/executor': 1.5.1(graphql@16.13.1)
-      '@graphql-tools/schema': 10.0.31(graphql@16.13.1)
-      '@graphql-tools/utils': 10.11.0(graphql@16.13.1)
+      '@graphql-tools/executor': 1.5.1(graphql@16.13.2)
+      '@graphql-tools/schema': 10.0.31(graphql@16.13.2)
+      '@graphql-tools/utils': 10.11.0(graphql@16.13.2)
       '@graphql-yoga/logger': 2.0.1
       '@graphql-yoga/subscription': 5.0.5
       '@whatwg-node/fetch': 0.10.13
       '@whatwg-node/promise-helpers': 1.3.2
       '@whatwg-node/server': 0.10.18
-      graphql: 16.13.1
+      graphql: 16.13.2
       lru-cache: 10.4.3
       tslib: 2.8.1
 
-  graphql@16.13.1: {}
+  graphql@16.13.2: {}
 
   has-flag@4.0.0: {}
 
@@ -6740,9 +6740,9 @@ snapshots:
 
   urlpattern-polyfill@10.1.0: {}
 
-  urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4):
+  urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4):
     dependencies:
-      '@urql/core': 6.0.1(graphql@16.13.1)
+      '@urql/core': 6.0.1(graphql@16.13.2)
       react: 19.2.4
       wonka: 6.3.5
 
