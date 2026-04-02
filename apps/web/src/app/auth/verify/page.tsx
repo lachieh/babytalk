@@ -29,7 +29,8 @@ const VerifyContent = () => {
     }
 
     const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
+      process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
+      "http://localhost:4000/graphql";
 
     const verify = async () => {
       try {
@@ -66,17 +67,15 @@ const VerifyContent = () => {
 
   if (error) {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
         <div className="animate-fade-up max-w-sm text-center">
-          <h1 className="text-[var(--font-size-xl)] font-bold text-danger-500">
+          <h1 className="text-xl font-bold text-danger-500">
             Something went wrong
           </h1>
-          <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">
-            {error}
-          </p>
+          <p className="mt-2 text-base text-neutral-500">{error}</p>
           <Link
             href="/auth/login"
-            className="mt-spacing-2xl inline-flex min-h-[44px] items-center text-[var(--font-size-base)] font-medium text-primary-500 transition-colors hover:text-primary-600"
+            className="mt-8 inline-flex min-h-[44px] items-center text-base font-medium text-primary-500 transition-colors hover:text-primary-600"
           >
             Try again
           </Link>
@@ -86,12 +85,10 @@ const VerifyContent = () => {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
+    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
       <div className="text-center">
         <div className="mx-auto h-8 w-8 animate-breathe rounded-full bg-primary-200" />
-        <p className="mt-spacing-xl text-[var(--font-size-base)] text-neutral-500">
-          Signing you in...
-        </p>
+        <p className="mt-6 text-base text-neutral-500">Signing you in...</p>
       </div>
     </main>
   );

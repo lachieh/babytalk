@@ -98,28 +98,16 @@
   --font-size-2xl: clamp(1.9rem, 1.6rem + 1.5vw, 2.369rem);
   --font-size-3xl: clamp(2.4rem, 2rem + 2vw, 3.157rem);
 
-  /* --- Spacing scale (4pt base) --- */
-  --spacing-xs: 0.25rem; /* 4px */
-  --spacing-sm: 0.5rem; /* 8px */
-  --spacing-md: 0.75rem; /* 12px */
-  --spacing-lg: 1rem; /* 16px */
-  --spacing-xl: 1.5rem; /* 24px */
-  --spacing-2xl: 2rem; /* 32px */
-  --spacing-3xl: 3rem; /* 48px */
-  --spacing-4xl: 4rem; /* 64px */
-  --spacing-5xl: 6rem; /* 96px */
-
-  /* --- Border radius --- */
-  --radius-sm: 0.375rem; /* 6px */
-  --radius-md: 0.625rem; /* 10px */
-  --radius-lg: 1rem; /* 16px */
-  --radius-xl: 1.5rem; /* 24px */
-  --radius-full: 9999px;
-
-  /* --- Shadows (warm-tinted) --- */
-  --shadow-sm: 0 1px 2px oklch(20% 0.01 60 / 0.06);
-  --shadow-md: 0 2px 8px oklch(20% 0.01 60 / 0.08);
-  --shadow-lg: 0 4px 16px oklch(20% 0.01 60 / 0.1);
+  /* --- Spacing scale (4px base, perfect fourth ratio) --- */
+  --space-xs: 0.25rem; /* 4px - 1 */
+  --space-sm: 0.5rem; /* 8px - 2 */
+  --space-md: 0.75rem; /* 12px - 3 */
+  --space-lg: 1rem; /* 16px - 4 */
+  --space-xl: 1.5rem; /* 24px - 6 */
+  --space-2xl: 2rem; /* 32px - 8 */
+  --space-3xl: 3rem; /* 48px - 12 */
+  --space-4xl: 4rem; /* 64px - 16 */
+  --space-5xl: 6rem; /* 96px - 24 */
 
   /* --- Motion --- */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
@@ -279,8 +267,8 @@ body {
 
 /* --- Safe area utilities for notched devices --- */
 .safe-top {
-  padding-top: max(var(--spacing-xl), env(safe-area-inset-top));
+  padding-top: max(calc(var(--spacing) * 10), env(safe-area-inset-top));
 }
 .safe-bottom {
-  padding-bottom: max(var(--spacing-xl), env(safe-area-inset-bottom));
+  padding-bottom: max(calc(var(--spacing) * 10), env(safe-area-inset-bottom));
 }

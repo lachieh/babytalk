@@ -31,17 +31,35 @@ services:
       - tambo-pgdata:/var/lib/postgresql/data
 
   tambo-api:
-    image: ghcr.io/tambo-ai/tambo-api:latest
+    image: ghcr.io/tambo-ai/tambo-api-server:latest
     ports:
       - "8261:8261"
     environment:
       DATABASE_URL: postgresql://tambo:tambo@tambo-postgres:5432/tambo
       API_KEY_SECRET: dev-tambo-api-key-secret-32chars
       PROVIDER_KEY_SECRET: dev-tambo-provider-key-secret-32
+      NEXTAUTH_SECRET: dev-nextauth-secret-at-least-32ch
+      NEXTAUTH_URL: http://localhost:8261
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-sk-dummy-not-used}
       FALLBACK_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PORT: "8261"
     depends_on:
       - tambo-postgres
+
+  tambo-web:
+    image: ghcr.io/tambo-ai/tambo-web-server:latest
+    ports:
+      - "8260:3000"
+    environment:
+      API_URL: http://tambo-api:8261
+      DATABASE_URL: postgresql://tambo:tambo@tambo-postgres:5432/tambo
+      API_KEY_SECRET: dev-tambo-api-key-secret-32chars
+      PROVIDER_KEY_SECRET: dev-tambo-provider-key-secret-32
+      NEXTAUTH_SECRET: dev-nextauth-secret-at-least-32ch
+      NEXTAUTH_URL: http://localhost:8260
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+    depends_on:
+      - tambo-api
 
 volumes:
   pgdata:

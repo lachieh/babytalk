@@ -85,34 +85,32 @@ export const EventConfirmation = ({
   const colorClass = typeColors[type] ?? "border-success-200 bg-success-50";
 
   return (
-    <div
-      className={`animate-fade-up rounded-radius-md border p-spacing-md ${colorClass}`}
-    >
+    <div className={`animate-fade-up rounded-md border p-3 ${colorClass}`}>
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-spacing-sm">
+        <div className="flex items-center gap-2">
           <span className="text-base">{typeEmoji[type] ?? "\u2705"}</span>
-          <span className="text-[var(--font-size-sm)] font-medium capitalize text-neutral-700">
+          <span className="text-sm font-medium capitalize text-neutral-700">
             {type}
           </span>
-          <span className="text-[var(--font-size-xs)] text-neutral-400">
+          <span className="text-xs text-neutral-400">
             {formatTime(startedAt)}
           </span>
           {endedAt && (
-            <span className="text-[var(--font-size-xs)] text-neutral-400">
+            <span className="text-xs text-neutral-400">
               — {formatTime(endedAt)}
             </span>
           )}
         </div>
-        <div className="flex gap-spacing-xs">
+        <div className="flex gap-1">
           <button
-            className="min-h-[44px] min-w-[44px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+            className="min-h-[44px] min-w-[44px] rounded-sm px-2 py-1 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
             onClick={handleEdit}
             type="button"
           >
             Edit
           </button>
           <button
-            className="min-h-[44px] min-w-[44px] rounded-radius-sm px-spacing-sm py-spacing-xs text-[var(--font-size-xs)] font-medium text-danger-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
+            className="min-h-[44px] min-w-[44px] rounded-sm px-2 py-1 text-xs font-medium text-danger-400 transition-colors hover:bg-danger-50 hover:text-danger-600"
             onClick={handleDelete}
             type="button"
           >
@@ -120,7 +118,7 @@ export const EventConfirmation = ({
           </button>
         </div>
       </div>
-      <p className="mt-spacing-xs text-[var(--font-size-sm)] text-neutral-600">
+      <p className="mt-1 text-sm text-neutral-600">
         {formatMetadata(type, metadata)}
       </p>
     </div>

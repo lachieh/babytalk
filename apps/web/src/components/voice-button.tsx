@@ -216,7 +216,7 @@ export const VoiceButton = () => {
 
   return (
     <button
-      className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full transition-[background-color,color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] select-none touch-none ${
+      className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-[background-color,color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] select-none touch-none ${
         listening
           ? "animate-gentle-pulse bg-danger-100 text-danger-500"
           : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 active:scale-[0.96]"

@@ -59,8 +59,8 @@ const QuickActionButton = ({
 
   return (
     <button
-      className={`flex items-center gap-spacing-sm rounded-radius-lg border px-spacing-lg text-left text-[var(--font-size-sm)] font-medium transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97] ${style.bg} ${
-        isPrimary ? "min-h-[56px] py-spacing-md" : "min-h-[44px] py-spacing-sm"
+      className={`flex items-center gap-2 rounded-lg border px-4 text-left text-sm)] font-medium transition-[background-color,transform] duration-[var(--duration-fast active:scale-[0.97] ${style.bg} ${
+        isPrimary ? "min-h-[56px] py-3" : "min-h-[44px] py-2"
       }`}
       onClick={onClick}
       type="button"
@@ -87,9 +87,9 @@ export const QuickActions = ({ actions }: QuickActionsProps) => {
   const secondary = actions.slice(2);
 
   return (
-    <div className="flex flex-col gap-spacing-sm">
+    <div className="flex flex-col gap-2">
       {/* Primary actions — large, thumb-friendly at bottom of screen */}
-      <div className="grid grid-cols-2 gap-spacing-sm">
+      <div className="grid grid-cols-2 gap-2">
         {primary.map((action) => (
           <QuickActionButton
             action={action}
@@ -101,7 +101,7 @@ export const QuickActions = ({ actions }: QuickActionsProps) => {
       </div>
       {/* Secondary actions — smaller row */}
       {secondary.length > 0 && (
-        <div className="grid grid-cols-2 gap-spacing-sm">
+        <div className="grid grid-cols-2 gap-2">
           {secondary.map((action) => (
             <QuickActionButton
               action={action}

@@ -2,8 +2,10 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "dev": {
+      "dependsOn": ["^build", "//#docker:dev:up"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["NEXT_PUBLIC_*", "BABYTALK_*"]
     },
     "generate": {
       "dependsOn": ["^build"],
@@ -11,7 +13,8 @@
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "dist/**"]
+      "outputs": [".next/**", "dist/**"],
+      "passThroughEnv": ["NEXT_PUBLIC_*", "BABYTALK_*"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
@@ -28,6 +31,13 @@
     "db:migrate": {
       "cache": false,
       "env": ["DATABASE_URL"]
+    },
+    "//#docker:dev:up": {
+      "cache": false,
+      "env": ["RESEND_API_KEY", "TAMBO_API_KEY", "NEXT_PUBLIC_*", "BABYTALK_*"]
+    },
+    "//#docker:dev:down": {
+      "cache": false
     }
   }
 }

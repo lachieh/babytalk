@@ -56,11 +56,11 @@ const formatMeta = (type: string, raw: string) => {
 export const Timeline = ({ events }: TimelineProps) => {
   if (events.length === 0) {
     return (
-      <div className="rounded-radius-md bg-neutral-50 px-spacing-lg py-spacing-2xl text-center">
-        <p className="text-[var(--font-size-sm)] font-medium text-neutral-500">
+      <div className="rounded-md bg-neutral-50 px-4 py-8 text-center">
+        <p className="text-sm font-medium text-neutral-500">
           Nothing logged yet today
         </p>
-        <p className="mt-spacing-xs text-[var(--font-size-xs)] text-neutral-300">
+        <p className="mt-1 text-xs text-neutral-300">
           Say &quot;baby just ate&quot; or tap a quick action to get started
         </p>
       </div>
@@ -68,21 +68,21 @@ export const Timeline = ({ events }: TimelineProps) => {
   }
 
   return (
-    <div className="space-y-spacing-xs">
+    <div className="space-y-1">
       {events.map((event, i) => (
         <div
-          className="animate-fade-up flex items-center gap-spacing-md rounded-radius-md bg-surface-raised px-spacing-md py-spacing-sm"
+          className="animate-fade-up flex items-center gap-3 rounded-md bg-surface-raised px-3 py-2"
           key={event.id}
           style={{ animationDelay: `${i * 50}ms` }}
         >
           <span className="text-base">{typeEmoji[event.type] ?? ""}</span>
-          <span className="text-[var(--font-size-xs)] text-neutral-400 tabular-nums">
+          <span className="text-xs text-neutral-400 tabular-nums">
             {formatTime(event.startedAt)}
           </span>
-          <span className="flex-1 text-[var(--font-size-sm)] font-medium capitalize text-neutral-700">
+          <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
             {event.type}
           </span>
-          <span className="text-[var(--font-size-sm)] text-neutral-500">
+          <span className="text-sm text-neutral-500">
             {formatMeta(event.type, event.metadata)}
           </span>
         </div>

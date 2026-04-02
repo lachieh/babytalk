@@ -160,21 +160,19 @@ export const StatusWidget = () => {
   if (timers.length === 0) return null;
 
   return (
-    <div className="flex gap-spacing-sm px-spacing-lg py-spacing-sm">
+    <div className="flex gap-2 px-4 py-2">
       {timers.map((timer) => (
         <div
           key={timer.type}
-          className={`flex flex-1 flex-col items-center rounded-radius-md border px-spacing-sm py-spacing-sm ${urgencyBg[timer.urgency]}`}
+          className={`flex flex-1 flex-col items-center rounded-md border px-2 py-2 ${urgencyBg[timer.urgency]}`}
         >
           <span className="text-base">{timer.icon}</span>
           <span
-            className={`text-[var(--font-size-sm)] font-semibold tabular-nums ${urgencyColors[timer.urgency]}`}
+            className={`text-sm font-semibold tabular-nums ${urgencyColors[timer.urgency]}`}
           >
             {timer.minutesAgo < 0 ? "—" : formatElapsed(timer.minutesAgo)}
           </span>
-          <span className="text-[var(--font-size-xs)] text-neutral-400">
-            {timer.label}
-          </span>
+          <span className="text-xs text-neutral-400">{timer.label}</span>
         </div>
       ))}
     </div>

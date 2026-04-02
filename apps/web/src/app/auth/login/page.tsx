@@ -19,7 +19,8 @@ export default function LoginPage() {
       setError("");
 
       const apiUrl =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/graphql";
+        process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
+        "http://localhost:4000/graphql";
 
       const res = await fetch(apiUrl, {
         body: JSON.stringify({
@@ -49,7 +50,7 @@ export default function LoginPage() {
 
   if (sent) {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
+      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
         <div className="animate-fade-up w-full max-w-sm text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success-100">
             <svg
@@ -67,10 +68,10 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h1 className="mt-spacing-xl text-[var(--font-size-xl)] font-bold text-neutral-900">
+          <h1 className="mt-6 text-xl font-bold text-neutral-900">
             Check your email
           </h1>
-          <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">
+          <p className="mt-2 text-base text-neutral-500">
             We sent a sign-in link to{" "}
             <span className="font-medium text-neutral-700">{email}</span>
           </p>
@@ -80,18 +81,15 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-spacing-xl safe-bottom safe-top">
+    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
       <div className="animate-fade-up w-full max-w-sm">
-        <h1 className="text-center text-[var(--font-size-xl)] font-bold text-neutral-900">
+        <h1 className="text-center text-xl font-bold text-neutral-900">
           Welcome back
         </h1>
-        <p className="mt-spacing-xs text-center text-[var(--font-size-sm)] text-neutral-400">
+        <p className="mt-1 text-center text-sm text-neutral-400">
           Sign in with a magic link — no password needed
         </p>
-        <form
-          onSubmit={handleSubmit}
-          className="mt-spacing-3xl flex flex-col gap-spacing-md"
-        >
+        <form onSubmit={handleSubmit} className="mt-12 flex flex-col gap-3">
           <label htmlFor="login-email" className="sr-only">
             Email address
           </label>
@@ -102,18 +100,16 @@ export default function LoginPage() {
             onChange={handleEmailChange}
             placeholder="you@example.com"
             required
-            className="min-h-[48px] rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-md text-[var(--font-size-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            className="min-h-[48px] rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           />
           <button
             type="submit"
-            className="min-h-[48px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98]"
+            className="min-h-[48px] rounded-md bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98]"
           >
             Send magic link
           </button>
           {error && (
-            <p className="text-center text-[var(--font-size-sm)] text-danger-500">
-              {error}
-            </p>
+            <p className="text-center text-sm text-danger-500">{error}</p>
           )}
         </form>
       </div>

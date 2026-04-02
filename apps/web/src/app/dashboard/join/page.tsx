@@ -40,24 +40,21 @@ export default function JoinPage() {
   );
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-spacing-xl">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6">
       <div className="animate-fade-up w-full max-w-sm text-center">
-        <h1 className="text-[var(--font-size-xl)] font-bold text-neutral-900">
+        <h1 className="text-xl font-bold text-neutral-900">
           Join your partner
         </h1>
-        <p className="mt-spacing-sm text-[var(--font-size-base)] text-neutral-500">
+        <p className="mt-2 text-base text-neutral-500">
           Enter the code they shared with you.
         </p>
-        <form
-          className="mt-spacing-3xl flex flex-col gap-spacing-md"
-          onSubmit={handleSubmit}
-        >
+        <form className="mt-12 flex flex-col gap-3" onSubmit={handleSubmit}>
           <label htmlFor="invite-code" className="sr-only">
             Invite code
           </label>
           <input
             id="invite-code"
-            className="rounded-radius-md border border-neutral-200 bg-surface-raised px-spacing-lg py-spacing-lg text-center font-mono text-[var(--font-size-xl)] tracking-[0.25em] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            className="rounded-md border border-neutral-200 bg-surface-raised px-4 py-4 text-center font-mono text-xl tracking-[0.25em] text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
             maxLength={8}
             onChange={handleChange}
             placeholder="ABC123"
@@ -66,17 +63,13 @@ export default function JoinPage() {
             value={code}
           />
           <button
-            className="min-h-[44px] rounded-radius-md bg-primary-500 px-spacing-xl py-spacing-md text-[var(--font-size-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            className="min-h-[44px] rounded-md bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
             disabled={loading || !code.trim()}
             type="submit"
           >
             {loading ? "Joining..." : "Join family"}
           </button>
-          {errorMsg && (
-            <p className="text-[var(--font-size-sm)] text-danger-500">
-              {errorMsg}
-            </p>
-          )}
+          {errorMsg && <p className="text-sm text-danger-500">{errorMsg}</p>}
         </form>
       </div>
     </main>

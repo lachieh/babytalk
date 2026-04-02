@@ -16,13 +16,11 @@ const MessageList = () => {
   }, [messages]);
 
   return (
-    <div className="flex-1 space-y-spacing-md overflow-y-auto px-spacing-lg py-spacing-xl">
+    <div className="flex-1 space-y-3 overflow-y-auto px-4 py-6">
       {messages.length === 0 && !isStreaming && (
         <div className="animate-fade-up flex h-full flex-col items-center justify-center text-center">
-          <p className="text-[var(--font-size-lg)] font-semibold text-neutral-800">
-            Hi there
-          </p>
-          <p className="mt-spacing-xs max-w-[280px] text-[var(--font-size-sm)] leading-relaxed text-neutral-400">
+          <p className="text-lg font-semibold text-neutral-800">Hi there</p>
+          <p className="mt-1 max-w-[280px] text-sm leading-relaxed text-neutral-400">
             Tell me what happened — &quot;baby just ate&quot; or &quot;diaper
             change&quot; — or hold the mic to talk.
           </p>
@@ -37,7 +35,7 @@ const MessageList = () => {
             key={msg.id}
           >
             <div
-              className={`max-w-[80%] rounded-radius-xl px-spacing-lg py-spacing-md ${
+              className={`max-w-[80%] rounded-xl px-4 py-3 ${
                 isUser
                   ? "bg-primary-500 text-white"
                   : "bg-neutral-100 text-neutral-800"
@@ -47,7 +45,7 @@ const MessageList = () => {
                 if (block.type === "text") {
                   return (
                     <p
-                      className="text-[var(--font-size-sm)] leading-relaxed whitespace-pre-wrap"
+                      className="text-sm leading-relaxed whitespace-pre-wrap"
                       key={`${msg.id}-${block.text.slice(0, 32)}`}
                     >
                       {block.text}
@@ -64,7 +62,7 @@ const MessageList = () => {
                     renderedComponent: React.ReactNode;
                   };
                   return (
-                    <div className="my-spacing-sm" key={componentBlock.id}>
+                    <div className="my-2" key={componentBlock.id}>
                       {componentBlock.renderedComponent}
                     </div>
                   );
@@ -77,7 +75,7 @@ const MessageList = () => {
       })}
       {isStreaming && (
         <div className="flex justify-start">
-          <div className="flex items-center gap-spacing-sm rounded-radius-xl bg-neutral-100 px-spacing-lg py-spacing-md">
+          <div className="flex items-center gap-2 rounded-xl bg-neutral-100 px-4 py-3">
             <div className="flex gap-1">
               <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400" />
               <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400 [animation-delay:200ms]" />
@@ -124,13 +122,13 @@ const ChatInput = () => {
 
   return (
     <form
-      className="border-t border-neutral-100 bg-surface-raised px-spacing-lg py-spacing-md"
+      className="border-t border-neutral-100 bg-surface-raised px-4 py-3"
       onSubmit={handleSubmit}
     >
-      <div className="flex items-center gap-spacing-sm">
+      <div className="flex items-center gap-2">
         <input
           aria-label="Message"
-          className="min-h-[44px] flex-1 rounded-radius-full border border-neutral-200 bg-surface px-spacing-lg py-spacing-md text-[var(--font-size-sm)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+          className="min-h-[44px] flex-1 rounded-full border border-neutral-200 bg-surface px-4 py-3 text-sm)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           disabled={isPending}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
@@ -141,7 +139,7 @@ const ChatInput = () => {
         <VoiceButton />
         <button
           aria-label="Send message"
-          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-radius-full bg-primary-500 px-spacing-lg py-spacing-sm text-[var(--font-size-sm)] font-medium text-white transition-[background-color,transform,opacity] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
+          className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary-500 px-4 py-2 text-sm)] font-medium text-white transition-[background-color,transform,opacity] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.96] disabled:opacity-40"
           disabled={isPending || !value.trim()}
           type="submit"
         >
@@ -165,10 +163,8 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen flex-col bg-surface">
       <header className="border-b border-neutral-100 bg-surface-raised">
-        <div className="px-spacing-lg py-spacing-md">
-          <h1 className="text-[var(--font-size-base)] font-semibold text-neutral-600">
-            BabyTalk
-          </h1>
+        <div className="px-4 py-3">
+          <h1 className="text-base font-semibold text-neutral-600">BabyTalk</h1>
         </div>
         <StatusWidget />
       </header>
