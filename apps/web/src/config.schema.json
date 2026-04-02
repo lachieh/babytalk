@@ -5,6 +5,16 @@
     "api_url": {
       "default": "http://localhost:4000/graphql",
       "type": "string"
+    },
+    "tambo_api_key": {
+      "type": "string"
+    },
+    "tambo_url": {
+      "default": "http://localhost:8261",
+      "type": "string"
     }
-  }
+  },
+  "required": [
+    "tambo_api_key"
+  ]
 }

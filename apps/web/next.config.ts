@@ -1,4 +1,7 @@
+import { withStandardConfig } from "@babytalk/standard-config/next";
 import type { NextConfig } from "next";
+
+import configDefinition from "./src/config";
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -18,4 +21,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withStandardConfig(configDefinition, nextConfig);

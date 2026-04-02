@@ -1,0 +1,5 @@
+# yaml-language-server: $schema=../apps/web/src/config.schema.json
+
+# api_url: http://localhost:4000/graphql
+tambo_api_key: ""
+tambo_url: http://api.tambo.co

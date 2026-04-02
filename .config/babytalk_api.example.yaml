@@ -1,0 +1,10 @@
+# yaml-language-server: $schema=../apps/api/src/config.schema.json
+
+database_url: "postgresql://babytalk:babytalk@localhost:5432/babytalk"
+# jwt_secret: dev-secret-change-me
+# port: 4000
+# smtp:
+#   from: noreply@babytalk.dev
+#   host: localhost
+#   port: 1025
+# web_url: http://localhost:3000

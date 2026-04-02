@@ -13,6 +13,7 @@
   "dependencies": {
     "@babytalk/db": "workspace:*",
     "@babytalk/standard-config": "workspace:*",
+    "@babytalk/vite-config": "workspace:*",
     "@babytalk/zpages": "workspace:*",
     "@hono/node-server": "^1.19.11",
     "@pothos/core": "^4.12.0",
