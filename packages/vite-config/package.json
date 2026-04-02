@@ -1,0 +1,19 @@
+{
+  "name": "@babytalk/vite-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "@babytalk/standard-config": "workspace:*",
+    "vite": "^8.0.1"
+  },
+  "devDependencies": {
+    "@babytalk/tsconfig": "workspace:*"
+  }
+}

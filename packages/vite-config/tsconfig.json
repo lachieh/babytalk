@@ -1,0 +1,4 @@
+{
+  "extends": "@babytalk/tsconfig/node.json",
+  "include": ["src"]
+}
