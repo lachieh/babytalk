@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "api_url": {
+          "default": "http://localhost:4000/graphql",
+          "description": "BabyTalk GraphQL API URL",
+          "type": "string"
+        },
+        "port": {
+          "default": 8262,
+          "description": "HTTP server port",
+          "type": "number"
+        },
+        "mode": {
+          "type": "string",
+          "const": "stdio",
+          "description": "Transport mode"
+        },
+        "token": {
+          "type": "string",
+          "description": "JWT token (required for stdio mode)"
+        }
+      },
+      "required": [
+        "mode",
+        "token"
+      ]
+    },
+    {
+      "type": "object",
+      "properties": {
+        "api_url": {
+          "default": "http://localhost:4000/graphql",
+          "description": "BabyTalk GraphQL API URL",
+          "type": "string"
+        },
+        "port": {
+          "default": 8262,
+          "description": "HTTP server port",
+          "type": "number"
+        },
+        "mode": {
+          "type": "string",
+          "const": "http",
+          "description": "Transport mode"
+        },
+        "token": {
+          "description": "JWT token (optional for HTTP mode)",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    }
+  ]
+}

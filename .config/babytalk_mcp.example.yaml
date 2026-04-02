@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=../apps/mcp/src/config.schema.json
+
+mode: stdio
+token: "development-token-change-me"
+# api_url: http://localhost:4000/graphql
+# port: 8262
