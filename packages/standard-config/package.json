@@ -42,6 +42,11 @@
       "import": "./dist/client.js",
       "default": "./src/client.ts"
     },
+    "./next": {
+      "types": "./dist/next.d.ts",
+      "import": "./dist/next.js",
+      "default": "./src/next.ts"
+    },
     "./well-known/next": {
       "types": "./dist/well-known/next.d.ts",
       "import": "./dist/well-known/next.js",

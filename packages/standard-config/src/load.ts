@@ -7,6 +7,22 @@ import { validateConfig } from "./loader/validate";
 import type { ConfigDefinition } from "./types";
 
 /**
+ * Collect all leaf key paths from a nested object as dot-separated strings.
+ */
+const collectKeys = (obj: Record<string, unknown>, prefix = ""): string[] => {
+  const keys: string[] = [];
+  for (const [key, value] of Object.entries(obj)) {
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+      keys.push(...collectKeys(value as Record<string, unknown>, path));
+    } else {
+      keys.push(path);
+    }
+  }
+  return keys;
+};
+
+/**
  * Load, merge, and validate config from files and environment variables.
  *
  * 1. Discover config files in precedence order
@@ -25,25 +41,34 @@ import type { ConfigDefinition } from "./types";
  * ```
  */
 export const loadConfig = async <T>(
-  definition: ConfigDefinition<T>
+  configDefinition: ConfigDefinition<T>
 ): Promise<Readonly<T>> => {
   const filePaths = discoverConfigFiles({
-    prefix: definition.prefix,
-    root: definition.root,
+    prefix: configDefinition.prefix,
+    root: configDefinition.root ?? process.cwd(),
   });
 
-  const fileConfig = mergeConfigFiles(filePaths);
+  const { config: fileConfig, sources } = mergeConfigFiles(filePaths);
 
   const envConfig = scanEnvVars({
-    envMap: definition.envMap,
-    prefix: definition.prefix,
-    public: definition.public,
-    publicPrefix: definition.publicPrefix,
-    separator: definition.separator,
+    envMap: configDefinition.envMap,
+    prefix: configDefinition.prefix,
+    public: configDefinition.public,
+    publicPrefix: configDefinition.publicPrefix,
+    separator: configDefinition.separator,
   });
 
+  // Env vars override file config — mark their keys as sourced from "env"
+  for (const key of collectKeys(envConfig)) {
+    sources.set(key, "env");
+  }
+
   const merged = defu(envConfig, fileConfig);
-  const validated = await validateConfig(definition.schema, merged);
+  const validated = await validateConfig(
+    configDefinition.schema,
+    merged,
+    sources
+  );
 
   return Object.freeze(validated);
 };

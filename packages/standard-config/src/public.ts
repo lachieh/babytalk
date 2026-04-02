@@ -41,16 +41,11 @@ const pickPublic = <T extends Record<string, unknown>>(
  * If no public keys are defined, returns an empty object.
  */
 export const getPublicConfig = async <T>(
-  definition: ConfigDefinition<T>
-): Promise<Partial<T>> => {
-  const publicKeys = definition.public;
-  if (!publicKeys || publicKeys.length === 0) {
-    return {} as Partial<T>;
-  }
+  configDefinition: ConfigDefinition<T>
+): Promise<Partial<Readonly<T>>> => {
+  const publicKeys = configDefinition.public;
+  if (!publicKeys || publicKeys.length === 0) return {};
 
-  const config = await loadConfig(definition);
-  return pickPublic(
-    config as unknown as Record<string, unknown>,
-    publicKeys
-  ) as Partial<T>;
+  const config = await loadConfig(configDefinition);
+  return pickPublic(config, publicKeys);
 };

@@ -218,6 +218,9 @@ export const generateEnvDeclaration = (
   lines.push("  }");
   lines.push("}");
   lines.push("");
+  // Ensure this file is treated as a module, but an ambient one with no exports
+  lines.push("export {};");
+  lines.push("");
 
   return lines.join("\n");
 };

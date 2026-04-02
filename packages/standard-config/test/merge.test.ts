@@ -17,24 +17,28 @@ describe(mergeConfigFiles, () => {
     rmSync(root, { force: true, recursive: true });
   });
 
-  it("returns empty object for no files", () => {
-    expect(mergeConfigFiles([])).toStrictEqual({});
+  it("returns empty result for no files", () => {
+    const { config, sources } = mergeConfigFiles([]);
+    expect(config).toStrictEqual({});
+    expect(sources.size).toBe(0);
   });
 
   it("reads a single yaml file", () => {
     const file = join(root, "config.yaml");
     writeFileSync(file, stringifyYaml({ host: "localhost", port: 3000 }));
 
-    const result = mergeConfigFiles([file]);
-    expect(result).toStrictEqual({ host: "localhost", port: 3000 });
+    const { config, sources } = mergeConfigFiles([file]);
+    expect(config).toStrictEqual({ host: "localhost", port: 3000 });
+    expect(sources.get("host")).toBe(file);
+    expect(sources.get("port")).toBe(file);
   });
 
   it("reads a single json file", () => {
     const file = join(root, "config.json");
     writeFileSync(file, JSON.stringify({ port: 3000 }));
 
-    const result = mergeConfigFiles([file]);
-    expect(result).toStrictEqual({ port: 3000 });
+    const { config } = mergeConfigFiles([file]);
+    expect(config).toStrictEqual({ port: 3000 });
   });
 
   it("deep merges with higher precedence file winning", () => {
@@ -48,10 +52,12 @@ describe(mergeConfigFiles, () => {
     );
 
     // high is first (highest precedence)
-    const result = mergeConfigFiles([high, low]);
-    expect(result).toStrictEqual({
+    const { config, sources } = mergeConfigFiles([high, low]);
+    expect(config).toStrictEqual({
       database: { host: "localhost", port: 5433 },
     });
+    expect(sources.get("database.port")).toBe(high);
+    expect(sources.get("database.host")).toBe(low);
   });
 
   it("replaces arrays instead of concatenating", () => {
@@ -61,8 +67,8 @@ describe(mergeConfigFiles, () => {
     writeFileSync(high, stringifyYaml({ tags: ["override"] }));
     writeFileSync(low, stringifyYaml({ tags: ["a", "b", "c"] }));
 
-    const result = mergeConfigFiles([high, low]);
-    expect(result).toStrictEqual({ tags: ["override"] });
+    const { config } = mergeConfigFiles([high, low]);
+    expect(config).toStrictEqual({ tags: ["override"] });
   });
 
   it("deep merges across three files", () => {
@@ -80,8 +86,8 @@ describe(mergeConfigFiles, () => {
       JSON.stringify({ db: { host: "db.local", name: "prod" } })
     );
 
-    const result = mergeConfigFiles([a, b, c]);
-    expect(result).toStrictEqual({
+    const { config } = mergeConfigFiles([a, b, c]);
+    expect(config).toStrictEqual({
       db: { host: "db.local", name: "test" },
       server: { host: "0.0.0.0", port: 9000 },
     });
@@ -95,7 +101,7 @@ describe(mergeConfigFiles, () => {
     writeFileSync(high, stringifyYaml({ a: 1, b: null }));
     writeFileSync(low, stringifyYaml({ b: 2, c: 3 }));
 
-    const result = mergeConfigFiles([high, low]);
-    expect(result).toStrictEqual({ a: 1, b: 2, c: 3 });
+    const { config } = mergeConfigFiles([high, low]);
+    expect(config).toStrictEqual({ a: 1, b: 2, c: 3 });
   });
 });
