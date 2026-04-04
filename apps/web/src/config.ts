@@ -7,7 +7,7 @@ export default defineConfig({
   publicPrefix: "NEXT_PUBLIC_",
   schema: z.object({
     api_url: z.string().default("http://localhost:4000/graphql"),
-    tambo_api_key: z.string(),
+    tambo_api_key: z.string().default(""),
     tambo_url: z.string().default("http://localhost:8261"),
   }),
 });
