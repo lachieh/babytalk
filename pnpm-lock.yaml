@@ -119,9 +119,6 @@ importers:
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
-      tsx:
-        specifier: ^4.19.4
-        version: 4.21.0
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -5495,6 +5492,7 @@ snapshots:
       '@esbuild/win32-arm64': 0.27.4
       '@esbuild/win32-ia32': 0.27.4
       '@esbuild/win32-x64': 0.27.4
+    optional: true
 
   escape-html@1.0.3: {}
 
@@ -6706,6 +6704,7 @@ snapshots:
       get-tsconfig: 4.13.7
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   turbo@2.8.20:
     optionalDependencies:
