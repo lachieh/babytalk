@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { BabyContextProvider } from "@/lib/baby-context";
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
 
@@ -63,5 +64,9 @@ export default function DashboardLayout({
     );
   }
 
-  return <BabyTamboProvider>{children}</BabyTamboProvider>;
+  return (
+    <BabyTamboProvider>
+      <BabyContextProvider>{children}</BabyContextProvider>
+    </BabyTamboProvider>
+  );
 }
