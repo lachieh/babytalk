@@ -4,7 +4,7 @@
 
 export interface Config {
   api_url?: string;
-  tambo_api_key: string;
+  tambo_api_key?: string;
   tambo_url?: string;
 }
 
