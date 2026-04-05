@@ -6,10 +6,10 @@ import configDef from "./config";
 
 export const config = await loadConfig(configDef);
 
-// Run migrations before starting the server.
-// In Docker, the migrations folder is copied alongside the dist output.
-// In development, resolve relative to the db package source.
-const migrationsFolder =
-  process.env.MIGRATIONS_PATH ?? "packages/db/src/migrations";
-await runMigrations(config.databaseUrl, migrationsFolder);
+// Run migrations before starting the server (skip with SKIP_MIGRATIONS=1 for smoke tests).
+if (!process.env.SKIP_MIGRATIONS) {
+  const migrationsFolder =
+    process.env.MIGRATIONS_PATH ?? "packages/db/src/migrations";
+  await runMigrations(config.databaseUrl, migrationsFolder);
+}
 initDb(config.databaseUrl);

@@ -119,7 +119,9 @@ jobs:
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
           docker run -d --name smoke \
             -e BABYTALK_API_DATABASE_URL="postgresql://x:x@localhost:5432/x" \
-            -e BABYTALK_API_JWT_SECRET="ci" -p 4000:4000 "$IMAGE"
+            -e BABYTALK_API_JWT_SECRET="ci" \
+            -e SKIP_MIGRATIONS=1 \
+            -p 4000:4000 "$IMAGE"
           sleep 5
           for i in $(seq 1 20); do
             livez=$(curl -sf http://localhost:4000/livez || true)
@@ -132,7 +134,14 @@ jobs:
             fi
             echo "Attempt $i…"; sleep 3
           done
-          curl -sf http://localhost:4000/livez | jq -e '.status == "ok"'
+          # Show container logs on failure for debugging
+          if ! curl -sf http://localhost:4000/livez | jq -e '.status == "ok"'; then
+            echo "::group::Container logs"
+            docker logs smoke
+            echo "::endgroup::"
+            docker stop smoke && docker rm smoke
+            exit 1
+          fi
           docker stop smoke && docker rm smoke
 
   # ── Build & push Web image ──────────────────────────────
