@@ -1,7 +1,7 @@
 "use client";
 
 import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { PersistentTimeline } from "@/components/persistent-timeline";
@@ -24,9 +24,15 @@ const ChatPanel = ({
   const { value, setValue, submit, isPending } = useTamboThreadInput();
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Filter out system messages — they're configuration, not conversation
+  const visibleMessages = useMemo(
+    () => messages.filter((msg) => msg.role !== "system"),
+    [messages]
+  );
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [visibleMessages]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -85,7 +91,7 @@ const ChatPanel = ({
 
       {/* Messages */}
       <div className="flex-1 space-y-3 overflow-y-auto px-4 py-6">
-        {messages.length === 0 && !isStreaming && (
+        {visibleMessages.length === 0 && !isStreaming && (
           <div className="flex h-full flex-col items-center justify-center text-center">
             <p className="text-lg font-semibold text-neutral-800">
               Ask me anything
@@ -96,7 +102,7 @@ const ChatPanel = ({
             </p>
           </div>
         )}
-        {messages.map((msg) => {
+        {visibleMessages.map((msg) => {
           const isUser = msg.role === "user";
           return (
             <div
@@ -193,6 +199,68 @@ const ChatPanel = ({
   );
 };
 
+/* ── Last Assistant Response ──────────────────────────────── */
+
+const LastResponse = () => {
+  const { messages, isStreaming } = useTambo();
+
+  // Find the last assistant message (skip system messages)
+  const lastAssistant = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i -= 1) {
+      if (messages[i].role === "assistant") return messages[i];
+    }
+    return null;
+  }, [messages]);
+
+  if (!lastAssistant && !isStreaming) return null;
+
+  return (
+    <div className="px-4 py-2">
+      {isStreaming && !lastAssistant && (
+        <div className="flex items-center gap-2 rounded-xl bg-neutral-50 px-4 py-3">
+          <div className="flex gap-1">
+            <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400" />
+            <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400 [animation-delay:200ms]" />
+            <span className="inline-block h-1.5 w-1.5 animate-breathe rounded-full bg-neutral-400 [animation-delay:400ms]" />
+          </div>
+        </div>
+      )}
+      {lastAssistant && (
+        <div className="animate-fade-up rounded-xl bg-neutral-50 px-4 py-3">
+          {lastAssistant.content.map((block) => {
+            if (block.type === "text") {
+              return (
+                <p
+                  className="text-sm leading-relaxed text-neutral-600"
+                  key={`last-${block.text.slice(0, 32)}`}
+                >
+                  {block.text}
+                </p>
+              );
+            }
+            if (
+              block.type === "component" &&
+              "renderedComponent" in block &&
+              block.renderedComponent
+            ) {
+              const componentBlock = block as {
+                id: string;
+                renderedComponent: React.ReactNode;
+              };
+              return (
+                <div className="my-2" key={componentBlock.id}>
+                  {componentBlock.renderedComponent}
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Bottom Action Bar ───────────────────────────────────── */
 
 const BottomBar = ({ onOpenChat }: { onOpenChat: () => void }) => (
@@ -237,6 +305,9 @@ export default function DashboardPage() {
 
         {/* Suggestion Zone — primary interaction surface */}
         <SuggestionZone />
+
+        {/* Last AI response — only the most recent, not full history */}
+        <LastResponse />
 
         {/* Divider */}
         <div className="mx-4 border-t border-neutral-100" />
