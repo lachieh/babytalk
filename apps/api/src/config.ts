@@ -4,8 +4,8 @@ import { z } from "zod";
 export default defineConfig({
   prefix: "babytalk_api",
   schema: z.object({
-    database_url: z.string().describe("PostgreSQL connection string"),
-    jwt_secret: z
+    databaseUrl: z.string().describe("PostgreSQL connection string"),
+    jwtSecret: z
       .string()
       .default("dev-secret-change-me")
       .describe("Secret key for signing JWTs"),
@@ -25,7 +25,7 @@ export default defineConfig({
         port: 1025,
       })
       .describe("SMTP mail configuration"),
-    web_url: z
+    webUrl: z
       .string()
       .default("http://localhost:3000")
       .describe("Frontend URL for CORS and email links"),

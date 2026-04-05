@@ -7,8 +7,10 @@ export interface ConfigDefinition<T> {
   schema: StandardSchemaV1<unknown, T>;
   /** Root directory for file discovery. Default: process.cwd() */
   root?: string;
-  /** Env var separator. Default: "_" */
+  /** Word separator in env var names. Default: "_" */
   separator?: string;
+  /** Nesting separator in env var names. Default: "__" (double underscore) */
+  nestingSeparator?: string;
   /** Key paths exposed as public config */
   public?: string[];
   /** Public env var prefix, e.g. "NEXT_PUBLIC_" */

@@ -2,15 +2,15 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "api_url": {
+    "apiUrl": {
       "default": "http://localhost:4000/graphql",
       "type": "string"
     },
-    "tambo_api_key": {
+    "tamboApiKey": {
       "default": "",
       "type": "string"
     },
-    "tambo_url": {
+    "tamboUrl": {
       "default": "http://localhost:8261",
       "type": "string"
     }

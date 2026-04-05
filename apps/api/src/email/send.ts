@@ -12,7 +12,7 @@ export const sendMagicLinkEmail = async (
   email: string,
   token: string
 ): Promise<void> => {
-  const link = `${config.web_url}/auth/verify?token=${token}`;
+  const link = `${config.webUrl}/auth/verify?token=${token}`;
 
   await transport.sendMail({
     from: config.smtp.from,

@@ -30,19 +30,19 @@ export const getRuntimeConfig = (): PublicConfig | null => runtimeConfig;
 
 /** Get the API URL, preferring runtime config over build-time env vars. */
 export const getApiUrl = (): string =>
-  runtimeConfig?.api_url ||
+  runtimeConfig?.apiUrl ||
   process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
   "http://localhost:4000/graphql";
 
 /** Get the Tambo URL, preferring runtime config over build-time env vars. */
 export const getTamboUrl = (): string =>
-  runtimeConfig?.tambo_url ||
+  runtimeConfig?.tamboUrl ||
   process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL ||
   "http://localhost:8261";
 
 /** Get the Tambo API key, preferring runtime config over build-time env vars. */
 export const getTamboApiKey = (): string =>
-  runtimeConfig?.tambo_api_key ||
+  runtimeConfig?.tamboApiKey ||
   process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_API_KEY ||
   "";
 
