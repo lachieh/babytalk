@@ -17,18 +17,43 @@ const escapeRegex = (str: string): string =>
   str.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
+ * Convert a SCREAMING_SNAKE_CASE segment to camelCase.
+ * e.g. "API_URL" → "apiUrl", "DATABASE" → "database", "VAR_NAME" → "varName"
+ */
+const snakeToCamel = (segment: string, wordSeparator: string): string => {
+  const parts = segment.toLowerCase().split(wordSeparator);
+  return parts
+    .map((part, i) =>
+      i === 0 ? part : part.charAt(0).toUpperCase() + part.slice(1)
+    )
+    .join("");
+};
+
+/**
+ * Convert a camelCase string to SCREAMING_SNAKE_CASE.
+ * e.g. "apiUrl" → "API_URL", "database" → "DATABASE", "varName" → "VAR_NAME"
+ */
+const camelToScreamingSnake = (str: string, wordSeparator: string): string =>
+  str.replaceAll(/([a-z])([A-Z])/g, `$1${wordSeparator}$2`).toUpperCase();
+
+/**
  * Convert a dot-separated key path to an env var name.
  * Dots in key paths become the nesting separator.
+ * camelCase segments become SCREAMING_SNAKE_CASE.
  * e.g. ("APP", "database.port", "_", "__") => "APP__DATABASE__PORT"
- * e.g. ("APP", "api_url", "_", "__") => "APP_API_URL"
+ * e.g. ("APP", "apiUrl", "_", "__") => "APP_API_URL"
  */
 const keyToEnvName = (
   prefix: string,
   keyPath: string,
   separator: string,
   nestingSeparator: string
-): string =>
-  `${prefix}${nestingSeparator}${keyPath.replaceAll(".", nestingSeparator)}`.toUpperCase();
+): string => {
+  const segments = keyPath
+    .split(".")
+    .map((seg) => camelToScreamingSnake(seg, separator));
+  return `${prefix}${nestingSeparator}${segments.join(nestingSeparator)}`.toUpperCase();
+};
 
 /**
  * Set a nested value on an object using a dot-separated path.
@@ -121,7 +146,10 @@ const matchEnvKey = (
   const nestingRegex = new RegExp(escapeRegex(nestingSeparator), "g");
 
   const remainderToKeyPath = (remainder: string): string =>
-    remainder.toLowerCase().split(nestingRegex).join(".");
+    remainder
+      .split(nestingRegex)
+      .map((segment) => snakeToCamel(segment, separator))
+      .join(".");
 
   // Determine the remainder after stripping prefix (and public prefix if present)
   const publicNestingPrefix = publicPrefix

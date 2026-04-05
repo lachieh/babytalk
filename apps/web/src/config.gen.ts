@@ -3,9 +3,9 @@
 
 
 export interface Config {
-  api_url?: string;
-  tambo_api_key?: string;
-  tambo_url?: string;
+  apiUrl?: string;
+  tamboApiKey?: string;
+  tamboUrl?: string;
 }
 
-export type PublicConfig = Pick<Config, "api_url" | "tambo_url" | "tambo_api_key">;
+export type PublicConfig = Pick<Config, "apiUrl" | "tamboUrl" | "tamboApiKey">;

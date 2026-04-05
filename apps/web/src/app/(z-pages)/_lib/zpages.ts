@@ -4,7 +4,7 @@ import { ZPages } from "@babytalk/zpages";
 import configDef from "@/config";
 
 const config = await loadConfig(configDef);
-const API_BASE = config.api_url.replace(/\/graphql$/, "");
+const API_BASE = config.apiUrl.replace(/\/graphql$/, "");
 
 export const zpages = new ZPages().addReadinessCheck("api", async () => {
   const start = Date.now();
