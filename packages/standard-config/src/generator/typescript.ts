@@ -63,7 +63,7 @@ export const generateTypeScript = (
   jsonSchema: Record<string, unknown>,
   definition: Pick<
     ConfigDefinition<unknown>,
-    "prefix" | "public" | "separator" | "publicPrefix"
+    "prefix" | "public" | "separator" | "nestingSeparator" | "publicPrefix"
   >
 ): string => {
   const lines: string[] = [HEADER];
@@ -125,10 +125,10 @@ const collectEnvVars = (
   properties: Record<string, Record<string, unknown>>,
   definition: Pick<
     ConfigDefinition<unknown>,
-    "prefix" | "public" | "separator" | "publicPrefix"
+    "prefix" | "public" | "separator" | "nestingSeparator" | "publicPrefix"
   >
 ): EnvVarEntry[] => {
-  const separator = definition.separator ?? "_";
+  const nestingSeparator = definition.nestingSeparator ?? "__";
   const prefix = definition.prefix.toUpperCase();
   const publicKeys = definition.public ?? [];
   const publicPrefix = definition.publicPrefix ?? "";
@@ -148,7 +148,7 @@ const collectEnvVars = (
       } else {
         entries.push({
           description: schema.description as string | undefined,
-          name: `${prefix}${separator}${currentPath.replaceAll(".", separator)}`.toUpperCase(),
+          name: `${prefix}${nestingSeparator}${currentPath.replaceAll(".", nestingSeparator)}`.toUpperCase(),
         });
       }
     }
@@ -160,7 +160,7 @@ const collectEnvVars = (
     for (const path of publicKeys) {
       entries.push({
         description: `Public: ${path}`,
-        name: `${publicPrefix.toUpperCase()}${prefix}${separator}${path.replaceAll(".", separator)}`.toUpperCase(),
+        name: `${publicPrefix.toUpperCase()}${prefix}${nestingSeparator}${path.replaceAll(".", nestingSeparator)}`.toUpperCase(),
       });
     }
   }
@@ -175,7 +175,7 @@ export const generateEnvDeclaration = (
   jsonSchema: Record<string, unknown>,
   definition: Pick<
     ConfigDefinition<unknown>,
-    "prefix" | "public" | "separator" | "publicPrefix"
+    "prefix" | "public" | "separator" | "nestingSeparator" | "publicPrefix"
   >
 ): string => {
   const properties = (jsonSchema.properties ?? {}) as Record<

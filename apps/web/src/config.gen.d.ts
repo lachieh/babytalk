@@ -4,27 +4,27 @@
 
 declare global {
   interface ProcessEnv {
-    BABYTALK_WEB_API_URL: string;
-    BABYTALK_WEB_TAMBO_API_KEY: string;
-    BABYTALK_WEB_TAMBO_URL: string;
+    BABYTALK_WEB__API_URL: string;
+    BABYTALK_WEB__TAMBO_API_KEY: string;
+    BABYTALK_WEB__TAMBO_URL: string;
     /** Public: api_url */
-    NEXT_PUBLIC_BABYTALK_WEB_API_URL: string;
+    NEXT_PUBLIC_BABYTALK_WEB__API_URL: string;
     /** Public: tambo_url */
-    NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL: string;
+    NEXT_PUBLIC_BABYTALK_WEB__TAMBO_URL: string;
     /** Public: tambo_api_key */
-    NEXT_PUBLIC_BABYTALK_WEB_TAMBO_API_KEY: string;
+    NEXT_PUBLIC_BABYTALK_WEB__TAMBO_API_KEY: string;
   }
 
   interface ImportMetaEnv {
-    readonly BABYTALK_WEB_API_URL: string;
-    readonly BABYTALK_WEB_TAMBO_API_KEY: string;
-    readonly BABYTALK_WEB_TAMBO_URL: string;
+    readonly BABYTALK_WEB__API_URL: string;
+    readonly BABYTALK_WEB__TAMBO_API_KEY: string;
+    readonly BABYTALK_WEB__TAMBO_URL: string;
     /** Public: api_url */
-    readonly NEXT_PUBLIC_BABYTALK_WEB_API_URL: string;
+    readonly NEXT_PUBLIC_BABYTALK_WEB__API_URL: string;
     /** Public: tambo_url */
-    readonly NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL: string;
+    readonly NEXT_PUBLIC_BABYTALK_WEB__TAMBO_URL: string;
     /** Public: tambo_api_key */
-    readonly NEXT_PUBLIC_BABYTALK_WEB_TAMBO_API_KEY: string;
+    readonly NEXT_PUBLIC_BABYTALK_WEB__TAMBO_API_KEY: string;
   }
 
   interface ImportMeta {

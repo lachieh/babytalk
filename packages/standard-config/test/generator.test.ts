@@ -124,9 +124,9 @@ describe(generate, () => {
       join(root, "src", "config.gen.d.ts"),
       "utf8"
     );
-    expect(envDtsContent).toContain("APP_PORT");
-    expect(envDtsContent).toContain("APP_DATABASE_URL");
-    expect(envDtsContent).toContain("NEXT_PUBLIC_APP_HOST");
+    expect(envDtsContent).toContain("APP__PORT");
+    expect(envDtsContent).toContain("APP__DATABASE__URL");
+    expect(envDtsContent).toContain("NEXT_PUBLIC_APP__HOST");
     expect(envDtsContent).toContain("ProcessEnv");
     expect(envDtsContent).toContain("ImportMetaEnv");
   });

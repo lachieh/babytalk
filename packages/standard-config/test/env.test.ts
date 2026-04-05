@@ -1,7 +1,7 @@
 import { buildEnvVarMap, scanEnvVars } from "../src/loader/env";
 
 describe(scanEnvVars, () => {
-  it("scans matching prefix vars", () => {
+  it("scans matching prefix vars (flat keys with word separator)", () => {
     const env = {
       APP_HOST: "localhost",
       APP_PORT: "3000",
@@ -12,10 +12,23 @@ describe(scanEnvVars, () => {
     expect(result).toStrictEqual({ host: "localhost", port: 3000 });
   });
 
-  it("maps nested keys via separator", () => {
+  it("preserves underscores in flat keys (word separator)", () => {
     const env = {
-      APP_DATABASE_HOST: "db.local",
-      APP_DATABASE_PORT: "5432",
+      APP_API_URL: "https://api.example.com",
+      APP_TAMBO_API_KEY: "secret123",
+    };
+
+    const result = scanEnvVars({ prefix: "APP" }, env);
+    expect(result).toStrictEqual({
+      api_url: "https://api.example.com",
+      tambo_api_key: "secret123",
+    });
+  });
+
+  it("maps nested keys via double-underscore nesting separator", () => {
+    const env = {
+      APP__DATABASE__HOST: "db.local",
+      APP__DATABASE__PORT: "5432",
     };
 
     const result = scanEnvVars({ prefix: "APP" }, env);
@@ -24,12 +37,23 @@ describe(scanEnvVars, () => {
     });
   });
 
-  it("uses custom separator", () => {
+  it("uses custom nesting separator", () => {
+    const env = {
+      "APP---DATABASE---HOST": "db.local",
+    };
+
+    const result = scanEnvVars({ prefix: "APP", nestingSeparator: "---" }, env);
+    expect(result).toStrictEqual({ database: { host: "db.local" } });
+  });
+
+  it("uses custom separator for legacy behavior", () => {
     const env = {
       APP__DATABASE__HOST: "db.local",
     };
 
     const result = scanEnvVars({ prefix: "APP", separator: "__" }, env);
+    // With separator="__" and default nestingSeparator="__",
+    // the nesting separator matches the old separator behavior
     expect(result).toStrictEqual({ database: { host: "db.local" } });
   });
 
@@ -73,9 +97,25 @@ describe(scanEnvVars, () => {
     expect(result).toStrictEqual({ value: "[not valid json" });
   });
 
-  it("handles public prefix vars", () => {
+  it("handles public prefix vars with flat keys", () => {
     const env = {
       NEXT_PUBLIC_APP_API_URL: "https://api.example.com",
+    };
+
+    const result = scanEnvVars(
+      {
+        prefix: "APP",
+        public: ["api_url"],
+        publicPrefix: "NEXT_PUBLIC_",
+      },
+      env
+    );
+    expect(result).toStrictEqual({ api_url: "https://api.example.com" });
+  });
+
+  it("handles public prefix vars with nested keys", () => {
+    const env = {
+      NEXT_PUBLIC_APP__API__URL: "https://api.example.com",
     };
 
     const result = scanEnvVars(
@@ -97,7 +137,7 @@ describe(scanEnvVars, () => {
     const result = scanEnvVars(
       {
         prefix: "APP",
-        public: ["api.url"],
+        public: ["api_url"],
         publicPrefix: "NEXT_PUBLIC_",
       },
       env
@@ -114,12 +154,12 @@ describe(scanEnvVars, () => {
     const result = scanEnvVars(
       {
         envMap: (keyPath) =>
-          keyPath === "database.url" ? "DATABASE_URL" : null,
+          keyPath === "database_url" ? "DATABASE_URL" : null,
         prefix: "APP",
       },
       env
     );
-    // database.url should NOT be set via APP_DATABASE_URL (default mapping)
+    // database_url should NOT be set via APP_DATABASE_URL (default mapping)
     // because envMap overrides it to DATABASE_URL
     expect(result).toStrictEqual({ port: 3000 });
   });
@@ -134,7 +174,7 @@ describe(scanEnvVars, () => {
     const result = scanEnvVars(
       {
         envMap: (keyPath) =>
-          keyPath === "database.url" ? "DATABASE_URL" : null,
+          keyPath === "database_url" ? "DATABASE_URL" : null,
         prefix: "APP",
       },
       env
@@ -164,7 +204,16 @@ describe(scanEnvVars, () => {
 });
 
 describe(buildEnvVarMap, () => {
-  it("maps key paths to env var names", () => {
+  it("maps flat key paths to env var names", () => {
+    const map = buildEnvVarMap({ prefix: "APP" }, ["port", "api_url"]);
+
+    expect(map).toStrictEqual({
+      api_url: "APP__API_URL",
+      port: "APP__PORT",
+    });
+  });
+
+  it("maps nested key paths to env var names with nesting separator", () => {
     const map = buildEnvVarMap({ prefix: "APP" }, [
       "port",
       "database.host",
@@ -172,9 +221,9 @@ describe(buildEnvVarMap, () => {
     ]);
 
     expect(map).toStrictEqual({
-      "database.host": "APP_DATABASE_HOST",
-      "database.port": "APP_DATABASE_PORT",
-      port: "APP_PORT",
+      "database.host": "APP__DATABASE__HOST",
+      "database.port": "APP__DATABASE__PORT",
+      port: "APP__PORT",
     });
   });
 
@@ -182,36 +231,36 @@ describe(buildEnvVarMap, () => {
     const map = buildEnvVarMap(
       {
         prefix: "APP",
-        public: ["api.url"],
+        public: ["api_url"],
         publicPrefix: "NEXT_PUBLIC_",
       },
-      ["api.url", "api.secret"]
+      ["api_url", "api_secret"]
     );
 
-    expect(map["api.url"]).toBe("APP_API_URL");
-    expect(map["public:api.url"]).toBe("NEXT_PUBLIC_APP_API_URL");
-    expect(map["public:api.secret"]).toBeUndefined();
+    expect(map["api_url"]).toBe("APP__API_URL");
+    expect(map["public:api_url"]).toBe("NEXT_PUBLIC_APP__API_URL");
+    expect(map["public:api_secret"]).toBeUndefined();
   });
 
-  it("uses custom separator", () => {
-    const map = buildEnvVarMap({ prefix: "APP", separator: "__" }, [
+  it("uses custom nesting separator", () => {
+    const map = buildEnvVarMap({ prefix: "APP", nestingSeparator: "---" }, [
       "database.host",
     ]);
 
-    expect(map["database.host"]).toBe("APP__DATABASE__HOST");
+    expect(map["database.host"]).toBe("APP---DATABASE---HOST");
   });
 
   it("applies custom envMap callback", () => {
     const map = buildEnvVarMap(
       {
         envMap: (keyPath) =>
-          keyPath === "database.url" ? "DATABASE_URL" : null,
+          keyPath === "database_url" ? "DATABASE_URL" : null,
         prefix: "APP",
       },
-      ["database.url", "port"]
+      ["database_url", "port"]
     );
 
-    expect(map["database.url"]).toBe("DATABASE_URL");
-    expect(map.port).toBe("APP_PORT");
+    expect(map["database_url"]).toBe("DATABASE_URL");
+    expect(map.port).toBe("APP__PORT");
   });
 });

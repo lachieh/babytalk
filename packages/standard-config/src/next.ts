@@ -5,11 +5,12 @@ import type { ConfigDefinition } from "./types";
 
 /**
  * Flatten a nested config object into NEXT_PUBLIC_PREFIX_KEY env var entries.
+ * Uses nestingSeparator between nesting levels and separator within keys.
  */
 const flatten = (
   obj: Record<string, unknown>,
   prefix: string,
-  separator: string,
+  nestingSeparator: string,
   path: string[] = []
 ): Record<string, string> => {
   const result: Record<string, string> = {};
@@ -22,13 +23,13 @@ const flatten = (
         flatten(
           value as Record<string, unknown>,
           prefix,
-          separator,
+          nestingSeparator,
           currentPath
         )
       );
     } else {
       const envName =
-        `NEXT_PUBLIC_${prefix}${separator}${currentPath.join(separator)}`.toUpperCase();
+        `NEXT_PUBLIC_${prefix}${nestingSeparator}${currentPath.join(nestingSeparator)}`.toUpperCase();
       result[envName] = String(value);
     }
   }
@@ -49,13 +50,13 @@ export const getNextPublicEnv = async <T>(
   configDefinition: ConfigDefinition<T>
 ): Promise<Record<string, string>> => {
   const publicConfig = await getPublicConfig(configDefinition);
-  const separator = configDefinition.separator ?? "_";
+  const nestingSeparator = configDefinition.nestingSeparator ?? "__";
   const prefix = configDefinition.prefix.toUpperCase();
 
   return flatten(
     publicConfig as unknown as Record<string, unknown>,
     prefix,
-    separator
+    nestingSeparator
   );
 };
 

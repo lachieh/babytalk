@@ -1,9 +1,11 @@
 export interface EnvOptions {
   /** Env var prefix, e.g. "APP" */
   prefix: string;
-  /** Separator between prefix and nested keys. Default: "_" */
+  /** Word separator in env var names. Default: "_" */
   separator?: string;
-  /** Key paths marked as public, e.g. ["api.url"] */
+  /** Nesting separator in env var names. Default: "__" (double underscore) */
+  nestingSeparator?: string;
+  /** Key paths marked as public, e.g. ["api_url"] */
   public?: string[];
   /** Public env var prefix, e.g. "NEXT_PUBLIC_" */
   publicPrefix?: string;
@@ -16,14 +18,17 @@ const escapeRegex = (str: string): string =>
 
 /**
  * Convert a dot-separated key path to an env var name.
- * e.g. ("APP", "database.port", "_") => "APP_DATABASE_PORT"
+ * Dots in key paths become the nesting separator.
+ * e.g. ("APP", "database.port", "_", "__") => "APP__DATABASE__PORT"
+ * e.g. ("APP", "api_url", "_", "__") => "APP_API_URL"
  */
 const keyToEnvName = (
   prefix: string,
   keyPath: string,
-  separator: string
+  separator: string,
+  nestingSeparator: string
 ): string =>
-  `${prefix}${separator}${keyPath.replaceAll(".", separator)}`.toUpperCase();
+  `${prefix}${nestingSeparator}${keyPath.replaceAll(".", nestingSeparator)}`.toUpperCase();
 
 /**
  * Set a nested value on an object using a dot-separated path.
@@ -86,6 +91,75 @@ const coerceValue = (value: string): unknown => {
   return value;
 };
 
+interface MatchResult {
+  keyPath: string;
+  isPublic: boolean;
+}
+
+/**
+ * Try to match an env var key against known prefix patterns.
+ * Returns the extracted key path and whether it's a public var.
+ */
+const matchEnvKey = (
+  envKey: string,
+  prefixUpper: string,
+  separator: string,
+  nestingSeparator: string,
+  publicPrefix: string,
+  fullPrefix: string
+): MatchResult | null => {
+  const nestingRegex = new RegExp(escapeRegex(nestingSeparator), "g");
+
+  // Check public + nesting prefix (e.g. NEXT_PUBLIC_APP__DATABASE__PORT)
+  if (
+    publicPrefix &&
+    envKey.startsWith(publicPrefix.toUpperCase() + fullPrefix)
+  ) {
+    const remainder = envKey
+      .slice(publicPrefix.length + fullPrefix.length)
+      .toLowerCase();
+    return { isPublic: true, keyPath: remainder.split(nestingRegex).join(".") };
+  }
+
+  // Check public + word prefix for flat keys (e.g. NEXT_PUBLIC_APP_API_URL)
+  const publicWordPrefix = `${publicPrefix.toUpperCase()}${prefixUpper}${separator}`;
+  if (
+    publicPrefix &&
+    nestingSeparator !== separator &&
+    envKey.startsWith(publicWordPrefix) &&
+    !envKey.slice(publicWordPrefix.length).includes(nestingSeparator)
+  ) {
+    return {
+      isPublic: true,
+      keyPath: envKey.slice(publicWordPrefix.length).toLowerCase(),
+    };
+  }
+
+  // Check standard nesting prefix (e.g. APP__DATABASE__PORT)
+  if (envKey.startsWith(fullPrefix)) {
+    const remainder = envKey.slice(fullPrefix.length).toLowerCase();
+    return {
+      isPublic: false,
+      keyPath: remainder.split(nestingRegex).join("."),
+    };
+  }
+
+  // Check standard word prefix for flat keys (e.g. APP_API_URL)
+  const wordPrefix = `${prefixUpper}${separator}`;
+  if (
+    nestingSeparator !== separator &&
+    envKey.startsWith(wordPrefix) &&
+    !envKey.slice(wordPrefix.length).includes(nestingSeparator)
+  ) {
+    return {
+      isPublic: false,
+      keyPath: envKey.slice(wordPrefix.length).toLowerCase(),
+    };
+  }
+
+  return null;
+};
+
 /**
  * Scan process.env for matching env vars and build a config overlay.
  * Returns a record of dot-separated key paths to coerced values.
@@ -95,8 +169,9 @@ export const scanEnvVars = (
   env: Record<string, string | undefined> = process.env
 ): Record<string, unknown> => {
   const separator = options.separator ?? "_";
+  const nestingSeparator = options.nestingSeparator ?? "__";
   const prefixUpper = options.prefix.toUpperCase();
-  const fullPrefix = `${prefixUpper}${separator}`;
+  const fullPrefix = `${prefixUpper}${nestingSeparator}`;
 
   const publicPaths = new Set(options.public);
   const publicPrefix = options.publicPrefix ?? "";
@@ -108,32 +183,20 @@ export const scanEnvVars = (
       continue;
     }
 
-    let keyPath: string | undefined;
+    const match = matchEnvKey(
+      envKey,
+      prefixUpper,
+      separator,
+      nestingSeparator,
+      publicPrefix,
+      fullPrefix
+    );
+    if (!match) continue;
 
-    // Check public prefix first (e.g. NEXT_PUBLIC_APP_DATABASE_PORT)
-    if (
-      publicPrefix &&
-      envKey.startsWith(publicPrefix.toUpperCase() + fullPrefix)
-    ) {
-      const remainder = envKey
-        .slice(publicPrefix.length + fullPrefix.length)
-        .toLowerCase()
-        .replaceAll(new RegExp(escapeRegex(separator), "g"), ".");
-      keyPath = remainder;
+    const { keyPath, isPublic } = match;
 
-      // Verify this is actually a declared public path
-      if (!publicPaths.has(keyPath)) {
-        continue;
-      }
-    }
-    // Check standard prefix (e.g. APP_DATABASE_PORT)
-    else if (envKey.startsWith(fullPrefix)) {
-      const remainder = envKey
-        .slice(fullPrefix.length)
-        .toLowerCase()
-        .replaceAll(new RegExp(escapeRegex(separator), "g"), ".");
-      keyPath = remainder;
-    } else {
+    // For public-prefixed vars, verify the path is declared public
+    if (isPublic && !publicPaths.has(keyPath)) {
       continue;
     }
 
@@ -168,12 +231,18 @@ export const buildEnvVarMap = (
   keyPaths: string[]
 ): Record<string, string> => {
   const separator = options.separator ?? "_";
+  const nestingSeparator = options.nestingSeparator ?? "__";
   const publicPaths = new Set(options.public);
   const publicPrefix = options.publicPrefix ?? "";
   const map: Record<string, string> = {};
 
   for (const keyPath of keyPaths) {
-    const baseName = keyToEnvName(options.prefix, keyPath, separator);
+    const baseName = keyToEnvName(
+      options.prefix,
+      keyPath,
+      separator,
+      nestingSeparator
+    );
 
     // Apply custom mapping if provided
     if (options.envMap) {

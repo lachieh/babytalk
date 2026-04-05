@@ -52,6 +52,7 @@ export const loadConfig = async <T>(
 
   const envConfig = scanEnvVars({
     envMap: configDefinition.envMap,
+    nestingSeparator: configDefinition.nestingSeparator,
     prefix: configDefinition.prefix,
     public: configDefinition.public,
     publicPrefix: configDefinition.publicPrefix,
