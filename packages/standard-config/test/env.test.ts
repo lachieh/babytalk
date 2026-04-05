@@ -37,6 +37,26 @@ describe(scanEnvVars, () => {
     });
   });
 
+  it("handles nesting prefix with flat key (APP__VAR_NAME)", () => {
+    const env = {
+      APP__VAR_NAME: "value",
+    };
+
+    const result = scanEnvVars({ prefix: "APP" }, env);
+    expect(result).toStrictEqual({ var_name: "value" });
+  });
+
+  it("handles word prefix with nested key (APP_VAR_NAME__NESTED__KEY)", () => {
+    const env = {
+      APP_VAR_NAME__NESTED__KEY: "deep",
+    };
+
+    const result = scanEnvVars({ prefix: "APP" }, env);
+    expect(result).toStrictEqual({
+      var_name: { nested: { key: "deep" } },
+    });
+  });
+
   it("uses custom nesting separator", () => {
     const env = {
       "APP---DATABASE---HOST": "db.local",

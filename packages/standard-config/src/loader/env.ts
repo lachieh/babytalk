@@ -97,8 +97,18 @@ interface MatchResult {
 }
 
 /**
- * Try to match an env var key against known prefix patterns.
- * Returns the extracted key path and whether it's a public var.
+ * Strip a matching prefix from an env var key and convert the remainder
+ * to a dot-separated key path. The nesting separator (`__` by default)
+ * creates nesting; the word separator (`_`) is preserved in key names.
+ *
+ * Prefix is accepted with either separator after it:
+ *   APP__KEY and APP_KEY both match prefix "APP"
+ *
+ * After stripping the prefix, the remainder is always split by the
+ * nesting separator for nesting:
+ *   APP_VAR_NAME           → "var_name"
+ *   APP__DATABASE__HOST    → "database.host"
+ *   APP_VAR_NAME__NESTED   → "var_name.nested"
  */
 const matchEnvKey = (
   envKey: string,
@@ -110,50 +120,43 @@ const matchEnvKey = (
 ): MatchResult | null => {
   const nestingRegex = new RegExp(escapeRegex(nestingSeparator), "g");
 
-  // Check public + nesting prefix (e.g. NEXT_PUBLIC_APP__DATABASE__PORT)
-  if (
-    publicPrefix &&
-    envKey.startsWith(publicPrefix.toUpperCase() + fullPrefix)
-  ) {
-    const remainder = envKey
-      .slice(publicPrefix.length + fullPrefix.length)
-      .toLowerCase();
-    return { isPublic: true, keyPath: remainder.split(nestingRegex).join(".") };
-  }
+  const remainderToKeyPath = (remainder: string): string =>
+    remainder.toLowerCase().split(nestingRegex).join(".");
 
-  // Check public + word prefix for flat keys (e.g. NEXT_PUBLIC_APP_API_URL)
-  const publicWordPrefix = `${publicPrefix.toUpperCase()}${prefixUpper}${separator}`;
-  if (
-    publicPrefix &&
-    nestingSeparator !== separator &&
-    envKey.startsWith(publicWordPrefix) &&
-    !envKey.slice(publicWordPrefix.length).includes(nestingSeparator)
-  ) {
+  // Determine the remainder after stripping prefix (and public prefix if present)
+  const publicNestingPrefix = publicPrefix
+    ? publicPrefix.toUpperCase() + fullPrefix
+    : "";
+  const publicWordPrefix =
+    !publicPrefix || nestingSeparator === separator
+      ? ""
+      : `${publicPrefix.toUpperCase()}${prefixUpper}${separator}`;
+  const wordPrefix =
+    nestingSeparator === separator ? "" : `${prefixUpper}${separator}`;
+
+  // Try each prefix pattern in order of specificity
+  if (publicNestingPrefix && envKey.startsWith(publicNestingPrefix)) {
     return {
       isPublic: true,
-      keyPath: envKey.slice(publicWordPrefix.length).toLowerCase(),
+      keyPath: remainderToKeyPath(envKey.slice(publicNestingPrefix.length)),
     };
   }
-
-  // Check standard nesting prefix (e.g. APP__DATABASE__PORT)
+  if (publicWordPrefix && envKey.startsWith(publicWordPrefix)) {
+    return {
+      isPublic: true,
+      keyPath: remainderToKeyPath(envKey.slice(publicWordPrefix.length)),
+    };
+  }
   if (envKey.startsWith(fullPrefix)) {
-    const remainder = envKey.slice(fullPrefix.length).toLowerCase();
     return {
       isPublic: false,
-      keyPath: remainder.split(nestingRegex).join("."),
+      keyPath: remainderToKeyPath(envKey.slice(fullPrefix.length)),
     };
   }
-
-  // Check standard word prefix for flat keys (e.g. APP_API_URL)
-  const wordPrefix = `${prefixUpper}${separator}`;
-  if (
-    nestingSeparator !== separator &&
-    envKey.startsWith(wordPrefix) &&
-    !envKey.slice(wordPrefix.length).includes(nestingSeparator)
-  ) {
+  if (wordPrefix && envKey.startsWith(wordPrefix)) {
     return {
       isPublic: false,
-      keyPath: envKey.slice(wordPrefix.length).toLowerCase(),
+      keyPath: remainderToKeyPath(envKey.slice(wordPrefix.length)),
     };
   }
 
