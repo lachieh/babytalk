@@ -3,9 +3,13 @@ import { createTransport } from "nodemailer";
 import { config } from "../env";
 
 const transport = createTransport({
+  auth:
+    config.smtp.user && config.smtp.pass
+      ? { pass: config.smtp.pass, user: config.smtp.user }
+      : undefined,
   host: config.smtp.host,
   port: config.smtp.port,
-  secure: false,
+  secure: config.smtp.port === 465,
 });
 
 export const sendMagicLinkEmail = async (
