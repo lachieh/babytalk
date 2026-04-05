@@ -2,6 +2,8 @@
 
 import { useCallback, useState } from "react";
 
+import { gqlRequest } from "@/lib/tambo/graphql";
+
 const REQUEST_MAGIC_LINK = `
   mutation RequestMagicLink($email: String!) {
     requestMagicLink(email: $email)
@@ -11,29 +13,21 @@ const REQUEST_MAGIC_LINK = `
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      setError("");
+      setErrorMsg("");
 
-      const apiUrl =
-        process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
-        "http://localhost:4000/graphql";
-
-      const res = await fetch(apiUrl, {
-        body: JSON.stringify({
-          query: REQUEST_MAGIC_LINK,
-          variables: { email },
-        }),
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
-      });
-
-      const data = await res.json();
-      if (data.errors) {
-        setError(data.errors[0].message);
+      const result = await gqlRequest<{ requestMagicLink: boolean }>(
+        REQUEST_MAGIC_LINK,
+        { email }
+      ).catch((error: unknown) =>
+        error instanceof Error ? error.message : "Something went wrong"
+      );
+      if (typeof result === "string") {
+        setErrorMsg(result);
       } else {
         setSent(true);
       }
@@ -108,8 +102,8 @@ export default function LoginPage() {
           >
             Send magic link
           </button>
-          {error && (
-            <p className="text-center text-sm text-danger-500">{error}</p>
+          {errorMsg && (
+            <p className="text-center text-sm text-danger-500">{errorMsg}</p>
           )}
         </form>
       </div>

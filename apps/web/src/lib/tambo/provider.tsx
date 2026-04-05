@@ -2,6 +2,8 @@
 
 import { TamboProvider } from "@tambo-ai/react";
 
+import { getTamboApiKey, getTamboUrl } from "@/lib/runtime-config";
+
 import { tamboComponents } from "./components";
 import { gqlRequest } from "./graphql";
 import { tamboTools } from "./tools";
@@ -179,9 +181,8 @@ export const BabyTamboProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const apiKey = process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_API_KEY || "";
-  const tamboUrl =
-    process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL || "http://localhost:8261";
+  const apiKey = getTamboApiKey();
+  const tamboUrl = getTamboUrl();
 
   return (
     <TamboProvider

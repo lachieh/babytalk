@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { BabyContextProvider } from "@/lib/baby-context";
+import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
 
@@ -37,6 +38,8 @@ export default function DashboardLayout({
     }
 
     const checkHousehold = async () => {
+      // Ensure runtime config is loaded before any GraphQL calls
+      await loadRuntimeConfig();
       try {
         const data = await gqlRequest<{
           myBabies: { id: string }[];
@@ -65,8 +68,10 @@ export default function DashboardLayout({
   }
 
   return (
-    <BabyTamboProvider>
-      <BabyContextProvider>{children}</BabyContextProvider>
-    </BabyTamboProvider>
+    <RuntimeConfigProvider>
+      <BabyTamboProvider>
+        <BabyContextProvider>{children}</BabyContextProvider>
+      </BabyTamboProvider>
+    </RuntimeConfigProvider>
   );
 }

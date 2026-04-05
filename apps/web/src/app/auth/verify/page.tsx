@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
+import { gqlRequest } from "@/lib/tambo/graphql";
+
 const VERIFY_MAGIC_LINK = `
   mutation VerifyMagicLink($token: String!) {
     verifyMagicLink(token: $token) {
@@ -28,34 +30,21 @@ const VerifyContent = () => {
       return;
     }
 
-    const apiUrl =
-      process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
-      "http://localhost:4000/graphql";
-
     const verify = async () => {
       try {
-        const res = await fetch(apiUrl, {
-          body: JSON.stringify({
-            query: VERIFY_MAGIC_LINK,
-            variables: { token },
-          }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
+        const result = await gqlRequest<{
+          verifyMagicLink: {
+            token: string;
+            user: { id: string; email: string };
+          } | null;
+        }>(VERIFY_MAGIC_LINK, { token });
 
-        const data = await res.json();
-        if (data.errors) {
-          setError(data.errors[0].message);
-          return;
-        }
-
-        const result = data.data.verifyMagicLink;
-        if (!result) {
+        if (!result.verifyMagicLink) {
           setError("Invalid or expired link");
           return;
         }
 
-        localStorage.setItem("babytalk_token", result.token);
+        localStorage.setItem("babytalk_token", result.verifyMagicLink.token);
         router.push("/dashboard");
       } catch {
         setError("Something went wrong");

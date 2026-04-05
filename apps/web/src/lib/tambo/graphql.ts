@@ -1,6 +1,8 @@
-const getApiUrl = () =>
-  process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
-  "http://localhost:4000/graphql";
+import {
+  getApiUrl,
+  getRuntimeConfig,
+  loadRuntimeConfig,
+} from "@/lib/runtime-config";
 
 const getToken = () =>
   typeof window === "undefined" ? null : localStorage.getItem("babytalk_token");
@@ -9,8 +11,13 @@ export const gqlRequest = async <T = unknown>(
   query: string,
   variables?: Record<string, unknown>
 ): Promise<T> => {
+  // Ensure runtime config is loaded before the first request (client-side only)
+  if (typeof window !== "undefined" && !getRuntimeConfig()) {
+    await loadRuntimeConfig();
+  }
   const token = getToken();
-  const res = await fetch(getApiUrl(), {
+  const apiUrl = getApiUrl();
+  const res = await fetch(apiUrl, {
     body: JSON.stringify({ query, variables }),
     headers: {
       "Content-Type": "application/json",
