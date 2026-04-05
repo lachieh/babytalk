@@ -4,12 +4,12 @@ import { config } from "../env";
 
 const transport = createTransport({
   auth:
-    config.smtp.user && config.smtp.pass
-      ? { pass: config.smtp.pass, user: config.smtp.user }
+    config.smtpUser && config.smtpPass
+      ? { pass: config.smtpPass, user: config.smtpUser }
       : undefined,
-  host: config.smtp.host,
-  port: config.smtp.port,
-  secure: config.smtp.port === 465,
+  host: config.smtpHost,
+  port: config.smtpPort,
+  secure: config.smtpPort === 465,
 });
 
 export const sendMagicLinkEmail = async (
@@ -19,7 +19,7 @@ export const sendMagicLinkEmail = async (
   const link = `${config.webUrl}/auth/verify?token=${token}`;
 
   await transport.sendMail({
-    from: config.smtp.from,
+    from: config.smtpFrom,
     html: `
       <h2>Sign in to Babytalk</h2>
       <p>Click the link below to sign in:</p>
