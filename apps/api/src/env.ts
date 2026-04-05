@@ -5,4 +5,4 @@ import configDef from "./config";
 
 export const config = await loadConfig(configDef);
 
-initDb(config.database_url);
+initDb(config.databaseUrl);

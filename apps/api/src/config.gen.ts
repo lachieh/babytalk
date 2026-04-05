@@ -4,15 +4,15 @@
 
 export interface Config {
   /** PostgreSQL connection string */
-  database_url: string;
+  databaseUrl: string;
   /** Secret key for signing JWTs */
-  jwt_secret?: string;
+  jwtSecret?: string;
   /** HTTP server port */
   port?: number;
   /** SMTP mail configuration */
   smtp?: { from?: string; host?: string; port?: number };
   /** Frontend URL for CORS and email links */
-  web_url?: string;
+  webUrl?: string;
 }
 
 export type PublicConfig = Record<string, never>;

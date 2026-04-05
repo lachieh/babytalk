@@ -15,7 +15,7 @@ app.use(
   "/graphql",
   cors({
     credentials: true,
-    origin: config.web_url,
+    origin: config.webUrl,
   })
 );
 
