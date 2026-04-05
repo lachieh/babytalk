@@ -24,7 +24,10 @@ export default function SetupPage() {
   const [inviteCode, setInviteCode] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [birthWeightLbs, setBirthWeightLbs] = useState("");
+  const [birthWeightOz, setBirthWeightOz] = useState("");
   const [birthWeightG, setBirthWeightG] = useState("");
+  const [weightUnit, setWeightUnit] = useState<"lb" | "g">("lb");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -52,9 +55,17 @@ export default function SetupPage() {
       setLoading(true);
       setErrorMsg("");
       try {
+        let weightGrams: number | null = null;
+        if (weightUnit === "lb" && (birthWeightLbs || birthWeightOz)) {
+          const lbs = Number(birthWeightLbs) || 0;
+          const oz = Number(birthWeightOz) || 0;
+          weightGrams = Math.round(lbs * 453.592 + oz * 28.3495);
+        } else if (weightUnit === "g" && birthWeightG) {
+          weightGrams = Number(birthWeightG);
+        }
         await gqlRequest(ADD_BABY, {
           birthDate,
-          birthWeightG: birthWeightG ? Number(birthWeightG) : null,
+          birthWeightG: weightGrams,
           name: babyName,
         });
         router.push("/dashboard");
@@ -66,7 +77,15 @@ export default function SetupPage() {
         setLoading(false);
       }
     },
-    [babyName, birthDate, birthWeightG, router]
+    [
+      babyName,
+      birthDate,
+      birthWeightLbs,
+      birthWeightOz,
+      birthWeightG,
+      weightUnit,
+      router,
+    ]
   );
 
   const handleBabyNameChange = useCallback(
@@ -79,10 +98,25 @@ export default function SetupPage() {
     []
   );
 
-  const handleWeightChange = useCallback(
+  const handleWeightLbsChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setBirthWeightLbs(e.target.value),
+    []
+  );
+
+  const handleWeightOzChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setBirthWeightOz(e.target.value),
+    []
+  );
+
+  const handleWeightGChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setBirthWeightG(e.target.value),
     []
   );
+
+  const handleSelectLb = useCallback(() => setWeightUnit("lb"), []);
+  const handleSelectG = useCallback(() => setWeightUnit("g"), []);
 
   if (step === "welcome") {
     return (
@@ -179,21 +213,65 @@ export default function SetupPage() {
             />
           </div>
           <div>
-            <label
-              htmlFor="birth-weight"
-              className="block text-sm font-medium text-neutral-600"
-            >
-              Birth weight
-              <span className="ml-1 text-neutral-300">optional</span>
-            </label>
-            <input
-              id="birth-weight"
-              className="mt-1 w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
-              onChange={handleWeightChange}
-              placeholder="Grams"
-              type="number"
-              value={birthWeightG}
-            />
+            <div className="flex items-baseline justify-between">
+              <label
+                htmlFor="birth-weight"
+                className="block text-sm font-medium text-neutral-600"
+              >
+                Birth weight
+                <span className="ml-1 text-neutral-300">optional</span>
+              </label>
+              <div className="flex rounded-md border border-neutral-200 text-xs">
+                <button
+                  className={`px-2.5 py-1 font-medium transition-colors ${weightUnit === "lb" ? "bg-primary-500 text-white rounded-l-md" : "text-neutral-400 hover:text-neutral-600"}`}
+                  onClick={handleSelectLb}
+                  type="button"
+                >
+                  lb
+                </button>
+                <button
+                  className={`px-2.5 py-1 font-medium transition-colors ${weightUnit === "g" ? "bg-primary-500 text-white rounded-r-md" : "text-neutral-400 hover:text-neutral-600"}`}
+                  onClick={handleSelectG}
+                  type="button"
+                >
+                  g
+                </button>
+              </div>
+            </div>
+            {weightUnit === "lb" ? (
+              <div className="mt-1 flex gap-2">
+                <input
+                  id="birth-weight"
+                  className="w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+                  onChange={handleWeightLbsChange}
+                  placeholder="lbs"
+                  type="number"
+                  min="0"
+                  max="20"
+                  value={birthWeightLbs}
+                />
+                <input
+                  id="birth-weight-oz"
+                  className="w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+                  onChange={handleWeightOzChange}
+                  placeholder="oz"
+                  type="number"
+                  min="0"
+                  max="15"
+                  step="0.1"
+                  value={birthWeightOz}
+                />
+              </div>
+            ) : (
+              <input
+                id="birth-weight"
+                className="mt-1 w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+                onChange={handleWeightGChange}
+                placeholder="Grams"
+                type="number"
+                value={birthWeightG}
+              />
+            )}
           </div>
           <button
             className="mt-2 min-h-[56px] rounded-lg bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
