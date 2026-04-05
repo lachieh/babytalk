@@ -7,6 +7,9 @@ const MAX_QUEUE_SIZE = 100;
 const MAX_RETRIES = 3;
 const STALE_DAYS = 7;
 
+// API URL — set by the main thread via postMessage, fallback to localhost for dev
+let configuredApiUrl = "http://localhost:4000/graphql";
+
 // Static assets to pre-cache
 const PRECACHE_URLS = ["/dashboard", "/offline"];
 
@@ -143,9 +146,7 @@ async function syncQueue() {
   if (queue.length === 0) return;
 
   const remaining = [];
-  const apiUrl = self.location.origin.includes("localhost")
-    ? "http://localhost:4000/graphql"
-    : "/api/graphql";
+  const apiUrl = configuredApiUrl;
 
   for (const item of queue) {
     // Flag stale items
@@ -198,9 +199,12 @@ async function syncQueue() {
   await saveQueue(remaining);
 }
 
-// Listen for online event from clients
+// Listen for messages from clients
 self.addEventListener("message", (event) => {
   if (event.data === "SYNC_NOW") {
     syncQueue();
+  }
+  if (event.data && event.data.type === "SET_API_URL" && event.data.url) {
+    configuredApiUrl = event.data.url;
   }
 });
