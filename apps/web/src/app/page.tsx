@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
 
+import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
+
 export default function Home() {
+  useRedirectIfLoggedIn();
+
   return (
     <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
       <div className="animate-fade-up w-full max-w-md text-center">

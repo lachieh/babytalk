@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
 const REQUEST_MAGIC_LINK = `
   mutation RequestMagicLink($email: String!) {
@@ -11,6 +12,7 @@ const REQUEST_MAGIC_LINK = `
 `;
 
 export default function LoginPage() {
+  useRedirectIfLoggedIn();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
