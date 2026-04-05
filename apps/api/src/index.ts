@@ -24,7 +24,11 @@ app.use(
 
 registerZPages(app, zpages);
 
-const yoga = createYoga({ context: createContext, schema });
+const yoga = createYoga({
+  context: createContext,
+  maskedErrors: false,
+  schema,
+});
 
 app.on(["GET", "POST"], "/graphql", async (c) => {
   const response = await yoga.fetch(c.req.raw, {});

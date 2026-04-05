@@ -7,7 +7,14 @@ builder.mutationField("requestMagicLink", (t) =>
     args: {
       email: t.arg.string({ required: true }),
     },
-    resolve: (_root, args) => requestMagicLink(args.email),
+    resolve: async (_root, args) => {
+      try {
+        return await requestMagicLink(args.email);
+      } catch (error) {
+        console.error("[requestMagicLink]", error);
+        throw error;
+      }
+    },
     type: "Boolean",
   })
 );
