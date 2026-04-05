@@ -1,5 +1,7 @@
 "use client";
 
+import { getApiUrl, loadRuntimeConfig } from "@/lib/runtime-config";
+
 export const registerServiceWorker = () => {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
     return;
@@ -10,12 +12,11 @@ export const registerServiceWorker = () => {
       const registration = await navigator.serviceWorker.register("/sw.js");
 
       // Send the API URL to the service worker so it doesn't hardcode localhost.
+      // Wait for runtime config to be loaded first, then send.
       // ServiceWorkerContainer.postMessage does not accept targetOrigin
       // (unlike Window.postMessage), so we use a helper to avoid a lint false positive.
-      const apiUrl =
-        process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
-        "http://localhost:4000/graphql";
-      const apiMsg = { type: "SET_API_URL", url: apiUrl };
+      await loadRuntimeConfig();
+      const apiMsg = { type: "SET_API_URL", url: getApiUrl() };
       // eslint-disable-next-line unicorn/require-post-message-target-origin -- ServiceWorker.postMessage has no targetOrigin param
       const sendApiUrl = (sw: ServiceWorker) => sw.postMessage(apiMsg);
       if (navigator.serviceWorker.controller) {
