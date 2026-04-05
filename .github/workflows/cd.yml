@@ -118,8 +118,8 @@ jobs:
         run: | #shell
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
           docker run -d --name smoke \
-            -e DATABASE_URL="postgresql://x:x@localhost:5432/x" \
-            -e JWT_SECRET="ci" -p 4000:4000 "$IMAGE"
+            -e BABYTALK_API_DATABASE_URL="postgresql://x:x@localhost:5432/x" \
+            -e BABYTALK_API_JWT_SECRET="ci" -p 4000:4000 "$IMAGE"
           sleep 5
           for i in $(seq 1 20); do
             livez=$(curl -sf http://localhost:4000/livez || true)
