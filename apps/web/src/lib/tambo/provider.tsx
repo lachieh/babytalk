@@ -184,6 +184,12 @@ export const BabyTamboProvider = ({
   const apiKey = getTamboApiKey();
   const tamboUrl = getTamboUrl();
 
+  // Skip TamboProvider if no API key — the dashboard still works for
+  // logging, timeline, etc. Chat features just won't be available.
+  if (!apiKey) {
+    return children;
+  }
+
   return (
     <TamboProvider
       apiKey={apiKey}

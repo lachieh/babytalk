@@ -9,6 +9,7 @@ import { StatusWidget } from "@/components/status-widget";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
 import { VoiceButton } from "@/components/voice-button";
+import { getTamboApiKey } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 /* ── Collapsible Chat Panel ──────────────────────────────── */
@@ -285,6 +286,7 @@ export default function DashboardPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const openChat = useCallback(() => setChatOpen(true), []);
   const closeChat = useCallback(() => setChatOpen(false), []);
+  const tamboEnabled = Boolean(getTamboApiKey());
 
   return (
     <div className="flex h-screen flex-col bg-surface">
@@ -306,8 +308,8 @@ export default function DashboardPage() {
         {/* Suggestion Zone — primary interaction surface */}
         <SuggestionZone />
 
-        {/* Last AI response — only the most recent, not full history */}
-        <LastResponse />
+        {/* Last AI response — only when Tambo is configured */}
+        {tamboEnabled && <LastResponse />}
 
         {/* Divider */}
         <div className="mx-4 border-t border-neutral-100" />
@@ -316,14 +318,14 @@ export default function DashboardPage() {
         <PersistentTimeline />
       </div>
 
-      {/* Bottom bar — voice + chat entry */}
-      <BottomBar onOpenChat={openChat} />
+      {/* Bottom bar — voice + chat only when Tambo is configured */}
+      {tamboEnabled && <BottomBar onOpenChat={openChat} />}
 
       {/* Undo toast — floating */}
       <UndoToast />
 
-      {/* Chat panel — full-screen overlay when open */}
-      <ChatPanel open={chatOpen} onClose={closeChat} />
+      {/* Chat panel — only when Tambo is configured */}
+      {tamboEnabled && <ChatPanel open={chatOpen} onClose={closeChat} />}
     </div>
   );
 }
