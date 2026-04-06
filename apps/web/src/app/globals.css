@@ -265,22 +265,6 @@ body {
   animation: gentle-pulse 1.8s var(--ease-in-out) infinite;
 }
 
-/* --- Radial menu pop-in --- */
-@keyframes radial-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.6) translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-.animate-radial-pop {
-  animation: radial-pop var(--duration-normal) var(--ease-out) both;
-}
-
 /* --- Safe area utilities for notched devices --- */
 .safe-top {
   padding-top: max(calc(var(--spacing) * 10), env(safe-area-inset-top));

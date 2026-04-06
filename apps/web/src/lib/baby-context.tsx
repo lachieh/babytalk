@@ -183,11 +183,16 @@ export const BabyContextProvider = ({
       if (!baby) return null;
 
       const metaKey = `${type}Meta`;
+      // Extract timing overrides from meta (set by timer flows)
+      const { _startedAt, _endedAt, ...cleanMeta } = meta;
       const variables: Record<string, unknown> = {
         babyId: baby.id,
         type,
-        startedAt: new Date().toISOString(),
-        [metaKey]: meta,
+        startedAt:
+          (typeof _startedAt === "string" ? _startedAt : null) ??
+          new Date().toISOString(),
+        ...(typeof _endedAt === "string" ? { endedAt: _endedAt } : {}),
+        [metaKey]: cleanMeta,
       };
 
       try {

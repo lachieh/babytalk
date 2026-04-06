@@ -1,38 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
+import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-interface ActionOption {
+interface Variant {
+  key: string;
   label: string;
   meta: Record<string, unknown>;
 }
 
-interface ActionButton {
-  type: string;
-  icon: string;
-  label: string;
-  sublabel: string;
-  defaultMeta: Record<string, unknown>;
-  options: ActionOption[];
-}
+/* ── Inference ─────────────────────────────────────────────── */
 
-/* ── Inference helpers ─────────────────────────────────────── */
-
-function inferFeedMethod(events: { type: string; metadata: string }[]): {
-  method: string;
-  side?: string;
-  label: string;
-} {
+function inferFeedVariant(events: BabyEvent[]): string {
   const recentFeeds = events.filter((e) => e.type === "feed").slice(0, 5);
-  if (recentFeeds.length === 0)
-    return { method: "breast", side: "left", label: "Breast \u00B7 L" };
+  if (recentFeeds.length === 0) return "breast-l";
 
-  // Count methods in recent feeds
   let breastCount = 0;
   let bottleCount = 0;
   let lastSide = "left";
@@ -48,54 +35,31 @@ function inferFeedMethod(events: { type: string; metadata: string }[]): {
     }
   }
 
-  // If >50% bottle, default to bottle
-  if (bottleCount > breastCount) {
-    return { method: "bottle", label: "Bottle" };
-  }
-
-  // Alternate breast side
-  const nextSide = lastSide === "left" ? "right" : "left";
-  const sideAbbrev = nextSide === "left" ? "L" : "R";
-  return {
-    method: "breast",
-    side: nextSide,
-    label: `Breast \u00B7 ${sideAbbrev}`,
-  };
+  if (bottleCount > breastCount) return "bottle";
+  return lastSide === "left" ? "breast-r" : "breast-l";
 }
 
-function inferSleepLocation(
-  events: { type: string; metadata: string }[]
-): string {
-  const lastSleep = events.find((e) => e.type === "sleep");
-  if (!lastSleep) return "crib";
-  try {
-    const meta = JSON.parse(lastSleep.metadata);
-    return meta.location || "crib";
-  } catch {
-    return "crib";
-  }
-}
-
-function inferDiaperType(events: { type: string; metadata: string }[]): {
-  wet: boolean;
-  soiled: boolean;
-  label: string;
-} {
-  const recentDiapers = events.filter((e) => e.type === "diaper").slice(0, 5);
+function inferDiaperVariant(events: BabyEvent[]): string {
+  const recent = events.filter((e) => e.type === "diaper").slice(0, 5);
   let soiledCount = 0;
-  for (const d of recentDiapers) {
+  for (const d of recent) {
     try {
-      const meta = JSON.parse(d.metadata);
-      if (meta.soiled) soiledCount += 1;
+      if (JSON.parse(d.metadata).soiled) soiledCount += 1;
     } catch {
       /* ignore */
     }
   }
-  // If >50% soiled recently, default to wet+soiled
-  if (soiledCount > recentDiapers.length / 2) {
-    return { wet: true, soiled: true, label: "Wet + Soiled" };
+  return soiledCount > recent.length / 2 ? "wet-soiled" : "wet";
+}
+
+function inferSleepLocation(events: BabyEvent[]): string {
+  const last = events.find((e) => e.type === "sleep");
+  if (!last) return "crib";
+  try {
+    return JSON.parse(last.metadata).location || "crib";
+  } catch {
+    return "crib";
   }
-  return { wet: true, soiled: false, label: "Wet" };
 }
 
 const minutesSince = (iso: string): number =>
@@ -109,197 +73,391 @@ function formatAgo(minutes: number): string {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
+function formatTimer(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  return `${min}:${String(sec).padStart(2, "0")}`;
+}
+
+const SHORT_TO_LONG: Record<string, string> = {
+  L: "Breast \u00B7 Left",
+  R: "Breast \u00B7 Right",
+};
+
+function expandLabel(label: string): string {
+  return SHORT_TO_LONG[label] ?? label;
+}
+
+/* ── Variant definitions ───────────────────────────────────── */
+
+const FEED_VARIANTS: Variant[] = [
+  { key: "breast-l", label: "L", meta: { method: "breast", side: "left" } },
+  { key: "breast-r", label: "R", meta: { method: "breast", side: "right" } },
+  { key: "bottle", label: "Bottle", meta: { method: "bottle" } },
+  { key: "solid", label: "Solid", meta: { method: "solid" } },
+];
+
+const DIAPER_VARIANTS: Variant[] = [
+  { key: "wet", label: "Wet", meta: { wet: true, soiled: false } },
+  { key: "soiled", label: "Soiled", meta: { wet: false, soiled: true } },
+  { key: "wet-soiled", label: "Both", meta: { wet: true, soiled: true } },
+];
+
+const SLEEP_VARIANTS: Variant[] = [
+  { key: "crib", label: "Crib", meta: { location: "crib" } },
+  { key: "bassinet", label: "Bass.", meta: { location: "bassinet" } },
+  { key: "held", label: "Held", meta: { location: "held" } },
+  { key: "carrier", label: "Carrier", meta: { location: "carrier" } },
+];
+
 /* ── Styles ────────────────────────────────────────────────── */
 
-const typeStyles: Record<
+const sectionStyles: Record<
   string,
-  { bg: string; iconBg: string; border: string }
+  { bg: string; border: string; chipActive: string }
 > = {
-  feed: { bg: "bg-feed-50", iconBg: "bg-feed-100", border: "border-feed-200" },
+  feed: {
+    bg: "bg-feed-50",
+    border: "border-feed-200",
+    chipActive: "bg-feed-200 text-feed-600 border-feed-200",
+  },
   diaper: {
     bg: "bg-diaper-50",
-    iconBg: "bg-diaper-100",
     border: "border-diaper-200",
+    chipActive: "bg-diaper-200 text-diaper-600 border-diaper-200",
   },
   sleep: {
     bg: "bg-sleep-50",
-    iconBg: "bg-sleep-100",
     border: "border-sleep-200",
+    chipActive: "bg-sleep-200 text-sleep-600 border-sleep-200",
   },
 };
 
-/* ── Radial Menu ───────────────────────────────────────────── */
+const chipInactive = "bg-transparent text-neutral-400 border-neutral-200";
 
-const RadialOption = ({
-  option,
-  left,
-  top,
-  delay,
+/* ── Chip Row ──────────────────────────────────────────────── */
+
+const ChipButton = ({
+  variantKey,
+  label,
+  isSelected,
+  activeStyle,
   onSelect,
 }: {
-  option: ActionOption;
-  left: number;
-  top: number;
-  delay: number;
-  onSelect: (option: ActionOption) => void;
+  variantKey: string;
+  label: string;
+  isSelected: boolean;
+  activeStyle: string;
+  onSelect: (key: string) => void;
 }) => {
-  const handleClick = useCallback(() => onSelect(option), [onSelect, option]);
+  const handleClick = useCallback(
+    () => onSelect(variantKey),
+    [onSelect, variantKey]
+  );
 
   return (
     <button
-      className="animate-radial-pop absolute min-h-[40px] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-neutral-200 bg-surface-raised px-3 py-2 text-xs font-medium text-neutral-700 shadow-lg transition-[background-color,transform] active:scale-95"
+      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${isSelected ? activeStyle : chipInactive}`}
       onClick={handleClick}
-      style={{
-        left: `${left}px`,
-        top: `${top}px`,
-        animationDelay: `${delay}ms`,
-      }}
       type="button"
     >
-      {option.label}
+      {label}
     </button>
   );
 };
 
-const RadialMenu = ({
-  options,
+const ChipRow = ({
+  variants,
+  selected,
+  activeStyle,
   onSelect,
-  onClose,
 }: {
-  options: ActionOption[];
-  onSelect: (option: ActionOption) => void;
-  onClose: () => void;
+  variants: Variant[];
+  selected: string;
+  activeStyle: string;
+  onSelect: (key: string) => void;
+}) => (
+  <div className="flex gap-1">
+    {variants.map((v) => (
+      <ChipButton
+        activeStyle={activeStyle}
+        isSelected={v.key === selected}
+        key={v.key}
+        label={v.label}
+        onSelect={onSelect}
+        variantKey={v.key}
+      />
+    ))}
+  </div>
+);
+
+/* ── Amount Input (for bottle feeds) ───────────────────────── */
+
+const AmountInput = ({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: (amountMl: number) => void;
+  onCancel: () => void;
 }) => {
-  const menuRef = useRef<HTMLDivElement>(null);
+  const [amount, setAmount] = useState("");
+  const [unit, setUnit] = useState<"ml" | "oz">("oz");
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: PointerEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener("pointerdown", handleClickOutside);
-    return () =>
-      document.removeEventListener("pointerdown", handleClickOutside);
-  }, [onClose]);
+  const handleConfirm = useCallback(() => {
+    const val = Number(amount);
+    if (val <= 0) return;
+    const ml = unit === "oz" ? Math.round(val * 29.5735) : val;
+    onConfirm(ml);
+  }, [amount, unit, onConfirm]);
 
-  // Fan options in a semicircle above the button center.
-  // Positions use top/left (not transform) to avoid conflicts with animations.
-  const count = options.length;
-  const arcSpan = Math.min(count * 45, 180);
-  const startAngle = 270 - arcSpan / 2;
-  const radius = 72;
-  const centerX = 0;
-  const centerY = 0;
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value),
+    []
+  );
+
+  const handleSelectMl = useCallback(() => setUnit("ml"), []);
+  const handleSelectOz = useCallback(() => setUnit("oz"), []);
 
   return (
-    <div className="absolute bottom-full left-1/2 z-50 mb-3" ref={menuRef}>
-      <div className="relative">
-        {options.map((option, i) => {
-          const angle =
-            startAngle + (count > 1 ? (i * arcSpan) / (count - 1) : 0);
-          const rad = (angle * Math.PI) / 180;
-          const left = centerX + Math.cos(rad) * radius;
-          const top = centerY + Math.sin(rad) * radius;
-
-          return (
-            <RadialOption
-              delay={i * 40}
-              key={option.label}
-              left={left}
-              onSelect={onSelect}
-              option={option}
-              top={top}
-            />
-          );
-        })}
+    <div className="animate-fade-up mt-2 flex items-center gap-2">
+      <input
+        ref={inputRef}
+        autoFocus
+        className="min-h-[40px] w-20 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-center text-sm tabular-nums text-neutral-800 focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+        inputMode="decimal"
+        onChange={handleChange}
+        placeholder={unit}
+        type="number"
+        value={amount}
+      />
+      <div className="flex rounded-md border border-neutral-200 text-xs">
+        <button
+          className={`px-2 py-1 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white rounded-l-md" : "text-neutral-400"}`}
+          onClick={handleSelectOz}
+          type="button"
+        >
+          oz
+        </button>
+        <button
+          className={`px-2 py-1 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white rounded-r-md" : "text-neutral-400"}`}
+          onClick={handleSelectMl}
+          type="button"
+        >
+          ml
+        </button>
       </div>
+      <button
+        className="min-h-[40px] rounded-lg bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95 disabled:opacity-40"
+        disabled={!amount || Number(amount) <= 0}
+        onClick={handleConfirm}
+        type="button"
+      >
+        Log
+      </button>
+      <button
+        className="min-h-[40px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        onClick={onCancel}
+        type="button"
+      >
+        Cancel
+      </button>
     </div>
   );
 };
 
-/* ── Action Button ─────────────────────────────────────────── */
+/* ── Inline Timer ──────────────────────────────────────────── */
 
-const HOLD_THRESHOLD = 400;
-
-const ActionButton = ({
-  button,
-  onTap,
-  onOptionSelect,
+const InlineTimer = ({
+  type,
+  meta,
+  onStop,
+  onCancel,
 }: {
-  button: ActionButton;
-  onTap: (type: string, meta: Record<string, unknown>) => void;
-  onOptionSelect: (type: string, meta: Record<string, unknown>) => void;
+  type: string;
+  meta: Record<string, unknown>;
+  onStop: (
+    type: string,
+    meta: Record<string, unknown>,
+    durationMs: number
+  ) => void;
+  onCancel: () => void;
 }) => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const didHoldRef = useRef(false);
-  const styles = typeStyles[button.type];
+  const startRef = useRef(Date.now());
+  const [elapsed, setElapsed] = useState(0);
 
-  const handlePointerDown = useCallback(() => {
-    didHoldRef.current = false;
-    holdTimerRef.current = setTimeout(() => {
-      didHoldRef.current = true;
-      triggerFeedback("timer");
-      setMenuOpen(true);
-    }, HOLD_THRESHOLD);
-  }, []);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  if (!tickRef.current) {
+    tickRef.current = setInterval(() => {
+      setElapsed(Date.now() - startRef.current);
+    }, 1000);
+  }
 
-  const handlePointerUp = useCallback(() => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-    if (!didHoldRef.current) {
-      onTap(button.type, button.defaultMeta);
-    }
-  }, [onTap, button.type, button.defaultMeta]);
+  const handleStop = useCallback(() => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = null;
+    onStop(type, meta, Date.now() - startRef.current);
+  }, [onStop, type, meta]);
 
-  const handlePointerLeave = useCallback(() => {
-    if (holdTimerRef.current) {
-      clearTimeout(holdTimerRef.current);
-      holdTimerRef.current = null;
-    }
-  }, []);
-
-  const handleOptionSelect = useCallback(
-    (option: ActionOption) => {
-      setMenuOpen(false);
-      onOptionSelect(button.type, option.meta);
-    },
-    [onOptionSelect, button.type]
-  );
-
-  const handleMenuClose = useCallback(() => setMenuOpen(false), []);
+  const handleCancel = useCallback(() => {
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = null;
+    onCancel();
+  }, [onCancel]);
 
   return (
-    <div className="relative flex-1">
-      {menuOpen && (
-        <RadialMenu
-          onClose={handleMenuClose}
-          onSelect={handleOptionSelect}
-          options={button.options}
-        />
-      )}
+    <div className="animate-fade-up mt-2 flex items-center gap-3">
+      <span className="font-mono text-lg font-bold tabular-nums text-neutral-800">
+        {formatTimer(elapsed)}
+      </span>
       <button
-        className={`flex w-full flex-col items-center gap-1.5 rounded-2xl border p-4 text-center transition-[background-color,transform] duration-[var(--duration-fast)] select-none touch-none active:scale-[0.96] ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
-        onPointerDown={handlePointerDown}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
+        className="min-h-[40px] rounded-lg bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95"
+        onClick={handleStop}
         type="button"
       >
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-xl text-2xl ${styles?.iconBg ?? "bg-neutral-100"}`}
-        >
-          {button.icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-neutral-800">
-            {button.label}
-          </p>
-          <p className="text-xs text-neutral-400">{button.sublabel}</p>
-        </div>
+        Done
       </button>
+      <button
+        className="min-h-[40px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        onClick={handleCancel}
+        type="button"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+};
+
+/* ── Action Section ────────────────────────────────────────── */
+
+type ActiveFlow =
+  | { kind: "idle" }
+  | { kind: "timer"; type: string; meta: Record<string, unknown> }
+  | { kind: "amount"; type: string; baseMeta: Record<string, unknown> };
+
+const ActionSection = ({
+  type,
+  icon,
+  sublabel,
+  variants,
+  defaultVariant,
+  onLog,
+  onLogWithDuration,
+}: {
+  type: string;
+  icon: string;
+  sublabel: string;
+  variants: Variant[];
+  defaultVariant: string;
+  onLog: (type: string, meta: Record<string, unknown>) => void;
+  onLogWithDuration: (
+    type: string,
+    meta: Record<string, unknown>,
+    durationMs: number
+  ) => void;
+}) => {
+  const [selected, setSelected] = useState(defaultVariant);
+  const [flow, setFlow] = useState<ActiveFlow>({ kind: "idle" });
+  const styles = sectionStyles[type];
+
+  const selectedVariant =
+    variants.find((v) => v.key === selected) ?? variants[0];
+
+  const handleMainTap = useCallback(() => {
+    triggerFeedback("logged");
+    const { meta } = selectedVariant;
+
+    if (type === "feed") {
+      const method = meta.method as string;
+      if (method === "breast") {
+        // Breast: start timer
+        setFlow({ kind: "timer", type: "feed", meta });
+      } else if (method === "bottle") {
+        // Bottle: ask for amount
+        setFlow({ kind: "amount", type: "feed", baseMeta: meta });
+      } else {
+        // Solid: log instantly
+        onLog(type, meta);
+      }
+      return;
+    }
+
+    if (type === "sleep") {
+      // Sleep: start timer
+      setFlow({ kind: "timer", type: "sleep", meta });
+      return;
+    }
+
+    // Diaper: log instantly
+    onLog(type, meta);
+  }, [type, selectedVariant, onLog]);
+
+  const handleTimerStop = useCallback(
+    (_type: string, meta: Record<string, unknown>, durationMs: number) => {
+      setFlow({ kind: "idle" });
+      onLogWithDuration(_type, meta, durationMs);
+    },
+    [onLogWithDuration]
+  );
+
+  const handleAmountConfirm = useCallback(
+    (amountMl: number) => {
+      if (flow.kind !== "amount") return;
+      setFlow({ kind: "idle" });
+      onLog(flow.type, { ...flow.baseMeta, amountMl });
+    },
+    [flow, onLog]
+  );
+
+  const handleFlowCancel = useCallback(() => setFlow({ kind: "idle" }), []);
+
+  const isActive = flow.kind !== "idle";
+
+  return (
+    <div
+      className={`flex-1 rounded-2xl border p-3 ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
+    >
+      {/* Header: icon + chip row */}
+      <div className="flex items-center gap-2">
+        <span className="text-xl">{icon}</span>
+        <ChipRow
+          activeStyle={styles?.chipActive ?? ""}
+          onSelect={setSelected}
+          selected={selected}
+          variants={variants}
+        />
+      </div>
+
+      {/* Main tap area */}
+      {!isActive && (
+        <button
+          className="mt-2 flex w-full items-center justify-between rounded-xl bg-white/60 px-3 py-2.5 text-left transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97]"
+          onClick={handleMainTap}
+          type="button"
+        >
+          <span className="text-sm font-semibold text-neutral-800">
+            {expandLabel(selectedVariant.label)}
+          </span>
+          <span className="text-xs text-neutral-400">{sublabel}</span>
+        </button>
+      )}
+
+      {/* Active flows */}
+      {flow.kind === "timer" && (
+        <InlineTimer
+          meta={flow.meta}
+          onCancel={handleFlowCancel}
+          onStop={handleTimerStop}
+          type={flow.type}
+        />
+      )}
+      {flow.kind === "amount" && (
+        <AmountInput
+          onCancel={handleFlowCancel}
+          onConfirm={handleAmountConfirm}
+        />
+      )}
     </div>
   );
 };
@@ -309,83 +467,23 @@ const ActionButton = ({
 export const SuggestionZone = () => {
   const { events, logEventDirect, loading } = useBabyContext();
 
-  const buttons = useMemo((): ActionButton[] => {
-    const hour = new Date().getHours();
+  const lastFeed = events.find((e) => e.type === "feed");
+  const lastDiaper = events.find((e) => e.type === "diaper");
+  const lastSleep = events.find((e) => e.type === "sleep");
 
-    const lastFeed = events.find((e) => e.type === "feed");
-    const lastDiaper = events.find((e) => e.type === "diaper");
-    const lastSleep = events.find((e) => e.type === "sleep");
+  const feedAgo = lastFeed ? formatAgo(minutesSince(lastFeed.startedAt)) : "";
+  const diaperAgo = lastDiaper
+    ? formatAgo(minutesSince(lastDiaper.startedAt))
+    : "";
+  const sleepAgo = lastSleep
+    ? formatAgo(minutesSince(lastSleep.startedAt))
+    : "";
 
-    const feedMinutes = lastFeed ? minutesSince(lastFeed.startedAt) : Infinity;
-    const diaperMinutes = lastDiaper
-      ? minutesSince(lastDiaper.startedAt)
-      : Infinity;
-    const sleepMinutes = lastSleep
-      ? minutesSince(lastSleep.startedAt)
-      : Infinity;
+  const feedDefault = useMemo(() => inferFeedVariant(events), [events]);
+  const diaperDefault = useMemo(() => inferDiaperVariant(events), [events]);
+  const sleepDefault = useMemo(() => inferSleepLocation(events), [events]);
 
-    const feed = inferFeedMethod(events);
-    const location = inferSleepLocation(events);
-    const diaper = inferDiaperType(events);
-
-    const feedAgo = feedMinutes < Infinity ? formatAgo(feedMinutes) : "";
-    const diaperAgo = diaperMinutes < Infinity ? formatAgo(diaperMinutes) : "";
-    const sleepAgo = sleepMinutes < Infinity ? formatAgo(sleepMinutes) : "";
-
-    // Fixed order: Feed, Diaper, Sleep — always
-    return [
-      {
-        type: "feed",
-        icon: "\u{1F37C}",
-        label: feed.label,
-        sublabel: feedAgo ? `${feedAgo} ago` : "No feeds yet",
-        defaultMeta: {
-          method: feed.method,
-          ...(feed.side ? { side: feed.side } : {}),
-        },
-        options: [
-          {
-            label: "Breast \u00B7 L",
-            meta: { method: "breast", side: "left" },
-          },
-          {
-            label: "Breast \u00B7 R",
-            meta: { method: "breast", side: "right" },
-          },
-          { label: "Bottle", meta: { method: "bottle" } },
-          { label: "Solid", meta: { method: "solid" } },
-        ],
-      },
-      {
-        type: "diaper",
-        icon: "\u{1F6BC}",
-        label: diaper.label,
-        sublabel: diaperAgo ? `${diaperAgo} ago` : "None logged",
-        defaultMeta: { wet: diaper.wet, soiled: diaper.soiled },
-        options: [
-          { label: "Wet", meta: { wet: true, soiled: false } },
-          { label: "Soiled", meta: { wet: false, soiled: true } },
-          { label: "Wet + Soiled", meta: { wet: true, soiled: true } },
-          { label: "Dry", meta: { wet: false, soiled: false } },
-        ],
-      },
-      {
-        type: "sleep",
-        icon: "\u{1F634}",
-        label: hour >= 19 || hour < 7 ? "Bedtime" : "Nap",
-        sublabel: sleepAgo ? `${location} \u00B7 ${sleepAgo} ago` : location,
-        defaultMeta: { location },
-        options: [
-          { label: "Crib", meta: { location: "crib" } },
-          { label: "Bassinet", meta: { location: "bassinet" } },
-          { label: "Held", meta: { location: "held" } },
-          { label: "Carrier", meta: { location: "carrier" } },
-        ],
-      },
-    ];
-  }, [events]);
-
-  const handleTap = useCallback(
+  const handleLog = useCallback(
     (type: string, meta: Record<string, unknown>) => {
       triggerFeedback("logged");
       logEventDirect(type, meta);
@@ -393,10 +491,17 @@ export const SuggestionZone = () => {
     [logEventDirect]
   );
 
-  const handleOptionSelect = useCallback(
-    (type: string, meta: Record<string, unknown>) => {
+  const handleLogWithDuration = useCallback(
+    (type: string, meta: Record<string, unknown>, durationMs: number) => {
       triggerFeedback("logged");
-      logEventDirect(type, meta);
+      const startedAt = new Date(Date.now() - durationMs).toISOString();
+      const endedAt = new Date().toISOString();
+      // Override startedAt/endedAt via the meta — baby-context will merge
+      logEventDirect(type, {
+        ...meta,
+        _startedAt: startedAt,
+        _endedAt: endedAt,
+      });
     },
     [logEventDirect]
   );
@@ -405,14 +510,33 @@ export const SuggestionZone = () => {
 
   return (
     <div className="flex gap-2 px-4 py-3">
-      {buttons.map((button) => (
-        <ActionButton
-          button={button}
-          key={button.type}
-          onOptionSelect={handleOptionSelect}
-          onTap={handleTap}
-        />
-      ))}
+      <ActionSection
+        defaultVariant={feedDefault}
+        icon="\u{1F37C}"
+        onLog={handleLog}
+        onLogWithDuration={handleLogWithDuration}
+        sublabel={feedAgo ? `${feedAgo} ago` : ""}
+        type="feed"
+        variants={FEED_VARIANTS}
+      />
+      <ActionSection
+        defaultVariant={diaperDefault}
+        icon="\u{1F6BC}"
+        onLog={handleLog}
+        onLogWithDuration={handleLogWithDuration}
+        sublabel={diaperAgo ? `${diaperAgo} ago` : ""}
+        type="diaper"
+        variants={DIAPER_VARIANTS}
+      />
+      <ActionSection
+        defaultVariant={sleepDefault}
+        icon="\u{1F634}"
+        onLog={handleLog}
+        onLogWithDuration={handleLogWithDuration}
+        sublabel={sleepAgo ? `${sleepAgo} ago` : ""}
+        type="sleep"
+        variants={SLEEP_VARIANTS}
+      />
     </div>
   );
 };
