@@ -18,6 +18,12 @@ const VERIFY_MAGIC_LINK = `
   }
 `;
 
+const JOIN_HOUSEHOLD = `
+  mutation JoinHousehold($inviteCode: String!) {
+    joinHousehold(inviteCode: $inviteCode) { id }
+  }
+`;
+
 const VerifyContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -25,6 +31,7 @@ const VerifyContent = () => {
 
   useEffect(() => {
     const token = searchParams.get("token");
+    const joinCode = searchParams.get("join");
     if (!token) {
       setError("Missing token");
       return;
@@ -45,6 +52,16 @@ const VerifyContent = () => {
         }
 
         localStorage.setItem("babytalk_token", result.verifyMagicLink.token);
+
+        // If this is a partner invite link, auto-join the household
+        if (joinCode) {
+          try {
+            await gqlRequest(JOIN_HOUSEHOLD, { inviteCode: joinCode });
+          } catch {
+            // Already in a household or invalid code — still proceed to dashboard
+          }
+        }
+
         router.push("/dashboard");
       } catch {
         setError("Something went wrong");

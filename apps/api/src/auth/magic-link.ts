@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { db, magicLinks, users } from "@babytalk/db";
 import { eq } from "drizzle-orm";
 
-import { sendMagicLinkEmail } from "../email/send";
+import { sendMagicLinkEmail, sendPartnerInviteEmail } from "../email/send";
 import { signToken } from "./jwt";
 
 export const requestMagicLink = async (email: string): Promise<boolean> => {
@@ -17,6 +17,23 @@ export const requestMagicLink = async (email: string): Promise<boolean> => {
   });
 
   await sendMagicLinkEmail(email.toLowerCase(), token);
+  return true;
+};
+
+export const invitePartner = async (
+  email: string,
+  inviteCode: string
+): Promise<boolean> => {
+  const token = randomUUID();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+  await db.insert(magicLinks).values({
+    email: email.toLowerCase(),
+    expiresAt,
+    token,
+  });
+
+  await sendPartnerInviteEmail(email.toLowerCase(), token, inviteCode);
   return true;
 };
 

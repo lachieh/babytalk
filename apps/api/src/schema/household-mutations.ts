@@ -1,6 +1,7 @@
 import { babies, events, households, users } from "@babytalk/db";
 import { and, eq } from "drizzle-orm";
 
+import { invitePartner } from "../auth/magic-link";
 import type { Context } from "../context";
 import { generateInviteCode } from "../utils/invite-code";
 import { builder } from "./builder";
@@ -106,6 +107,28 @@ builder.mutationField("joinHousehold", (t) =>
       return household;
     },
     type: HouseholdType,
+  })
+);
+
+builder.mutationField("invitePartner", (t) =>
+  t.field({
+    args: {
+      email: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const { householdId } = await requireHousehold(ctx);
+
+      const [household] = await ctx.db
+        .select({ inviteCode: households.inviteCode })
+        .from(households)
+        .where(eq(households.id, householdId))
+        .limit(1);
+      if (!household) throw new Error("Household not found");
+
+      await invitePartner(args.email, household.inviteCode);
+      return true;
+    },
+    type: "Boolean",
   })
 );
 

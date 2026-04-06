@@ -18,6 +18,12 @@ const ADD_BABY = `
   }
 `;
 
+const INVITE_PARTNER = `
+  mutation InvitePartner($email: String!) {
+    invitePartner(email: $email)
+  }
+`;
+
 export default function SetupPage() {
   const router = useRouter();
   const [step, setStep] = useState<"welcome" | "baby">("welcome");
@@ -28,6 +34,7 @@ export default function SetupPage() {
   const [birthWeightOz, setBirthWeightOz] = useState("");
   const [birthWeightG, setBirthWeightG] = useState("");
   const [weightUnit, setWeightUnit] = useState<"lb" | "g">("lb");
+  const [partnerEmail, setPartnerEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -68,6 +75,16 @@ export default function SetupPage() {
           birthWeightG: weightGrams,
           name: babyName,
         });
+
+        // Send partner invite if email provided
+        if (partnerEmail.trim()) {
+          try {
+            await gqlRequest(INVITE_PARTNER, { email: partnerEmail.trim() });
+          } catch {
+            // Non-blocking — baby is already created, don't fail the whole flow
+          }
+        }
+
         router.push("/dashboard");
       } catch (error) {
         setErrorMsg(
@@ -84,6 +101,7 @@ export default function SetupPage() {
       birthWeightOz,
       birthWeightG,
       weightUnit,
+      partnerEmail,
       router,
     ]
   );
@@ -117,6 +135,11 @@ export default function SetupPage() {
 
   const handleSelectLb = useCallback(() => setWeightUnit("lb"), []);
   const handleSelectG = useCallback(() => setWeightUnit("g"), []);
+
+  const handlePartnerEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setPartnerEmail(e.target.value),
+    []
+  );
 
   if (step === "welcome") {
     return (
@@ -273,12 +296,32 @@ export default function SetupPage() {
               />
             )}
           </div>
+          <div className="mt-4 border-t border-neutral-100 pt-4">
+            <label
+              htmlFor="partner-email"
+              className="block text-sm font-medium text-neutral-600"
+            >
+              Invite your partner
+              <span className="ml-1 text-neutral-300">optional</span>
+            </label>
+            <p className="mt-1 text-xs text-neutral-400">
+              We&apos;ll send them a link to join your family
+            </p>
+            <input
+              id="partner-email"
+              className="mt-2 w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+              onChange={handlePartnerEmailChange}
+              placeholder="partner@email.com"
+              type="email"
+              value={partnerEmail}
+            />
+          </div>
           <button
-            className="mt-2 min-h-[56px] rounded-lg bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            className="mt-4 min-h-[56px] rounded-lg bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
             disabled={loading || !babyName || !birthDate}
             type="submit"
           >
-            {loading ? "Adding..." : "Start tracking"}
+            {loading ? "Setting up..." : "Start tracking"}
           </button>
           {errorMsg && <p className="text-sm text-danger-500">{errorMsg}</p>}
         </form>

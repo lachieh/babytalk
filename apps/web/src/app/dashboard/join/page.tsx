@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
 
@@ -11,11 +11,18 @@ const JOIN_HOUSEHOLD = `
   }
 `;
 
-export default function JoinPage() {
+const JoinContent = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [code, setCode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Auto-fill from URL param (?code=ABC123)
+  useEffect(() => {
+    const urlCode = searchParams.get("code");
+    if (urlCode) setCode(urlCode);
+  }, [searchParams]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -73,5 +80,19 @@ export default function JoinPage() {
         </form>
       </div>
     </main>
+  );
+};
+
+export default function JoinPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-surface">
+          <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+        </main>
+      }
+    >
+      <JoinContent />
+    </Suspense>
   );
 }
