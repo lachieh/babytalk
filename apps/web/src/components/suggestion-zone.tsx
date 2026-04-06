@@ -512,7 +512,7 @@ export const SuggestionZone = () => {
     <div className="flex gap-2 px-4 py-3">
       <ActionSection
         defaultVariant={feedDefault}
-        icon="\u{1F37C}"
+        icon="🍼"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
         sublabel={feedAgo ? `${feedAgo} ago` : ""}
@@ -521,7 +521,7 @@ export const SuggestionZone = () => {
       />
       <ActionSection
         defaultVariant={diaperDefault}
-        icon="\u{1F6BC}"
+        icon="🚼"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
         sublabel={diaperAgo ? `${diaperAgo} ago` : ""}
@@ -530,7 +530,7 @@ export const SuggestionZone = () => {
       />
       <ActionSection
         defaultVariant={sleepDefault}
-        icon="\u{1F634}"
+        icon="😴"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
         sublabel={sleepAgo ? `${sleepAgo} ago` : ""}
