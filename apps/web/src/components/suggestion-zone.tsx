@@ -444,7 +444,7 @@ const ActionSection = ({
       {/* Main tap area — logs with current variant */}
       {!isActive && (
         <button
-          className="flex w-full flex-col items-center gap-1 rounded-xl bg-white/50 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
+          className="flex w-full flex-col items-center gap-1 rounded-xl bg-surface-raised/80 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
           onClick={handleMainTap}
           type="button"
         >
@@ -456,7 +456,7 @@ const ActionSection = ({
       {!isActive && (
         <div className="relative mt-2">
           <button
-            className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-white/40"
+            className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-surface-raised"
             onClick={handleVariantTap}
             type="button"
           >
