@@ -2,11 +2,11 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
-    "database_url": {
+    "databaseUrl": {
       "type": "string",
       "description": "PostgreSQL connection string"
     },
-    "jwt_secret": {
+    "jwtSecret": {
       "default": "dev-secret-change-me",
       "description": "Secret key for signing JWTs",
       "type": "string"
@@ -16,39 +16,38 @@
       "description": "HTTP server port",
       "type": "number"
     },
-    "smtp": {
-      "default": {
-        "from": "noreply@babytalk.dev",
-        "host": "localhost",
-        "port": 1025
-      },
-      "description": "SMTP mail configuration",
-      "type": "object",
-      "properties": {
-        "from": {
-          "default": "noreply@babytalk.dev",
-          "description": "Sender email address",
-          "type": "string"
-        },
-        "host": {
-          "default": "localhost",
-          "description": "SMTP server hostname",
-          "type": "string"
-        },
-        "port": {
-          "default": 1025,
-          "description": "SMTP server port",
-          "type": "number"
-        }
-      }
+    "smtpFrom": {
+      "default": "noreply@babytalk.dev",
+      "description": "Sender email address",
+      "type": "string"
     },
-    "web_url": {
+    "smtpHost": {
+      "default": "localhost",
+      "description": "SMTP server hostname",
+      "type": "string"
+    },
+    "smtpPass": {
+      "default": "",
+      "description": "SMTP password (Resend API key for smtp.resend.com)",
+      "type": "string"
+    },
+    "smtpPort": {
+      "default": 1025,
+      "description": "SMTP server port",
+      "type": "number"
+    },
+    "smtpUser": {
+      "default": "",
+      "description": "SMTP username ('resend' for smtp.resend.com)",
+      "type": "string"
+    },
+    "webUrl": {
       "default": "http://localhost:3000",
       "description": "Frontend URL for CORS and email links",
       "type": "string"
     }
   },
   "required": [
-    "database_url"
+    "databaseUrl"
   ]
 }

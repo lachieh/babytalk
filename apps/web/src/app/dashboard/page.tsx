@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { PersistentTimeline } from "@/components/persistent-timeline";
+import { ProfileSheet } from "@/components/profile-sheet";
 import { StatusWidget } from "@/components/status-widget";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
@@ -284,16 +285,39 @@ const BottomBar = ({ onOpenChat }: { onOpenChat: () => void }) => (
 export default function DashboardPage() {
   useAutoDarkMode();
   const [chatOpen, setChatOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const openChat = useCallback(() => setChatOpen(true), []);
   const closeChat = useCallback(() => setChatOpen(false), []);
   const tamboEnabled = Boolean(getTamboApiKey());
+  const openProfile = useCallback(() => setProfileOpen(true), []);
+  const closeProfile = useCallback(() => setProfileOpen(false), []);
 
   return (
     <div className="flex h-screen flex-col bg-surface">
       {/* Header */}
       <header className="border-b border-neutral-100 bg-surface-raised">
-        <div className="px-4 py-3">
+        <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-base font-semibold text-neutral-600">BabyTalk</h1>
+          <button
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-600 transition-colors hover:bg-primary-200 active:scale-[0.96]"
+            onClick={openProfile}
+            type="button"
+            aria-label="Open profile"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.75}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+              />
+            </svg>
+          </button>
         </div>
         <StatusWidget />
       </header>
@@ -326,6 +350,9 @@ export default function DashboardPage() {
 
       {/* Chat panel — only when Tambo is configured */}
       {tamboEnabled && <ChatPanel open={chatOpen} onClose={closeChat} />}
+
+      {/* Profile sheet — bottom slide-up */}
+      <ProfileSheet open={profileOpen} onClose={closeProfile} />
     </div>
   );
 }
