@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
@@ -126,17 +126,15 @@ const sectionStyles: Record<
   },
 };
 
-/* ── Inline Option Picker ──────────────────────────────────── */
+/* ── Dropdown Popover ─────────────────────────────────────── */
 
-const OptionButton = ({
+const PopoverOption = ({
   variant,
   isSelected,
-  activeStyle,
   onSelect,
 }: {
   variant: Variant;
   isSelected: boolean;
-  activeStyle: string;
   onSelect: (key: string) => void;
 }) => {
   const handleClick = useCallback(
@@ -146,14 +144,71 @@ const OptionButton = ({
 
   return (
     <button
-      className={`min-h-[44px] flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-colors ${
-        isSelected ? activeStyle : "bg-white/40 text-neutral-500"
-      }`}
+      className="flex min-h-[44px] w-full items-center justify-between px-4 py-2 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
       onClick={handleClick}
       type="button"
     >
-      {variant.label}
+      <span>{variant.label}</span>
+      {isSelected && (
+        <svg
+          className="h-4 w-4 text-primary-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M5 13l4 4L19 7"
+          />
+        </svg>
+      )}
     </button>
+  );
+};
+
+const VariantPopover = ({
+  variants,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  variants: Variant[];
+  selected: string;
+  onSelect: (key: string) => void;
+  onClose: () => void;
+}) => {
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: PointerEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+    document.addEventListener("pointerdown", handleClickOutside);
+    return () =>
+      document.removeEventListener("pointerdown", handleClickOutside);
+  }, [onClose]);
+
+  return (
+    <div
+      className="animate-fade-up absolute bottom-full left-1/2 z-50 mb-2 min-w-[160px] -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg"
+      ref={popoverRef}
+    >
+      {variants.map((v) => (
+        <PopoverOption
+          isSelected={v.key === selected}
+          key={v.key}
+          onSelect={onSelect}
+          variant={v}
+        />
+      ))}
+    </div>
   );
 };
 
@@ -397,42 +452,37 @@ const ActionSection = ({
         </button>
       )}
 
-      {/* Variant label — tappable to expand options */}
+      {/* Variant label — tappable to open dropdown */}
       {!isActive && (
-        <button
-          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-white/40"
-          onClick={handleVariantTap}
-          type="button"
-        >
-          <span>{selectedVariant.label}</span>
-          <svg
-            className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+        <div className="relative mt-2">
+          <button
+            className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-white/40"
+            onClick={handleVariantTap}
+            type="button"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 9l-7 7-7-7"
-            />
-          </svg>
-        </button>
-      )}
-
-      {/* Expanded options */}
-      {expanded && !isActive && (
-        <div className="animate-fade-up mt-1 flex flex-wrap gap-1">
-          {variants.map((v) => (
-            <OptionButton
-              activeStyle={styles?.optionActive ?? ""}
-              isSelected={v.key === selected}
-              key={v.key}
+            <span>{selectedVariant.label}</span>
+            <svg
+              className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
+          </button>
+          {expanded && (
+            <VariantPopover
+              onClose={handleVariantTap}
               onSelect={handleOptionSelect}
-              variant={v}
+              selected={selected}
+              variants={variants}
             />
-          ))}
+          )}
         </div>
       )}
 
