@@ -132,14 +132,14 @@ const typeStyles: Record<
 
 const RadialOption = ({
   option,
-  x,
-  y,
+  left,
+  top,
   delay,
   onSelect,
 }: {
   option: ActionOption;
-  x: number;
-  y: number;
+  left: number;
+  top: number;
   delay: number;
   onSelect: (option: ActionOption) => void;
 }) => {
@@ -147,10 +147,11 @@ const RadialOption = ({
 
   return (
     <button
-      className="animate-radial-pop absolute left-1/2 top-full min-h-[40px] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-neutral-200 bg-surface-raised px-3 py-2 text-xs font-medium text-neutral-700 shadow-lg transition-[background-color,transform] active:scale-95"
+      className="animate-radial-pop absolute min-h-[40px] -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-neutral-200 bg-surface-raised px-3 py-2 text-xs font-medium text-neutral-700 shadow-lg transition-[background-color,transform] active:scale-95"
       onClick={handleClick}
       style={{
-        transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
+        left: `${left}px`,
+        top: `${top}px`,
         animationDelay: `${delay}ms`,
       }}
       type="button"
@@ -182,34 +183,33 @@ const RadialMenu = ({
       document.removeEventListener("pointerdown", handleClickOutside);
   }, [onClose]);
 
-  // Fan options upward in an arc above the button.
-  // Arc span in degrees, start angle centered above (270 = up), radius in px.
+  // Fan options in a semicircle above the button center.
+  // Positions use top/left (not transform) to avoid conflicts with animations.
   const count = options.length;
-  const arcSpan = Math.min(count * 40, 160);
+  const arcSpan = Math.min(count * 45, 180);
   const startAngle = 270 - arcSpan / 2;
-  const radius = 80;
+  const radius = 72;
+  const centerX = 0;
+  const centerY = 0;
 
   return (
-    <div
-      className="absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2"
-      ref={menuRef}
-    >
-      <div className="relative h-24 w-48">
+    <div className="absolute bottom-full left-1/2 z-50 mb-3" ref={menuRef}>
+      <div className="relative">
         {options.map((option, i) => {
           const angle =
             startAngle + (count > 1 ? (i * arcSpan) / (count - 1) : 0);
           const rad = (angle * Math.PI) / 180;
-          const x = Math.cos(rad) * radius;
-          const y = Math.sin(rad) * radius;
+          const left = centerX + Math.cos(rad) * radius;
+          const top = centerY + Math.sin(rad) * radius;
 
           return (
             <RadialOption
-              delay={i * 30}
+              delay={i * 40}
               key={option.label}
+              left={left}
               onSelect={onSelect}
               option={option}
-              x={x}
-              y={y}
+              top={top}
             />
           );
         })}
