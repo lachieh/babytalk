@@ -80,6 +80,12 @@ const UserAvatar = ({
   );
 };
 
+const INVITE_PARTNER = `
+  mutation InvitePartner($email: String!) {
+    invitePartner(email: $email)
+  }
+`;
+
 const PartnerInvite = ({
   inviteCode,
   copied,
@@ -88,57 +94,88 @@ const PartnerInvite = ({
   copied: boolean;
   inviteCode: string;
   onShare: () => void;
-}) => (
-  <div className="rounded-xl bg-primary-50 px-4 py-4 text-center">
-    <p className="text-sm text-neutral-500">
-      Share this code with your partner
-    </p>
-    <p className="mt-2 font-mono text-lg font-bold tracking-widest text-primary-500">
-      {inviteCode}
-    </p>
-    <button
-      className="mt-3 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-primary-500 px-5 py-2.5 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97]"
-      onClick={onShare}
-      type="button"
-    >
-      {copied ? (
-        <>
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+}) => {
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
+    []
+  );
+
+  const handleSendInvite = useCallback(async () => {
+    if (!email.trim()) return;
+    setSending(true);
+    setErrorMsg("");
+    try {
+      await gqlRequest(INVITE_PARTNER, { email: email.trim() });
+      setSent(true);
+    } catch {
+      setErrorMsg("Failed to send invite");
+    } finally {
+      setSending(false);
+    }
+  }, [email]);
+
+  if (sent) {
+    return (
+      <div className="rounded-xl bg-success-50 px-4 py-4 text-center">
+        <p className="text-sm font-medium text-success-600">
+          Invite sent to {email}
+        </p>
+        <p className="mt-1 text-xs text-neutral-400">
+          They&apos;ll get a link to join your family
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Email invite — primary */}
+      <div className="rounded-xl bg-neutral-50 px-4 py-4">
+        <p className="text-sm font-medium text-neutral-700">Invite by email</p>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            onChange={handleEmailChange}
+            placeholder="partner@email.com"
+            type="email"
+            value={email}
+          />
+          <button
+            className="min-h-[44px] rounded-lg bg-primary-500 px-4 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
+            disabled={sending || !email.trim()}
+            onClick={handleSendInvite}
+            type="button"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-          Copied!
-        </>
-      ) : (
-        <>
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+            {sending ? "..." : "Send"}
+          </button>
+        </div>
+        {errorMsg && <p className="mt-2 text-xs text-danger-500">{errorMsg}</p>}
+      </div>
+
+      {/* Code fallback — secondary */}
+      <div className="rounded-xl bg-neutral-50 px-4 py-3 text-center">
+        <p className="text-xs text-neutral-400">Or share this code</p>
+        <div className="mt-1 flex items-center justify-center gap-2">
+          <span className="font-mono text-sm font-bold tracking-widest text-primary-500">
+            {inviteCode}
+          </span>
+          <button
+            className="min-h-[36px] rounded-md px-2 py-1 text-xs font-medium text-primary-500 transition-colors hover:bg-primary-50"
+            onClick={onShare}
+            type="button"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-            />
-          </svg>
-          Share invite code
-        </>
-      )}
-    </button>
-  </div>
-);
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ProfileContent = ({
   me,
