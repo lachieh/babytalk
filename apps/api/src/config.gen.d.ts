@@ -5,36 +5,44 @@
 declare global {
   interface ProcessEnv {
     /** PostgreSQL connection string */
-    BABYTALK_API_DATABASE_URL: string;
+    BABYTALK_API__DATABASEURL: string;
     /** Secret key for signing JWTs */
-    BABYTALK_API_JWT_SECRET: string;
+    BABYTALK_API__JWTSECRET: string;
     /** HTTP server port */
-    BABYTALK_API_PORT: string;
+    BABYTALK_API__PORT: string;
     /** Sender email address */
-    BABYTALK_API_SMTP_FROM: string;
+    BABYTALK_API__SMTPFROM: string;
     /** SMTP server hostname */
-    BABYTALK_API_SMTP_HOST: string;
+    BABYTALK_API__SMTPHOST: string;
+    /** SMTP password (Resend API key for smtp.resend.com) */
+    BABYTALK_API__SMTPPASS: string;
     /** SMTP server port */
-    BABYTALK_API_SMTP_PORT: string;
+    BABYTALK_API__SMTPPORT: string;
+    /** SMTP username ('resend' for smtp.resend.com) */
+    BABYTALK_API__SMTPUSER: string;
     /** Frontend URL for CORS and email links */
-    BABYTALK_API_WEB_URL: string;
+    BABYTALK_API__WEBURL: string;
   }
 
   interface ImportMetaEnv {
     /** PostgreSQL connection string */
-    readonly BABYTALK_API_DATABASE_URL: string;
+    readonly BABYTALK_API__DATABASEURL: string;
     /** Secret key for signing JWTs */
-    readonly BABYTALK_API_JWT_SECRET: string;
+    readonly BABYTALK_API__JWTSECRET: string;
     /** HTTP server port */
-    readonly BABYTALK_API_PORT: string;
+    readonly BABYTALK_API__PORT: string;
     /** Sender email address */
-    readonly BABYTALK_API_SMTP_FROM: string;
+    readonly BABYTALK_API__SMTPFROM: string;
     /** SMTP server hostname */
-    readonly BABYTALK_API_SMTP_HOST: string;
+    readonly BABYTALK_API__SMTPHOST: string;
+    /** SMTP password (Resend API key for smtp.resend.com) */
+    readonly BABYTALK_API__SMTPPASS: string;
     /** SMTP server port */
-    readonly BABYTALK_API_SMTP_PORT: string;
+    readonly BABYTALK_API__SMTPPORT: string;
+    /** SMTP username ('resend' for smtp.resend.com) */
+    readonly BABYTALK_API__SMTPUSER: string;
     /** Frontend URL for CORS and email links */
-    readonly BABYTALK_API_WEB_URL: string;
+    readonly BABYTALK_API__WEBURL: string;
   }
 
   interface ImportMeta {

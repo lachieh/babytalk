@@ -9,8 +9,16 @@ export interface Config {
   jwtSecret?: string;
   /** HTTP server port */
   port?: number;
-  /** SMTP mail configuration */
-  smtp?: { from?: string; host?: string; port?: number };
+  /** Sender email address */
+  smtpFrom?: string;
+  /** SMTP server hostname */
+  smtpHost?: string;
+  /** SMTP password (Resend API key for smtp.resend.com) */
+  smtpPass?: string;
+  /** SMTP server port */
+  smtpPort?: number;
+  /** SMTP username ('resend' for smtp.resend.com) */
+  smtpUser?: string;
   /** Frontend URL for CORS and email links */
   webUrl?: string;
 }
