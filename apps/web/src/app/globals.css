@@ -265,6 +265,22 @@ body {
   animation: gentle-pulse 1.8s var(--ease-in-out) infinite;
 }
 
+/* --- Bottom sheet slide-up --- */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up var(--duration-normal) var(--ease-out) both;
+}
+
 /* --- Safe area utilities for notched devices --- */
 .safe-top {
   padding-top: max(calc(var(--spacing) * 10), env(safe-area-inset-top));

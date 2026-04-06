@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 import type { Context } from "../context";
 import { builder } from "./builder";
 import { BabyEventType, BabyType, HouseholdType } from "./household-types";
+import { UserType } from "./types";
 
 const getHouseholdId = async (ctx: Context): Promise<string | null> => {
   if (!ctx.currentUser) return null;
@@ -31,6 +32,21 @@ builder.queryField("myHousehold", (t) =>
       return household ?? null;
     },
     type: HouseholdType,
+  })
+);
+
+builder.queryField("householdMembers", (t) =>
+  t.field({
+    resolve: async (_root, _args, ctx) => {
+      const householdId = await getHouseholdId(ctx);
+      if (!householdId) return [];
+
+      return ctx.db
+        .select()
+        .from(users)
+        .where(eq(users.householdId, householdId));
+    },
+    type: [UserType],
   })
 );
 
