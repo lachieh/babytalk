@@ -62,17 +62,6 @@ function inferSleepLocation(events: BabyEvent[]): string {
   }
 }
 
-const minutesSince = (iso: string): number =>
-  (Date.now() - new Date(iso).getTime()) / 60_000;
-
-function formatAgo(minutes: number): string {
-  if (minutes < 1) return "now";
-  if (minutes < 60) return `${Math.floor(minutes)}m`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-}
-
 function formatTimer(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
   const min = Math.floor(totalSec / 60);
@@ -80,20 +69,19 @@ function formatTimer(ms: number): string {
   return `${min}:${String(sec).padStart(2, "0")}`;
 }
 
-const SHORT_TO_LONG: Record<string, string> = {
-  L: "Breast \u00B7 Left",
-  R: "Breast \u00B7 Right",
-};
-
-function expandLabel(label: string): string {
-  return SHORT_TO_LONG[label] ?? label;
-}
-
 /* ── Variant definitions ───────────────────────────────────── */
 
 const FEED_VARIANTS: Variant[] = [
-  { key: "breast-l", label: "L", meta: { method: "breast", side: "left" } },
-  { key: "breast-r", label: "R", meta: { method: "breast", side: "right" } },
+  {
+    key: "breast-l",
+    label: "Breast \u00B7 Left",
+    meta: { method: "breast", side: "left" },
+  },
+  {
+    key: "breast-r",
+    label: "Breast \u00B7 Right",
+    meta: { method: "breast", side: "right" },
+  },
   { key: "bottle", label: "Bottle", meta: { method: "bottle" } },
   { key: "solid", label: "Solid", meta: { method: "solid" } },
 ];
@@ -101,12 +89,16 @@ const FEED_VARIANTS: Variant[] = [
 const DIAPER_VARIANTS: Variant[] = [
   { key: "wet", label: "Wet", meta: { wet: true, soiled: false } },
   { key: "soiled", label: "Soiled", meta: { wet: false, soiled: true } },
-  { key: "wet-soiled", label: "Both", meta: { wet: true, soiled: true } },
+  {
+    key: "wet-soiled",
+    label: "Wet + Soiled",
+    meta: { wet: true, soiled: true },
+  },
 ];
 
 const SLEEP_VARIANTS: Variant[] = [
   { key: "crib", label: "Crib", meta: { location: "crib" } },
-  { key: "bassinet", label: "Bass.", meta: { location: "bassinet" } },
+  { key: "bassinet", label: "Bassinet", meta: { location: "bassinet" } },
   { key: "held", label: "Held", meta: { location: "held" } },
   { key: "carrier", label: "Carrier", meta: { location: "carrier" } },
 ];
@@ -115,82 +107,55 @@ const SLEEP_VARIANTS: Variant[] = [
 
 const sectionStyles: Record<
   string,
-  { bg: string; border: string; chipActive: string }
+  { bg: string; border: string; optionActive: string }
 > = {
   feed: {
     bg: "bg-feed-50",
     border: "border-feed-200",
-    chipActive: "bg-feed-200 text-feed-600 border-feed-200",
+    optionActive: "bg-feed-200 text-feed-600",
   },
   diaper: {
     bg: "bg-diaper-50",
     border: "border-diaper-200",
-    chipActive: "bg-diaper-200 text-diaper-600 border-diaper-200",
+    optionActive: "bg-diaper-200 text-diaper-600",
   },
   sleep: {
     bg: "bg-sleep-50",
     border: "border-sleep-200",
-    chipActive: "bg-sleep-200 text-sleep-600 border-sleep-200",
+    optionActive: "bg-sleep-200 text-sleep-600",
   },
 };
 
-const chipInactive = "bg-transparent text-neutral-400 border-neutral-200";
+/* ── Inline Option Picker ──────────────────────────────────── */
 
-/* ── Chip Row ──────────────────────────────────────────────── */
-
-const ChipButton = ({
-  variantKey,
-  label,
+const OptionButton = ({
+  variant,
   isSelected,
   activeStyle,
   onSelect,
 }: {
-  variantKey: string;
-  label: string;
+  variant: Variant;
   isSelected: boolean;
   activeStyle: string;
   onSelect: (key: string) => void;
 }) => {
   const handleClick = useCallback(
-    () => onSelect(variantKey),
-    [onSelect, variantKey]
+    () => onSelect(variant.key),
+    [onSelect, variant.key]
   );
 
   return (
     <button
-      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${isSelected ? activeStyle : chipInactive}`}
+      className={`min-h-[44px] flex-1 rounded-xl px-2 py-2 text-xs font-medium transition-colors ${
+        isSelected ? activeStyle : "bg-white/40 text-neutral-500"
+      }`}
       onClick={handleClick}
       type="button"
     >
-      {label}
+      {variant.label}
     </button>
   );
 };
-
-const ChipRow = ({
-  variants,
-  selected,
-  activeStyle,
-  onSelect,
-}: {
-  variants: Variant[];
-  selected: string;
-  activeStyle: string;
-  onSelect: (key: string) => void;
-}) => (
-  <div className="flex gap-1">
-    {variants.map((v) => (
-      <ChipButton
-        activeStyle={activeStyle}
-        isSelected={v.key === selected}
-        key={v.key}
-        label={v.label}
-        onSelect={onSelect}
-        variantKey={v.key}
-      />
-    ))}
-  </div>
-);
 
 /* ── Amount Input (for bottle feeds) ───────────────────────── */
 
@@ -221,27 +186,27 @@ const AmountInput = ({
   const handleSelectOz = useCallback(() => setUnit("oz"), []);
 
   return (
-    <div className="animate-fade-up mt-2 flex items-center gap-2">
+    <div className="animate-fade-up mt-3 flex items-center gap-2">
       <input
         ref={inputRef}
         autoFocus
-        className="min-h-[40px] w-20 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-center text-sm tabular-nums text-neutral-800 focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+        className="min-h-[44px] w-20 rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-center text-sm tabular-nums text-neutral-800 focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
         inputMode="decimal"
         onChange={handleChange}
         placeholder={unit}
         type="number"
         value={amount}
       />
-      <div className="flex rounded-md border border-neutral-200 text-xs">
+      <div className="flex rounded-lg border border-neutral-200 text-xs">
         <button
-          className={`px-2 py-1 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white rounded-l-md" : "text-neutral-400"}`}
+          className={`min-h-[44px] px-3 py-2 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white rounded-l-lg" : "text-neutral-400"}`}
           onClick={handleSelectOz}
           type="button"
         >
           oz
         </button>
         <button
-          className={`px-2 py-1 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white rounded-r-md" : "text-neutral-400"}`}
+          className={`min-h-[44px] px-3 py-2 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white rounded-r-lg" : "text-neutral-400"}`}
           onClick={handleSelectMl}
           type="button"
         >
@@ -249,7 +214,7 @@ const AmountInput = ({
         </button>
       </div>
       <button
-        className="min-h-[40px] rounded-lg bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95 disabled:opacity-40"
+        className="min-h-[44px] rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95 disabled:opacity-40"
         disabled={!amount || Number(amount) <= 0}
         onClick={handleConfirm}
         type="button"
@@ -257,7 +222,7 @@ const AmountInput = ({
         Log
       </button>
       <button
-        className="min-h-[40px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        className="min-h-[44px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
         onClick={onCancel}
         type="button"
       >
@@ -307,19 +272,19 @@ const InlineTimer = ({
   }, [onCancel]);
 
   return (
-    <div className="animate-fade-up mt-2 flex items-center gap-3">
+    <div className="animate-fade-up mt-3 flex items-center gap-3">
       <span className="font-mono text-lg font-bold tabular-nums text-neutral-800">
         {formatTimer(elapsed)}
       </span>
       <button
-        className="min-h-[40px] rounded-lg bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95"
+        className="min-h-[44px] rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95"
         onClick={handleStop}
         type="button"
       >
         Done
       </button>
       <button
-        className="min-h-[40px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        className="min-h-[44px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
         onClick={handleCancel}
         type="button"
       >
@@ -339,7 +304,6 @@ type ActiveFlow =
 const ActionSection = ({
   type,
   icon,
-  sublabel,
   variants,
   defaultVariant,
   onLog,
@@ -347,7 +311,6 @@ const ActionSection = ({
 }: {
   type: string;
   icon: string;
-  sublabel: string;
   variants: Variant[];
   defaultVariant: string;
   onLog: (type: string, meta: Record<string, unknown>) => void;
@@ -358,6 +321,7 @@ const ActionSection = ({
   ) => void;
 }) => {
   const [selected, setSelected] = useState(defaultVariant);
+  const [expanded, setExpanded] = useState(false);
   const [flow, setFlow] = useState<ActiveFlow>({ kind: "idle" });
   const styles = sectionStyles[type];
 
@@ -371,27 +335,31 @@ const ActionSection = ({
     if (type === "feed") {
       const method = meta.method as string;
       if (method === "breast") {
-        // Breast: start timer
         setFlow({ kind: "timer", type: "feed", meta });
       } else if (method === "bottle") {
-        // Bottle: ask for amount
         setFlow({ kind: "amount", type: "feed", baseMeta: meta });
       } else {
-        // Solid: log instantly
         onLog(type, meta);
       }
       return;
     }
 
     if (type === "sleep") {
-      // Sleep: start timer
       setFlow({ kind: "timer", type: "sleep", meta });
       return;
     }
 
-    // Diaper: log instantly
     onLog(type, meta);
   }, [type, selectedVariant, onLog]);
+
+  const handleVariantTap = useCallback(() => {
+    setExpanded((prev) => !prev);
+  }, []);
+
+  const handleOptionSelect = useCallback((key: string) => {
+    setSelected(key);
+    setExpanded(false);
+  }, []);
 
   const handleTimerStop = useCallback(
     (_type: string, meta: Record<string, unknown>, durationMs: number) => {
@@ -416,31 +384,56 @@ const ActionSection = ({
 
   return (
     <div
-      className={`flex-1 rounded-2xl border p-3 ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
+      className={`flex-1 rounded-2xl border p-3 transition-all ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
     >
-      {/* Header: icon + chip row */}
-      <div className="flex items-center gap-2">
-        <span className="text-xl">{icon}</span>
-        <ChipRow
-          activeStyle={styles?.chipActive ?? ""}
-          onSelect={setSelected}
-          selected={selected}
-          variants={variants}
-        />
-      </div>
-
-      {/* Main tap area */}
+      {/* Main tap area — logs with current variant */}
       {!isActive && (
         <button
-          className="mt-2 flex w-full items-center justify-between rounded-xl bg-white/60 px-3 py-2.5 text-left transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97]"
+          className="flex w-full flex-col items-center gap-1 rounded-xl bg-white/50 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
           onClick={handleMainTap}
           type="button"
         >
-          <span className="text-sm font-semibold text-neutral-800">
-            {expandLabel(selectedVariant.label)}
-          </span>
-          <span className="text-xs text-neutral-400">{sublabel}</span>
+          <span className="text-2xl">{icon}</span>
         </button>
+      )}
+
+      {/* Variant label — tappable to expand options */}
+      {!isActive && (
+        <button
+          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-white/40"
+          onClick={handleVariantTap}
+          type="button"
+        >
+          <span>{selectedVariant.label}</span>
+          <svg
+            className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+      )}
+
+      {/* Expanded options */}
+      {expanded && !isActive && (
+        <div className="animate-fade-up mt-1 flex flex-wrap gap-1">
+          {variants.map((v) => (
+            <OptionButton
+              activeStyle={styles?.optionActive ?? ""}
+              isSelected={v.key === selected}
+              key={v.key}
+              onSelect={handleOptionSelect}
+              variant={v}
+            />
+          ))}
+        </div>
       )}
 
       {/* Active flows */}
@@ -467,18 +460,6 @@ const ActionSection = ({
 export const SuggestionZone = () => {
   const { events, logEventDirect, loading } = useBabyContext();
 
-  const lastFeed = events.find((e) => e.type === "feed");
-  const lastDiaper = events.find((e) => e.type === "diaper");
-  const lastSleep = events.find((e) => e.type === "sleep");
-
-  const feedAgo = lastFeed ? formatAgo(minutesSince(lastFeed.startedAt)) : "";
-  const diaperAgo = lastDiaper
-    ? formatAgo(minutesSince(lastDiaper.startedAt))
-    : "";
-  const sleepAgo = lastSleep
-    ? formatAgo(minutesSince(lastSleep.startedAt))
-    : "";
-
   const feedDefault = useMemo(() => inferFeedVariant(events), [events]);
   const diaperDefault = useMemo(() => inferDiaperVariant(events), [events]);
   const sleepDefault = useMemo(() => inferSleepLocation(events), [events]);
@@ -496,7 +477,6 @@ export const SuggestionZone = () => {
       triggerFeedback("logged");
       const startedAt = new Date(Date.now() - durationMs).toISOString();
       const endedAt = new Date().toISOString();
-      // Override startedAt/endedAt via the meta — baby-context will merge
       logEventDirect(type, {
         ...meta,
         _startedAt: startedAt,
@@ -515,7 +495,6 @@ export const SuggestionZone = () => {
         icon="🍼"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
-        sublabel={feedAgo ? `${feedAgo} ago` : ""}
         type="feed"
         variants={FEED_VARIANTS}
       />
@@ -524,7 +503,6 @@ export const SuggestionZone = () => {
         icon="🚼"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
-        sublabel={diaperAgo ? `${diaperAgo} ago` : ""}
         type="diaper"
         variants={DIAPER_VARIANTS}
       />
@@ -533,7 +511,6 @@ export const SuggestionZone = () => {
         icon="😴"
         onLog={handleLog}
         onLogWithDuration={handleLogWithDuration}
-        sublabel={sleepAgo ? `${sleepAgo} ago` : ""}
         type="sleep"
         variants={SLEEP_VARIANTS}
       />
