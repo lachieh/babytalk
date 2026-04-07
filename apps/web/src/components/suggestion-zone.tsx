@@ -17,7 +17,9 @@ interface Variant {
 /* ── Inference ─────────────────────────────────────────────── */
 
 function inferFeedVariant(events: BabyEvent[]): string {
-  const recentFeeds = events.filter((e) => e.type === "feed").slice(0, 5);
+  const recentFeeds = events
+    .filter((e) => e.type === "feed" && e.endedAt !== null)
+    .slice(0, 5);
   if (recentFeeds.length === 0) return "breast-l";
 
   let breastCount = 0;
@@ -105,25 +107,10 @@ const SLEEP_VARIANTS: Variant[] = [
 
 /* ── Styles ────────────────────────────────────────────────── */
 
-const sectionStyles: Record<
-  string,
-  { bg: string; border: string; optionActive: string }
-> = {
-  feed: {
-    bg: "bg-feed-50",
-    border: "border-feed-200",
-    optionActive: "bg-feed-200 text-feed-600",
-  },
-  diaper: {
-    bg: "bg-diaper-50",
-    border: "border-diaper-200",
-    optionActive: "bg-diaper-200 text-diaper-600",
-  },
-  sleep: {
-    bg: "bg-sleep-50",
-    border: "border-sleep-200",
-    optionActive: "bg-sleep-200 text-sleep-600",
-  },
+const sectionStyles: Record<string, { bg: string; border: string }> = {
+  feed: { bg: "bg-feed-50", border: "border-feed-200" },
+  diaper: { bg: "bg-diaper-50", border: "border-diaper-200" },
+  sleep: { bg: "bg-sleep-50", border: "border-sleep-200" },
 };
 
 /* ── Dropdown Popover ─────────────────────────────────────── */
@@ -212,6 +199,76 @@ const VariantPopover = ({
   );
 };
 
+/* ── Active Timer Display (DB-backed, shared across devices) ── */
+
+const ActiveTimer = ({
+  event,
+  onStop,
+  onCancel,
+}: {
+  event: BabyEvent;
+  onStop: (id: string) => void;
+  onCancel: (id: string) => void;
+}) => {
+  const [elapsed, setElapsed] = useState(
+    () => Date.now() - new Date(event.startedAt).getTime()
+  );
+
+  useEffect(() => {
+    const start = new Date(event.startedAt).getTime();
+    const tick = () => setElapsed(Date.now() - start);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [event.startedAt]);
+
+  const handleStop = useCallback(() => {
+    triggerFeedback("logged");
+    onStop(event.id);
+  }, [onStop, event.id]);
+
+  const handleCancel = useCallback(
+    () => onCancel(event.id),
+    [onCancel, event.id]
+  );
+
+  let label = event.type;
+  try {
+    const meta = JSON.parse(event.metadata);
+    if (event.type === "feed" && meta.side) {
+      label = `${meta.side} side`;
+    }
+    if (event.type === "sleep" && meta.location) {
+      label = meta.location;
+    }
+  } catch {
+    /* ignore */
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <span className="font-mono text-xl font-bold tabular-nums text-neutral-800">
+        {formatTimer(elapsed)}
+      </span>
+      <span className="text-xs text-neutral-500">{label}</span>
+      <button
+        className="min-h-[44px] w-full rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-[background-color,transform] active:scale-[0.96]"
+        onClick={handleStop}
+        type="button"
+      >
+        Done
+      </button>
+      <button
+        className="min-h-[36px] px-2 py-1 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        onClick={handleCancel}
+        type="button"
+      >
+        Cancel
+      </button>
+    </div>
+  );
+};
+
 /* ── Amount Input (for bottle feeds) ───────────────────────── */
 
 const AmountInput = ({
@@ -223,7 +280,6 @@ const AmountInput = ({
 }) => {
   const [amount, setAmount] = useState("");
   const [unit, setUnit] = useState<"ml" | "oz">("oz");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleConfirm = useCallback(() => {
     const val = Number(amount);
@@ -241,35 +297,36 @@ const AmountInput = ({
   const handleSelectOz = useCallback(() => setUnit("oz"), []);
 
   return (
-    <div className="animate-fade-up mt-3 flex items-center gap-2">
-      <input
-        ref={inputRef}
-        autoFocus
-        className="min-h-[44px] w-20 rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-center text-sm tabular-nums text-neutral-800 focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
-        inputMode="decimal"
-        onChange={handleChange}
-        placeholder={unit}
-        type="number"
-        value={amount}
-      />
-      <div className="flex rounded-lg border border-neutral-200 text-xs">
-        <button
-          className={`min-h-[44px] px-3 py-2 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white rounded-l-lg" : "text-neutral-400"}`}
-          onClick={handleSelectOz}
-          type="button"
-        >
-          oz
-        </button>
-        <button
-          className={`min-h-[44px] px-3 py-2 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white rounded-r-lg" : "text-neutral-400"}`}
-          onClick={handleSelectMl}
-          type="button"
-        >
-          ml
-        </button>
+    <div className="flex flex-col items-center gap-2">
+      <div className="flex items-center gap-2">
+        <input
+          autoFocus
+          className="min-h-[44px] w-20 rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-center text-sm tabular-nums text-neutral-800 focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+          inputMode="decimal"
+          onChange={handleChange}
+          placeholder={unit}
+          type="number"
+          value={amount}
+        />
+        <div className="flex rounded-lg border border-neutral-200 text-xs">
+          <button
+            className={`min-h-[36px] px-2.5 py-1.5 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white rounded-l-lg" : "text-neutral-400"}`}
+            onClick={handleSelectOz}
+            type="button"
+          >
+            oz
+          </button>
+          <button
+            className={`min-h-[36px] px-2.5 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white rounded-r-lg" : "text-neutral-400"}`}
+            onClick={handleSelectMl}
+            type="button"
+          >
+            ml
+          </button>
+        </div>
       </div>
       <button
-        className="min-h-[44px] rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95 disabled:opacity-40"
+        className="min-h-[44px] w-full rounded-xl bg-primary-500 px-4 py-2 text-sm font-semibold text-white transition-[background-color,transform] active:scale-95 disabled:opacity-40"
         disabled={!amount || Number(amount) <= 0}
         onClick={handleConfirm}
         type="button"
@@ -277,70 +334,8 @@ const AmountInput = ({
         Log
       </button>
       <button
-        className="min-h-[44px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
+        className="min-h-[36px] px-2 py-1 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
         onClick={onCancel}
-        type="button"
-      >
-        Cancel
-      </button>
-    </div>
-  );
-};
-
-/* ── Inline Timer ──────────────────────────────────────────── */
-
-const InlineTimer = ({
-  type,
-  meta,
-  onStop,
-  onCancel,
-}: {
-  type: string;
-  meta: Record<string, unknown>;
-  onStop: (
-    type: string,
-    meta: Record<string, unknown>,
-    durationMs: number
-  ) => void;
-  onCancel: () => void;
-}) => {
-  const startRef = useRef(Date.now());
-  const [elapsed, setElapsed] = useState(0);
-
-  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  if (!tickRef.current) {
-    tickRef.current = setInterval(() => {
-      setElapsed(Date.now() - startRef.current);
-    }, 1000);
-  }
-
-  const handleStop = useCallback(() => {
-    if (tickRef.current) clearInterval(tickRef.current);
-    tickRef.current = null;
-    onStop(type, meta, Date.now() - startRef.current);
-  }, [onStop, type, meta]);
-
-  const handleCancel = useCallback(() => {
-    if (tickRef.current) clearInterval(tickRef.current);
-    tickRef.current = null;
-    onCancel();
-  }, [onCancel]);
-
-  return (
-    <div className="animate-fade-up mt-3 flex items-center gap-3">
-      <span className="font-mono text-lg font-bold tabular-nums text-neutral-800">
-        {formatTimer(elapsed)}
-      </span>
-      <button
-        className="min-h-[44px] rounded-xl bg-primary-500 px-4 py-2 text-xs font-semibold text-white transition-[background-color,transform] active:scale-95"
-        onClick={handleStop}
-        type="button"
-      >
-        Done
-      </button>
-      <button
-        className="min-h-[44px] px-2 py-2 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
-        onClick={handleCancel}
         type="button"
       >
         Cancel
@@ -351,33 +346,28 @@ const InlineTimer = ({
 
 /* ── Action Section ────────────────────────────────────────── */
 
-type ActiveFlow =
-  | { kind: "idle" }
-  | { kind: "timer"; type: string; meta: Record<string, unknown> }
-  | { kind: "amount"; type: string; baseMeta: Record<string, unknown> };
-
 const ActionSection = ({
   type,
   icon,
   variants,
   defaultVariant,
+  activeEvent,
   onLog,
-  onLogWithDuration,
+  onStop,
+  onCancel,
 }: {
   type: string;
   icon: string;
   variants: Variant[];
   defaultVariant: string;
+  activeEvent: BabyEvent | null;
   onLog: (type: string, meta: Record<string, unknown>) => void;
-  onLogWithDuration: (
-    type: string,
-    meta: Record<string, unknown>,
-    durationMs: number
-  ) => void;
+  onStop: (id: string) => void;
+  onCancel: (id: string) => void;
 }) => {
   const [selected, setSelected] = useState(defaultVariant);
   const [expanded, setExpanded] = useState(false);
-  const [flow, setFlow] = useState<ActiveFlow>({ kind: "idle" });
+  const [showAmountInput, setShowAmountInput] = useState(false);
   const styles = sectionStyles[type];
 
   const selectedVariant =
@@ -389,117 +379,96 @@ const ActionSection = ({
 
     if (type === "feed") {
       const method = meta.method as string;
-      if (method === "breast") {
-        setFlow({ kind: "timer", type: "feed", meta });
-      } else if (method === "bottle") {
-        setFlow({ kind: "amount", type: "feed", baseMeta: meta });
-      } else {
-        onLog(type, meta);
+      if (method === "bottle") {
+        setShowAmountInput(true);
+        return;
       }
+      // Breast + solid: log immediately (breast with endedAt=null starts timer)
+      onLog(type, meta);
       return;
     }
 
-    if (type === "sleep") {
-      setFlow({ kind: "timer", type: "sleep", meta });
-      return;
-    }
-
+    // Sleep + diaper: log immediately (sleep with endedAt=null starts timer)
     onLog(type, meta);
   }, [type, selectedVariant, onLog]);
 
-  const handleVariantTap = useCallback(() => {
-    setExpanded((prev) => !prev);
-  }, []);
-
+  const handleVariantTap = useCallback(() => setExpanded((prev) => !prev), []);
   const handleOptionSelect = useCallback((key: string) => {
     setSelected(key);
     setExpanded(false);
   }, []);
 
-  const handleTimerStop = useCallback(
-    (_type: string, meta: Record<string, unknown>, durationMs: number) => {
-      setFlow({ kind: "idle" });
-      onLogWithDuration(_type, meta, durationMs);
-    },
-    [onLogWithDuration]
-  );
-
   const handleAmountConfirm = useCallback(
     (amountMl: number) => {
-      if (flow.kind !== "amount") return;
-      setFlow({ kind: "idle" });
-      onLog(flow.type, { ...flow.baseMeta, amountMl });
+      setShowAmountInput(false);
+      onLog(type, { ...selectedVariant.meta, amountMl });
     },
-    [flow, onLog]
+    [type, selectedVariant, onLog]
   );
 
-  const handleFlowCancel = useCallback(() => setFlow({ kind: "idle" }), []);
+  const handleAmountCancel = useCallback(() => setShowAmountInput(false), []);
 
-  const isActive = flow.kind !== "idle";
+  const hasTimer = activeEvent !== null;
+  const showActions = !hasTimer && !showAmountInput;
 
   return (
     <div
       className={`flex-1 rounded-2xl border p-3 transition-all ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
     >
-      {/* Main tap area — logs with current variant */}
-      {!isActive && (
-        <button
-          className="flex w-full flex-col items-center gap-1 rounded-xl bg-surface-raised/80 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
-          onClick={handleMainTap}
-          type="button"
-        >
-          <span className="text-2xl">{icon}</span>
-        </button>
+      {/* Active timer from DB — visible to both parents, survives refresh */}
+      {hasTimer && (
+        <ActiveTimer event={activeEvent} onStop={onStop} onCancel={onCancel} />
       )}
 
-      {/* Variant label — tappable to open dropdown */}
-      {!isActive && (
-        <div className="relative mt-2">
+      {/* Bottle amount input (local flow, not a timer) */}
+      {showAmountInput && (
+        <AmountInput
+          onConfirm={handleAmountConfirm}
+          onCancel={handleAmountCancel}
+        />
+      )}
+
+      {/* Normal state: tap to log */}
+      {showActions && (
+        <>
           <button
-            className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-surface-raised"
-            onClick={handleVariantTap}
+            className="flex w-full flex-col items-center gap-1 rounded-xl bg-surface-raised/80 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
+            onClick={handleMainTap}
             type="button"
           >
-            <span>{selectedVariant.label}</span>
-            <svg
-              className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
+            <span className="text-2xl">{icon}</span>
           </button>
-          {expanded && (
-            <VariantPopover
-              onClose={handleVariantTap}
-              onSelect={handleOptionSelect}
-              selected={selected}
-              variants={variants}
-            />
-          )}
-        </div>
-      )}
-
-      {/* Active flows */}
-      {flow.kind === "timer" && (
-        <InlineTimer
-          meta={flow.meta}
-          onCancel={handleFlowCancel}
-          onStop={handleTimerStop}
-          type={flow.type}
-        />
-      )}
-      {flow.kind === "amount" && (
-        <AmountInput
-          onCancel={handleFlowCancel}
-          onConfirm={handleAmountConfirm}
-        />
+          <div className="relative mt-2">
+            <button
+              className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-surface-raised"
+              onClick={handleVariantTap}
+              type="button"
+            >
+              <span>{selectedVariant.label}</span>
+              <svg
+                className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </button>
+            {expanded && (
+              <VariantPopover
+                onClose={handleVariantTap}
+                onSelect={handleOptionSelect}
+                selected={selected}
+                variants={variants}
+              />
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -508,11 +477,22 @@ const ActionSection = ({
 /* ── SuggestionZone ────────────────────────────────────────── */
 
 export const SuggestionZone = () => {
-  const { events, logEventDirect, loading } = useBabyContext();
+  const {
+    events,
+    activeEvents,
+    logEventDirect,
+    stopEvent,
+    deleteEvent,
+    loading,
+  } = useBabyContext();
 
   const feedDefault = useMemo(() => inferFeedVariant(events), [events]);
   const diaperDefault = useMemo(() => inferDiaperVariant(events), [events]);
   const sleepDefault = useMemo(() => inferSleepLocation(events), [events]);
+
+  // Find active (in-progress) events for each type
+  const activeFeed = activeEvents.find((e) => e.type === "feed") ?? null;
+  const activeSleep = activeEvents.find((e) => e.type === "sleep") ?? null;
 
   const handleLog = useCallback(
     (type: string, meta: Record<string, unknown>) => {
@@ -522,18 +502,18 @@ export const SuggestionZone = () => {
     [logEventDirect]
   );
 
-  const handleLogWithDuration = useCallback(
-    (type: string, meta: Record<string, unknown>, durationMs: number) => {
-      triggerFeedback("logged");
-      const startedAt = new Date(Date.now() - durationMs).toISOString();
-      const endedAt = new Date().toISOString();
-      logEventDirect(type, {
-        ...meta,
-        _startedAt: startedAt,
-        _endedAt: endedAt,
-      });
+  const handleStop = useCallback(
+    (id: string) => {
+      stopEvent(id);
     },
-    [logEventDirect]
+    [stopEvent]
+  );
+
+  const handleCancel = useCallback(
+    (id: string) => {
+      deleteEvent(id);
+    },
+    [deleteEvent]
   );
 
   if (loading) return null;
@@ -541,26 +521,32 @@ export const SuggestionZone = () => {
   return (
     <div className="flex gap-2 px-4 py-3">
       <ActionSection
+        activeEvent={activeFeed}
         defaultVariant={feedDefault}
         icon="🍼"
+        onCancel={handleCancel}
         onLog={handleLog}
-        onLogWithDuration={handleLogWithDuration}
+        onStop={handleStop}
         type="feed"
         variants={FEED_VARIANTS}
       />
       <ActionSection
+        activeEvent={null}
         defaultVariant={diaperDefault}
         icon="🚼"
+        onCancel={handleCancel}
         onLog={handleLog}
-        onLogWithDuration={handleLogWithDuration}
+        onStop={handleStop}
         type="diaper"
         variants={DIAPER_VARIANTS}
       />
       <ActionSection
+        activeEvent={activeSleep}
         defaultVariant={sleepDefault}
         icon="😴"
+        onCancel={handleCancel}
         onLog={handleLog}
-        onLogWithDuration={handleLogWithDuration}
+        onStop={handleStop}
         type="sleep"
         variants={SLEEP_VARIANTS}
       />

@@ -38,12 +38,14 @@ interface UndoableAction {
 interface BabyContextValue {
   baby: Baby | null;
   events: BabyEvent[];
+  activeEvents: BabyEvent[];
   loading: boolean;
   refreshEvents: () => Promise<void>;
   logEventDirect: (
     type: string,
     meta: Record<string, unknown>
   ) => Promise<BabyEvent | null>;
+  stopEvent: (id: string) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   undoableAction: UndoableAction | null;
   dismissUndo: () => void;
@@ -92,6 +94,14 @@ const LOG_EVENT = `
 const DELETE_EVENT = `
   mutation DeleteEvent($id: String!) {
     deleteEvent(id: $id)
+  }
+`;
+
+const UPDATE_EVENT = `
+  mutation UpdateEvent($id: String!, $endedAt: String) {
+    updateEvent(id: $id, endedAt: $endedAt) {
+      id type startedAt endedAt metadata
+    }
   }
 `;
 
@@ -149,12 +159,19 @@ export const BabyContextProvider = ({
     if (baby) refreshEvents();
   }, [baby, refreshEvents]);
 
-  // Auto-refresh events every 60s
+  // Active events = in-progress (endedAt is null), shared across devices
+  const activeEvents = useMemo(
+    () => events.filter((e) => e.endedAt === null),
+    [events]
+  );
+
+  // Poll faster when there are active events (15s) vs idle (60s)
   useEffect(() => {
     if (!baby) return;
-    const interval = setInterval(refreshEvents, 60_000);
-    return () => clearInterval(interval);
-  }, [baby, refreshEvents]);
+    const interval = activeEvents.length > 0 ? 15_000 : 60_000;
+    const id = setInterval(refreshEvents, interval);
+    return () => clearInterval(id);
+  }, [baby, refreshEvents, activeEvents.length]);
 
   const dismissUndo = useCallback(() => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -169,6 +186,22 @@ export const BabyContextProvider = ({
         await gqlRequest(DELETE_EVENT, { id });
       } catch {
         // Revert on failure
+        await refreshEvents();
+      }
+    },
+    [refreshEvents]
+  );
+
+  const stopEvent = useCallback(
+    async (id: string) => {
+      const endedAt = new Date().toISOString();
+      // Optimistic: update local state
+      setEvents((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, endedAt } : e))
+      );
+      try {
+        await gqlRequest(UPDATE_EVENT, { id, endedAt });
+      } catch {
         await refreshEvents();
       }
     },
@@ -232,9 +265,11 @@ export const BabyContextProvider = ({
     (): BabyContextValue => ({
       baby,
       events,
+      activeEvents,
       loading,
       refreshEvents,
       logEventDirect,
+      stopEvent,
       deleteEvent,
       undoableAction,
       dismissUndo,
@@ -242,9 +277,11 @@ export const BabyContextProvider = ({
     [
       baby,
       events,
+      activeEvents,
       loading,
       refreshEvents,
       logEventDirect,
+      stopEvent,
       deleteEvent,
       undoableAction,
       dismissUndo,
