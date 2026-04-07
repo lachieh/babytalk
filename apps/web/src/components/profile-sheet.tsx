@@ -87,12 +87,10 @@ const INVITE_PARTNER = `
 `;
 
 const PartnerInvite = ({
-  inviteCode,
   copied,
   onShare,
 }: {
   copied: boolean;
-  inviteCode: string;
   onShare: () => void;
 }) => {
   const [email, setEmail] = useState("");
@@ -157,19 +155,16 @@ const PartnerInvite = ({
         {errorMsg && <p className="mt-2 text-xs text-danger-500">{errorMsg}</p>}
       </div>
 
-      {/* Code fallback — secondary */}
+      {/* Share link fallback — secondary */}
       <div className="rounded-xl bg-neutral-50 px-4 py-3 text-center">
-        <p className="text-xs text-neutral-400">Or share this code</p>
+        <p className="text-xs text-neutral-400">Or share this link</p>
         <div className="mt-1 flex items-center justify-center gap-2">
-          <span className="font-mono text-sm font-bold tracking-widest text-primary-500">
-            {inviteCode}
-          </span>
           <button
-            className="min-h-[36px] rounded-md px-2 py-1 text-xs font-medium text-primary-500 transition-colors hover:bg-primary-50"
+            className="min-h-[36px] rounded-md px-3 py-1 text-xs font-medium text-primary-500 transition-colors hover:bg-primary-50"
             onClick={onShare}
             type="button"
           >
-            {copied ? "Copied!" : "Copy"}
+            {copied ? "Link copied!" : "Copy invite link"}
           </button>
         </div>
       </div>
@@ -264,11 +259,7 @@ const ProfileContent = ({
           </div>
         )}
         {!partner && household?.inviteCode && (
-          <PartnerInvite
-            inviteCode={household.inviteCode}
-            copied={copied}
-            onShare={onShare}
-          />
+          <PartnerInvite copied={copied} onShare={onShare} />
         )}
       </section>
 
@@ -326,14 +317,17 @@ export const ProfileSheet = ({
     fetchProfile();
   }, [open]);
 
-  const handleCopyCode = useCallback(async () => {
+  const handleShareLink = useCallback(async () => {
     if (!household?.inviteCode) return;
+
+    const inviteUrl = `${window.location.origin}/dashboard/join?code=${household.inviteCode}`;
 
     if (navigator.share) {
       try {
         await navigator.share({
-          text: `Join our family on BabyTalk with code: ${household.inviteCode}`,
+          text: "Join our family on BabyTalk",
           title: "BabyTalk Invite",
+          url: inviteUrl,
         });
         return;
       } catch {
@@ -341,7 +335,7 @@ export const ProfileSheet = ({
       }
     }
 
-    await navigator.clipboard.writeText(household.inviteCode);
+    await navigator.clipboard.writeText(inviteUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [household?.inviteCode]);
@@ -418,7 +412,7 @@ export const ProfileSheet = ({
             babies={babies}
             members={members}
             copied={copied}
-            onShare={handleCopyCode}
+            onShare={handleShareLink}
             onSignOut={handleSignOut}
           />
         )}

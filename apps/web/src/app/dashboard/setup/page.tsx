@@ -7,7 +7,7 @@ import { useCallback, useState } from "react";
 import { gqlRequest } from "@/lib/tambo/graphql";
 
 const CREATE_HOUSEHOLD = `
-  mutation { createHousehold { id inviteCode } }
+  mutation { createHousehold { id } }
 `;
 
 const ADD_BABY = `
@@ -27,7 +27,6 @@ const INVITE_PARTNER = `
 export default function SetupPage() {
   const router = useRouter();
   const [step, setStep] = useState<"welcome" | "baby">("welcome");
-  const [inviteCode, setInviteCode] = useState("");
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthWeightLbs, setBirthWeightLbs] = useState("");
@@ -42,10 +41,7 @@ export default function SetupPage() {
     setLoading(true);
     setErrorMsg("");
     try {
-      const data = await gqlRequest<{
-        createHousehold: { id: string; inviteCode: string };
-      }>(CREATE_HOUSEHOLD);
-      setInviteCode(data.createHousehold.inviteCode);
+      await gqlRequest(CREATE_HOUSEHOLD);
       setStep("baby");
     } catch (error) {
       setErrorMsg(
@@ -189,17 +185,6 @@ export default function SetupPage() {
         <p className="mt-2 text-center text-sm text-neutral-400">
           Just the basics — you can always update later.
         </p>
-
-        {inviteCode && (
-          <div className="mt-6 rounded-md bg-primary-50 p-4 text-center">
-            <p className="text-xs font-medium text-neutral-400">
-              Share this code with your partner
-            </p>
-            <p className="mt-1 font-mono text-lg font-bold tracking-widest text-primary-500">
-              {inviteCode}
-            </p>
-          </div>
-        )}
 
         <form className="mt-8 flex flex-col gap-3" onSubmit={handleAddBaby}>
           <div>
