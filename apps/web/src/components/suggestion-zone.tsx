@@ -23,21 +23,26 @@ function inferFeedVariant(events: BabyEvent[]): string {
   if (recentFeeds.length === 0) return "breast-l";
 
   let breastCount = 0;
-  let bottleCount = 0;
+  let nonBreastCount = 0;
   let lastSide = "left";
+  let lastNonBreastMethod = "bottle";
 
   for (const feed of recentFeeds) {
     try {
       const meta = JSON.parse(feed.metadata);
-      if (meta.method === "bottle") bottleCount += 1;
-      else breastCount += 1;
+      if (meta.method === "bottle" || meta.method === "formula") {
+        nonBreastCount += 1;
+        lastNonBreastMethod = meta.method;
+      } else if (meta.method === "breast") {
+        breastCount += 1;
+      }
       if (meta.side) lastSide = meta.side;
     } catch {
       /* ignore */
     }
   }
 
-  if (bottleCount > breastCount) return "bottle";
+  if (nonBreastCount > breastCount) return lastNonBreastMethod;
   return lastSide === "left" ? "breast-r" : "breast-l";
 }
 
@@ -85,6 +90,7 @@ const FEED_VARIANTS: Variant[] = [
     meta: { method: "breast", side: "right" },
   },
   { key: "bottle", label: "Bottle", meta: { method: "bottle" } },
+  { key: "formula", label: "Formula", meta: { method: "formula" } },
   { key: "solid", label: "Solid", meta: { method: "solid" } },
 ];
 
@@ -379,11 +385,11 @@ const ActionSection = ({
 
     if (type === "feed") {
       const method = meta.method as string;
-      if (method === "bottle") {
+      if (method === "bottle" || method === "formula") {
         setShowAmountInput(true);
         return;
       }
-      // Breast + solid: log immediately (breast with endedAt=null starts timer)
+      // Breast: log with endedAt=null (starts timer). Solid: log instantly.
       onLog(type, meta);
       return;
     }
