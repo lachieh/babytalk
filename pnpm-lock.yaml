@@ -11,7 +11,7 @@ importers:
     devDependencies:
       '@changesets/cli':
         specifier: ^2.30.0
-        version: 2.30.0(@types/node@25.5.0)
+        version: 2.30.0(@types/node@25.5.2)
       '@playwright/test':
         specifier: ^1.58.2
         version: 1.58.2
@@ -41,10 +41,10 @@ importers:
     dependencies:
       '@babytalk/db':
         specifier: workspace:*
-        version: link:../../packages/db
+        version: file:packages/db(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/vite-config':
         specifier: workspace:*
         version: link:../../packages/vite-config
@@ -56,19 +56,19 @@ importers:
         version: 1.19.11(hono@4.12.8)
       '@pothos/core':
         specifier: ^4.12.0
-        version: 4.12.0(graphql@16.13.1)
+        version: 4.12.0(graphql@16.13.2)
       '@pothos/plugin-drizzle':
         specifier: ^0.17.0
-        version: 0.17.0(@pothos/core@4.12.0(graphql@16.13.1))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.1)
+        version: 0.17.0(@pothos/core@4.12.0(graphql@16.13.2))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.2)
       drizzle-orm:
         specifier: 1.0.0-beta.19-d95b7a4
-        version: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+        version: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       graphql:
-        specifier: ^16.13.1
-        version: 16.13.1
+        specifier: ^16.13.2
+        version: 16.13.2
       graphql-yoga:
-        specifier: ^5.18.1
-        version: 5.18.1(graphql@16.13.1)
+        specifier: ^5.19.0
+        version: 5.19.0(graphql@16.13.2)
       hono:
         specifier: ^4.12.8
         version: 4.12.8
@@ -93,19 +93,19 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.1
-        version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       vitest:
         specifier: ^4.1.0
-        version: 4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.0(@types/node@25.5.2)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   apps/mcp:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/vite-config':
         specifier: workspace:*
-        version: link:../../packages/vite-config
+        version: file:packages/vite-config(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
       '@modelcontextprotocol/sdk':
         specifier: ^1.27.1
         version: 1.27.1(zod@4.3.6)
@@ -130,7 +130,7 @@ importers:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/zpages':
         specifier: workspace:*
         version: link:../../packages/zpages
@@ -139,13 +139,13 @@ importers:
         version: 1.2.4(@modelcontextprotocol/sdk@1.27.1(zod@4.3.6))(@types/json-schema@7.0.15)(@types/node@25.5.0)(@types/react@19.2.14)(quansync@0.2.11)(react@19.2.4)(typescript@5.9.3)(valibot@1.3.1(typescript@5.9.3))(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6)
       '@urql/core':
         specifier: ^6.0.1
-        version: 6.0.1(graphql@16.13.1)
+        version: 6.0.1(graphql@16.13.2)
       '@urql/next':
         specifier: ^2.0.0
-        version: 2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4))
+        version: 2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4))
       graphql:
-        specifier: ^16.13.1
-        version: 16.13.1
+        specifier: ^16.13.2
+        version: 16.13.2
       next:
         specifier: ^16.2.1
         version: 16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -157,7 +157,7 @@ importers:
         version: 19.2.4(react@19.2.4)
       urql:
         specifier: ^5.0.1
-        version: 5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4)
+        version: 5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4)
       zod:
         specifier: ^4.3.6
         version: 4.3.6
@@ -270,10 +270,10 @@ importers:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../standard-config
+        version: file:packages/standard-config
       vite:
         specifier: ^8.0.1
-        version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
     devDependencies:
       '@babytalk/tsconfig':
         specifier: workspace:*
@@ -376,16 +376,16 @@ packages:
     resolution: {integrity: sha512-fCqPIfOcLE+CGqGPd66c8bZpwAji98tZ4JI9i/mlTNTlsIWslCfpg48s/ypyLxZTump5sypjrKn2/kY7q8oAbA==}
     engines: {node: '>=20.0.0'}
 
-  '@azure/msal-browser@5.6.1':
-    resolution: {integrity: sha512-Ylmp8yngH7YRLV5mA1aF4CNS6WsJTPbVXaA0Tb1x1Gv/J3BM3hE4Q7nDaf7dRfU00FcxDBBudTjqlpH74ZSsgw==}
+  '@azure/msal-browser@5.6.3':
+    resolution: {integrity: sha512-sTjMtUm+bJpENU/1WlRzHEsgEHppZDZ1EtNyaOODg/sQBtMxxJzGB+MOCM+T2Q5Qe1fKBrdxUmjyRxm0r7Ez9w==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-common@16.4.0':
-    resolution: {integrity: sha512-twXt09PYtj1PffNNIAzQlrBd0DS91cdA6i1gAfzJ6BnPM4xNk5k9q/5xna7jLIjU3Jnp0slKYtucshGM8OGNAw==}
+  '@azure/msal-common@16.4.1':
+    resolution: {integrity: sha512-Bl8f+w37xkXsYh7QRkAKCFGYtWMYuOVO7Lv+BxILrvGz3HbIEF22Pt0ugyj0QPOl6NLrHcnNUQ9yeew98P/5iw==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-node@5.1.1':
-    resolution: {integrity: sha512-71grXU6+5hl+3CL3joOxlj/AW6rmhthuTlG0fRqsTrhPArQBpZuUFzCIlKOGdcafLUa/i1hBdV78ZxJdlvRA+g==}
+  '@azure/msal-node@5.1.2':
+    resolution: {integrity: sha512-DoeSJ9U5KPAIZoHsPywvfEj2MhBniQe0+FSpjLUTdWoIkI999GB5USkW6nNEHnIaLVxROHXvprWA1KzdS1VQ4A==}
     engines: {node: '>=20'}
 
   '@babel/helper-string-parser@7.27.1':
@@ -412,6 +412,16 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@babytalk/db@file:packages/db':
+    resolution: {directory: packages/db, type: directory}
+
+  '@babytalk/standard-config@file:packages/standard-config':
+    resolution: {directory: packages/standard-config, type: directory}
+    hasBin: true
+
+  '@babytalk/vite-config@file:packages/vite-config':
+    resolution: {directory: packages/vite-config, type: directory}
 
   '@changesets/apply-release-plan@7.1.0':
     resolution: {integrity: sha512-yq8ML3YS7koKQ/9bk1PqO0HMzApIFNwjlwCnwFEXMzNe8NpzeeYYKCmnhWJGkN8g7E51MnWaSbqRcTcdIxUgnQ==}
@@ -1807,6 +1817,9 @@ packages:
   '@types/node@25.5.0':
     resolution: {integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==}
 
+  '@types/node@25.5.2':
+    resolution: {integrity: sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg==}
+
   '@types/nodemailer@7.0.11':
     resolution: {integrity: sha512-E+U4RzR2dKrx+u3N4DlsmLaDC6mMZOM/TPROxA0UAPiTgI0y4CEFBmZE+coGWTjakDriRsXG368lNk1u9Q0a2g==}
 
@@ -2159,6 +2172,9 @@ packages:
 
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
+
+  defu@6.1.6:
+    resolution: {integrity: sha512-f8mefEW4WIVg4LckePx3mALjQSPQgFlg9U8yaPdlsbdYcHQyj9n2zL2LJEA52smeYxOvmd/nB7TpMtHGMTHcug==}
 
   depd@2.0.0:
     resolution: {integrity: sha512-g7nH6P6dyDioJogAAGprGpCtVImJhpPk/roCzdb3fIh61/s/nPsfR6onyMwkCAR/OlC3yBC0lESvUoQEAssIrw==}
@@ -2541,14 +2557,14 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  graphql-yoga@5.18.1:
-    resolution: {integrity: sha512-GiDSlvibfY/vyurbkBOKMO+adF6bTCzKr80FYWta59s1Lx87oVo8T6Nu/0hrxrGv0SrAUkqUpcpr4Ee7XlYmBw==}
+  graphql-yoga@5.19.0:
+    resolution: {integrity: sha512-Cw8lsN85Ugat3DGUvQC8kRd+PvV4zsNSCWSMPKaKnq9hZSXE5/qL/RzWeUem4Qdo7ja9refmsuo60NYGBcy56Q==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       graphql: ^15.2.0 || ^16.0.0
 
-  graphql@16.13.1:
-    resolution: {integrity: sha512-gGgrVCoDKlIZ8fIqXBBb0pPKqDgki0Z/FSKNiQzSGj2uEYHr1tq5wmBegGwJx6QB5S5cM0khSBpi/JFHMCvsmQ==}
+  graphql@16.13.2:
+    resolution: {integrity: sha512-5bJ+nf/UCpAjHM8i06fl7eLyVC9iuNAjm9qzkiu2ZGhM0VscSvS6WDPfAwkdkBuoXGM9FJSbKl6wylMwP9Ktig==}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
   has-flag@4.0.0:
@@ -2886,8 +2902,8 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
-  lru-cache@11.2.7:
-    resolution: {integrity: sha512-aY/R+aEsRelme17KGQa/1ZSIpLpNYYrhcrepKTZgE+W3WM16YMCaPwOHLHsmopZHELU0Ojin1lPVxKR0MihncA==}
+  lru-cache@11.3.0:
+    resolution: {integrity: sha512-sr8xPKE25m6vJVcrdn6NxtC0fVfuPowbscLypegRgOm0yXSqr5JNHCAY3hnusdJ7HRBW04j6Ip4khvHU778DuQ==}
     engines: {node: 20 || >=22}
 
   lru-cache@6.0.0:
@@ -3160,6 +3176,10 @@ packages:
 
   postgres@3.4.8:
     resolution: {integrity: sha512-d+JFcLM17njZaOLkv6SCev7uoLaBtfK86vMUXhW1Z4glPWh4jozno9APvW/XKFJ3CCxVoC7OL38BqRydtu5nGg==}
+    engines: {node: '>=12'}
+
+  postgres@3.4.9:
+    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
 
   prettier@2.8.8:
@@ -3720,9 +3740,9 @@ packages:
 
 snapshots:
 
-  '@0no-co/graphql.web@1.2.0(graphql@16.13.1)':
+  '@0no-co/graphql.web@1.2.0(graphql@16.13.2)':
     optionalDependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
   '@ag-ui/core@0.0.44':
     dependencies:
@@ -3818,8 +3838,8 @@ snapshots:
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
       '@azure/logger': 1.3.0
-      '@azure/msal-browser': 5.6.1
-      '@azure/msal-node': 5.1.1
+      '@azure/msal-browser': 5.6.3
+      '@azure/msal-node': 5.1.2
       open: 10.2.0
       tslib: 2.8.1
     transitivePeerDependencies:
@@ -3863,15 +3883,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@azure/msal-browser@5.6.1':
+  '@azure/msal-browser@5.6.3':
     dependencies:
-      '@azure/msal-common': 16.4.0
+      '@azure/msal-common': 16.4.1
 
-  '@azure/msal-common@16.4.0': {}
+  '@azure/msal-common@16.4.1': {}
 
-  '@azure/msal-node@5.1.1':
+  '@azure/msal-node@5.1.2':
     dependencies:
-      '@azure/msal-common': 16.4.0
+      '@azure/msal-common': 16.4.1
       jsonwebtoken: 9.0.3
       uuid: 8.3.2
 
@@ -3891,6 +3911,72 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@babytalk/db@file:packages/db(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)':
+    dependencies:
+      drizzle-orm: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+      postgres: 3.4.9
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@effect/sql'
+      - '@effect/sql-pg'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@sinclair/typebox'
+      - '@sqlitecloud/drivers'
+      - '@tidbcloud/serverless'
+      - '@tursodatabase/database'
+      - '@tursodatabase/database-common'
+      - '@tursodatabase/database-wasm'
+      - '@types/better-sqlite3'
+      - '@types/mssql'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - mssql
+      - mysql2
+      - pg
+      - sql.js
+      - sqlite3
+      - typebox
+      - valibot
+      - zod
+
+  '@babytalk/standard-config@file:packages/standard-config':
+    dependencies:
+      defu: 6.1.6
+      yaml: 2.8.3
+
+  '@babytalk/vite-config@file:packages/vite-config(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)':
+    dependencies:
+      '@babytalk/standard-config': file:packages/standard-config
+      vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+    transitivePeerDependencies:
+      - '@types/node'
+      - '@vitejs/devtools'
+      - esbuild
+      - jiti
+      - less
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - terser
+      - tsx
+      - yaml
 
   '@changesets/apply-release-plan@7.1.0':
     dependencies:
@@ -3921,7 +4007,7 @@ snapshots:
     dependencies:
       '@changesets/types': 6.1.0
 
-  '@changesets/cli@2.30.0(@types/node@25.5.0)':
+  '@changesets/cli@2.30.0(@types/node@25.5.2)':
     dependencies:
       '@changesets/apply-release-plan': 7.1.0
       '@changesets/assemble-release-plan': 6.0.9
@@ -3937,7 +4023,7 @@ snapshots:
       '@changesets/should-skip-package': 0.1.2
       '@changesets/types': 6.1.0
       '@changesets/write': 0.4.0
-      '@inquirer/external-editor': 1.0.3(@types/node@25.5.0)
+      '@inquirer/external-editor': 1.0.3(@types/node@25.5.2)
       '@manypkg/get-packages': 1.1.3
       ansi-colors: 4.1.3
       enquirer: 2.4.1
@@ -4241,48 +4327,48 @@ snapshots:
 
   '@fastify/busboy@3.2.0': {}
 
-  '@graphql-tools/executor@1.5.1(graphql@16.13.1)':
+  '@graphql-tools/executor@1.5.1(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@repeaterjs/repeater': 3.0.6
       '@whatwg-node/disposablestack': 0.0.6
       '@whatwg-node/promise-helpers': 1.3.2
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/merge@9.1.7(graphql@16.13.1)':
+  '@graphql-tools/merge@9.1.7(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      graphql: 16.13.1
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/schema@10.0.31(graphql@16.13.1)':
+  '@graphql-tools/schema@10.0.31(graphql@16.13.2)':
     dependencies:
-      '@graphql-tools/merge': 9.1.7(graphql@16.13.1)
-      '@graphql-tools/utils': 11.0.0(graphql@16.13.1)
-      graphql: 16.13.1
+      '@graphql-tools/merge': 9.1.7(graphql@16.13.2)
+      '@graphql-tools/utils': 11.0.0(graphql@16.13.2)
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/utils@10.11.0(graphql@16.13.1)':
+  '@graphql-tools/utils@10.11.0(graphql@16.13.2)':
     dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@whatwg-node/promise-helpers': 1.3.2
       cross-inspect: 1.0.1
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-tools/utils@11.0.0(graphql@16.13.1)':
+  '@graphql-tools/utils@11.0.0(graphql@16.13.2)':
     dependencies:
-      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.1)
+      '@graphql-typed-document-node/core': 3.2.0(graphql@16.13.2)
       '@whatwg-node/promise-helpers': 1.3.2
       cross-inspect: 1.0.1
-      graphql: 16.13.1
+      graphql: 16.13.2
       tslib: 2.8.1
 
-  '@graphql-typed-document-node/core@3.2.0(graphql@16.13.1)':
+  '@graphql-typed-document-node/core@3.2.0(graphql@16.13.2)':
     dependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
   '@graphql-yoga/logger@2.0.1':
     dependencies:
@@ -4401,12 +4487,12 @@ snapshots:
   '@img/sharp-win32-x64@0.34.5':
     optional: true
 
-  '@inquirer/external-editor@1.0.3(@types/node@25.5.0)':
+  '@inquirer/external-editor@1.0.3(@types/node@25.5.2)':
     dependencies:
       chardet: 2.1.1
       iconv-lite: 0.7.2
     optionalDependencies:
-      '@types/node': 25.5.0
+      '@types/node': 25.5.2
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -4680,15 +4766,15 @@ snapshots:
     dependencies:
       playwright: 1.58.2
 
-  '@pothos/core@4.12.0(graphql@16.13.1)':
+  '@pothos/core@4.12.0(graphql@16.13.2)':
     dependencies:
-      graphql: 16.13.1
+      graphql: 16.13.2
 
-  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.13.1))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.1)':
+  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.13.2))(drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.13.2)':
     dependencies:
-      '@pothos/core': 4.12.0(graphql@16.13.1)
-      drizzle-orm: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
-      graphql: 16.13.1
+      '@pothos/core': 4.12.0(graphql@16.13.2)
+      drizzle-orm: 1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+      graphql: 16.13.2
 
   '@repeaterjs/repeater@3.0.6': {}
 
@@ -4988,7 +5074,7 @@ snapshots:
 
   '@types/mssql@9.1.9(@azure/core-client@1.10.1)':
     dependencies:
-      '@types/node': 25.5.0
+      '@types/node': 25.5.2
       tarn: 3.0.2
       tedious: 19.2.1(@azure/core-client@1.10.1)
     transitivePeerDependencies:
@@ -4998,6 +5084,10 @@ snapshots:
   '@types/node@12.20.55': {}
 
   '@types/node@25.5.0':
+    dependencies:
+      undici-types: 7.18.2
+
+  '@types/node@25.5.2':
     dependencies:
       undici-types: 7.18.2
 
@@ -5015,7 +5105,7 @@ snapshots:
 
   '@types/readable-stream@4.0.23':
     dependencies:
-      '@types/node': 25.5.0
+      '@types/node': 25.5.2
 
   '@typespec/ts-http-runtime@0.3.4':
     dependencies:
@@ -5025,18 +5115,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@urql/core@6.0.1(graphql@16.13.1)':
+  '@urql/core@6.0.1(graphql@16.13.2)':
     dependencies:
-      '@0no-co/graphql.web': 1.2.0(graphql@16.13.1)
+      '@0no-co/graphql.web': 1.2.0(graphql@16.13.2)
       wonka: 6.3.5
     transitivePeerDependencies:
       - graphql
 
-  '@urql/next@2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4))':
+  '@urql/next@2.0.0(next@16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)(urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4))':
     dependencies:
       next: 16.2.1(@playwright/test@1.58.2)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react: 19.2.4
-      urql: 5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4)
+      urql: 5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4)
 
   '@vitest/expect@4.1.0':
     dependencies:
@@ -5054,6 +5144,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  '@vitest/mocker@4.1.0(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))':
+    dependencies:
+      '@vitest/spy': 4.1.0
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@4.1.0':
     dependencies:
@@ -5364,6 +5462,8 @@ snapshots:
 
   defu@6.1.4: {}
 
+  defu@6.1.6: {}
+
   depd@2.0.0: {}
 
   detect-indent@6.1.0: {}
@@ -5393,6 +5493,16 @@ snapshots:
     optionalDependencies:
       gel: 2.2.0
       postgres: 3.4.8
+      valibot: 1.3.1(typescript@5.9.3)
+      zod: 4.3.6
+
+  drizzle-orm@1.0.0-beta.19-d95b7a4(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6):
+    dependencies:
+      '@types/mssql': 9.1.9(@azure/core-client@1.10.1)
+      mssql: 11.0.1(@azure/core-client@1.10.1)
+    optionalDependencies:
+      gel: 2.2.0
+      postgres: 3.4.9
       valibot: 1.3.1(typescript@5.9.3)
       zod: 4.3.6
 
@@ -5731,23 +5841,23 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graphql-yoga@5.18.1(graphql@16.13.1):
+  graphql-yoga@5.19.0(graphql@16.13.2):
     dependencies:
       '@envelop/core': 5.5.1
       '@envelop/instrumentation': 1.0.0
-      '@graphql-tools/executor': 1.5.1(graphql@16.13.1)
-      '@graphql-tools/schema': 10.0.31(graphql@16.13.1)
-      '@graphql-tools/utils': 10.11.0(graphql@16.13.1)
+      '@graphql-tools/executor': 1.5.1(graphql@16.13.2)
+      '@graphql-tools/schema': 10.0.31(graphql@16.13.2)
+      '@graphql-tools/utils': 10.11.0(graphql@16.13.2)
       '@graphql-yoga/logger': 2.0.1
       '@graphql-yoga/subscription': 5.0.5
       '@whatwg-node/fetch': 0.10.13
       '@whatwg-node/promise-helpers': 1.3.2
       '@whatwg-node/server': 0.10.18
-      graphql: 16.13.1
+      graphql: 16.13.2
       lru-cache: 10.4.3
       tslib: 2.8.1
 
-  graphql@16.13.1: {}
+  graphql@16.13.2: {}
 
   has-flag@4.0.0: {}
 
@@ -6025,7 +6135,7 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
-  lru-cache@11.2.7: {}
+  lru-cache@11.3.0: {}
 
   lru-cache@6.0.0:
     dependencies:
@@ -6264,7 +6374,7 @@ snapshots:
 
   path-scurry@2.0.2:
     dependencies:
-      lru-cache: 11.2.7
+      lru-cache: 11.3.0
       minipass: 7.1.3
 
   path-to-regexp@8.3.0: {}
@@ -6316,6 +6426,8 @@ snapshots:
       source-map-js: 1.2.1
 
   postgres@3.4.8: {}
+
+  postgres@3.4.9: {}
 
   prettier@2.8.8: {}
 
@@ -6631,7 +6743,7 @@ snapshots:
       '@azure/identity': 4.13.1
       '@azure/keyvault-keys': 4.10.0(@azure/core-client@1.10.1)
       '@js-joda/core': 5.7.0
-      '@types/node': 25.5.0
+      '@types/node': 25.5.2
       bl: 6.1.6
       iconv-lite: 0.6.3
       js-md4: 0.3.2
@@ -6647,7 +6759,7 @@ snapshots:
       '@azure/identity': 4.13.1
       '@azure/keyvault-keys': 4.10.0(@azure/core-client@1.10.1)
       '@js-joda/core': 5.7.0
-      '@types/node': 25.5.0
+      '@types/node': 25.5.2
       bl: 6.1.6
       iconv-lite: 0.7.2
       js-md4: 0.3.2
@@ -6754,9 +6866,9 @@ snapshots:
 
   urlpattern-polyfill@10.1.0: {}
 
-  urql@5.0.1(@urql/core@6.0.1(graphql@16.13.1))(react@19.2.4):
+  urql@5.0.1(@urql/core@6.0.1(graphql@16.13.2))(react@19.2.4):
     dependencies:
-      '@urql/core': 6.0.1(graphql@16.13.1)
+      '@urql/core': 6.0.1(graphql@16.13.2)
       react: 19.2.4
       wonka: 6.3.5
 
@@ -6808,6 +6920,21 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.3
 
+  vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.3
+      postcss: 8.5.8
+      rolldown: 1.0.0-rc.10
+      tinyglobby: 0.2.15
+    optionalDependencies:
+      '@types/node': 25.5.2
+      esbuild: 0.27.4
+      fsevents: 2.3.3
+      jiti: 2.6.1
+      tsx: 4.21.0
+      yaml: 2.8.3
+
   vitest@4.1.0(@types/node@25.5.0)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.0
@@ -6832,6 +6959,33 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.0
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.0(@types/node@25.5.2)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)):
+    dependencies:
+      '@vitest/expect': 4.1.0
+      '@vitest/mocker': 4.1.0(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      '@vitest/pretty-format': 4.1.0
+      '@vitest/runner': 4.1.0
+      '@vitest/snapshot': 4.1.0
+      '@vitest/spy': 4.1.0
+      '@vitest/utils': 4.1.0
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.4
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.0.1(@types/node@25.5.2)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.5.2
     transitivePeerDependencies:
       - msw
 
