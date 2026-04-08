@@ -15,7 +15,7 @@
     "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
-    "drizzle-orm": "1.0.0-beta.19-d95b7a4",
+    "drizzle-orm": "1.0.0-beta.20",
     "postgres": "^3.4.8"
   },
   "devDependencies": {
