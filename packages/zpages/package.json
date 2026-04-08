@@ -28,7 +28,7 @@
     "@babytalk/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
     "typescript": "^5",
-    "vite": "^8.0.1",
+    "vite": "^8.0.5",
     "vite-plugin-dts": "^4.5.4",
     "vitest": "^4.1.0"
   }
