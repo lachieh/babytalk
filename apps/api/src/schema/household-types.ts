@@ -3,11 +3,11 @@ import { builder } from "./builder";
 // --- Enums ---
 
 export const EventTypeEnum = builder.enumType("EventType", {
-  values: ["feed", "sleep", "diaper", "note"] as const,
+  values: ["feed", "sleep", "diaper", "note", "pump"] as const,
 });
 
 export const FeedMethodEnum = builder.enumType("FeedMethod", {
-  values: ["breast", "bottle", "solid"] as const,
+  values: ["breast", "bottle", "formula", "solid"] as const,
 });
 
 export const FeedSideEnum = builder.enumType("FeedSide", {
@@ -134,5 +134,16 @@ export const DiaperMetadataInput = builder.inputType("DiaperMetadataInput", {
 export const NoteMetadataInput = builder.inputType("NoteMetadataInput", {
   fields: (t) => ({
     text: t.string({ required: true }),
+  }),
+});
+
+export const PumpSideEnum = builder.enumType("PumpSide", {
+  values: ["left", "right", "both"] as const,
+});
+
+export const PumpMetadataInput = builder.inputType("PumpMetadataInput", {
+  fields: (t) => ({
+    amountMl: t.int({ required: false }),
+    side: t.field({ required: true, type: PumpSideEnum }),
   }),
 });

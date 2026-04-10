@@ -151,7 +151,7 @@ export const tamboTools: TamboTool[] = [
         .string()
         .optional()
         .describe("ISO timestamp, defaults to now"),
-      type: z.enum(["feed", "sleep", "diaper", "note"]),
+      type: z.enum(["feed", "sleep", "diaper", "note", "pump"]),
     }),
     name: "logEvent",
     outputSchema: z.object({

@@ -46,6 +46,11 @@ interface BabyContextValue {
     meta: Record<string, unknown>
   ) => Promise<BabyEvent | null>;
   stopEvent: (id: string) => Promise<void>;
+  updateEventMeta: (
+    id: string,
+    type: string,
+    meta: Record<string, unknown>
+  ) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   undoableAction: UndoableAction | null;
   dismissUndo: () => void;
@@ -75,6 +80,7 @@ const LOG_EVENT = `
     $sleepMeta: SleepMetadataInput
     $diaperMeta: DiaperMetadataInput
     $noteMeta: NoteMetadataInput
+    $pumpMeta: PumpMetadataInput
   ) {
     logEvent(
       babyId: $babyId
@@ -85,6 +91,7 @@ const LOG_EVENT = `
       sleepMeta: $sleepMeta
       diaperMeta: $diaperMeta
       noteMeta: $noteMeta
+      pumpMeta: $pumpMeta
     ) {
       id type startedAt endedAt metadata
     }
@@ -100,6 +107,28 @@ const DELETE_EVENT = `
 const UPDATE_EVENT = `
   mutation UpdateEvent($id: String!, $endedAt: String) {
     updateEvent(id: $id, endedAt: $endedAt) {
+      id type startedAt endedAt metadata
+    }
+  }
+`;
+
+const UPDATE_EVENT_META = `
+  mutation UpdateEventMeta(
+    $id: String!
+    $feedMeta: FeedMetadataInput
+    $sleepMeta: SleepMetadataInput
+    $diaperMeta: DiaperMetadataInput
+    $noteMeta: NoteMetadataInput
+    $pumpMeta: PumpMetadataInput
+  ) {
+    updateEvent(
+      id: $id
+      feedMeta: $feedMeta
+      sleepMeta: $sleepMeta
+      diaperMeta: $diaperMeta
+      noteMeta: $noteMeta
+      pumpMeta: $pumpMeta
+    ) {
       id type startedAt endedAt metadata
     }
   }
@@ -208,6 +237,19 @@ export const BabyContextProvider = ({
     [refreshEvents]
   );
 
+  const updateEventMeta = useCallback(
+    async (id: string, type: string, meta: Record<string, unknown>) => {
+      const metaKey = `${type}Meta`;
+      try {
+        await gqlRequest(UPDATE_EVENT_META, { id, [metaKey]: meta });
+        await refreshEvents();
+      } catch {
+        await refreshEvents();
+      }
+    },
+    [refreshEvents]
+  );
+
   const logEventDirect = useCallback(
     async (
       type: string,
@@ -270,6 +312,7 @@ export const BabyContextProvider = ({
       refreshEvents,
       logEventDirect,
       stopEvent,
+      updateEventMeta,
       deleteEvent,
       undoableAction,
       dismissUndo,
@@ -282,6 +325,7 @@ export const BabyContextProvider = ({
       refreshEvents,
       logEventDirect,
       stopEvent,
+      updateEventMeta,
       deleteEvent,
       undoableAction,
       dismissUndo,

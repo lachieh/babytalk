@@ -13,6 +13,7 @@ import {
   FeedMetadataInput,
   HouseholdType,
   NoteMetadataInput,
+  PumpMetadataInput,
   SleepMetadataInput,
 } from "./household-types";
 
@@ -178,6 +179,10 @@ const buildMetadata = (
       side?: string | null;
     } | null;
     noteMeta?: { text: string } | null;
+    pumpMeta?: {
+      amountMl?: number | null;
+      side: string;
+    } | null;
     sleepMeta?: { location?: string | null; quality?: string | null } | null;
   }
 ): Record<string, unknown> => {
@@ -198,6 +203,10 @@ const buildMetadata = (
       if (!args.noteMeta) throw new Error("noteMeta required for note events");
       return { ...args.noteMeta };
     }
+    case "pump": {
+      if (!args.pumpMeta) throw new Error("pumpMeta required for pump events");
+      return { ...args.pumpMeta };
+    }
     default: {
       throw new Error(`Unknown event type: ${type}`);
     }
@@ -212,6 +221,7 @@ builder.mutationField("logEvent", (t) =>
       endedAt: t.arg.string({ required: false }),
       feedMeta: t.arg({ required: false, type: FeedMetadataInput }),
       noteMeta: t.arg({ required: false, type: NoteMetadataInput }),
+      pumpMeta: t.arg({ required: false, type: PumpMetadataInput }),
       sleepMeta: t.arg({ required: false, type: SleepMetadataInput }),
       startedAt: t.arg.string({ required: false }),
       type: t.arg({ required: true, type: EventTypeEnum }),
@@ -248,6 +258,7 @@ builder.mutationField("updateEvent", (t) =>
       feedMeta: t.arg({ required: false, type: FeedMetadataInput }),
       id: t.arg.string({ required: true }),
       noteMeta: t.arg({ required: false, type: NoteMetadataInput }),
+      pumpMeta: t.arg({ required: false, type: PumpMetadataInput }),
       sleepMeta: t.arg({ required: false, type: SleepMetadataInput }),
       startedAt: t.arg.string({ required: false }),
     },
@@ -273,7 +284,11 @@ builder.mutationField("updateEvent", (t) =>
 
       // If any metadata input is provided, rebuild metadata
       const hasMeta =
-        args.feedMeta || args.sleepMeta || args.diaperMeta || args.noteMeta;
+        args.feedMeta ||
+        args.sleepMeta ||
+        args.diaperMeta ||
+        args.noteMeta ||
+        args.pumpMeta;
       if (hasMeta) {
         updates.metadata = buildMetadata(existing.type, args);
       }

@@ -111,10 +111,17 @@ const SLEEP_VARIANTS: Variant[] = [
   { key: "carrier", label: "Carrier", meta: { location: "carrier" } },
 ];
 
+const PUMP_VARIANTS: Variant[] = [
+  { key: "left", label: "Left", meta: { side: "left" } },
+  { key: "right", label: "Right", meta: { side: "right" } },
+  { key: "both", label: "Both", meta: { side: "both" } },
+];
+
 /* ── Styles ────────────────────────────────────────────────── */
 
 const sectionStyles: Record<string, { bg: string; border: string }> = {
   feed: { bg: "bg-feed-50", border: "border-feed-200" },
+  pump: { bg: "bg-feed-50", border: "border-feed-200" },
   diaper: { bg: "bg-diaper-50", border: "border-diaper-200" },
   sleep: { bg: "bg-sleep-50", border: "border-sleep-200" },
 };
@@ -360,6 +367,7 @@ const ActionSection = ({
   activeEvent,
   onLog,
   onStop,
+  onUpdateMeta,
   onCancel,
 }: {
   type: string;
@@ -369,11 +377,16 @@ const ActionSection = ({
   activeEvent: BabyEvent | null;
   onLog: (type: string, meta: Record<string, unknown>) => void;
   onStop: (id: string) => void;
+  onUpdateMeta: (id: string, meta: Record<string, unknown>) => void;
   onCancel: (id: string) => void;
 }) => {
   const [selected, setSelected] = useState(defaultVariant);
   const [expanded, setExpanded] = useState(false);
   const [showAmountInput, setShowAmountInput] = useState(false);
+  // For pump: after stopping timer, capture amount before finalizing
+  const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
+    null
+  );
   const styles = sectionStyles[type];
 
   const selectedVariant =
@@ -394,9 +407,41 @@ const ActionSection = ({
       return;
     }
 
+    if (type === "pump") {
+      // Pump: always starts a timer (endedAt=null)
+      onLog(type, meta);
+      return;
+    }
+
     // Sleep + diaper: log immediately (sleep with endedAt=null starts timer)
     onLog(type, meta);
   }, [type, selectedVariant, onLog]);
+
+  const handleTimerStop = useCallback(
+    (id: string) => {
+      if (type === "pump") {
+        // Pump: stop the timer, then ask for amount
+        onStop(id);
+        setPumpStoppedEventId(id);
+      } else {
+        onStop(id);
+      }
+    },
+    [type, onStop]
+  );
+
+  const handlePumpAmountConfirm = useCallback(
+    (amountMl: number) => {
+      if (!pumpStoppedEventId) return;
+      onUpdateMeta(pumpStoppedEventId, { ...selectedVariant.meta, amountMl });
+      setPumpStoppedEventId(null);
+    },
+    [pumpStoppedEventId, selectedVariant, onUpdateMeta]
+  );
+
+  const handlePumpAmountCancel = useCallback(() => {
+    setPumpStoppedEventId(null);
+  }, []);
 
   const handleVariantTap = useCallback(() => setExpanded((prev) => !prev), []);
   const handleOptionSelect = useCallback((key: string) => {
@@ -415,7 +460,8 @@ const ActionSection = ({
   const handleAmountCancel = useCallback(() => setShowAmountInput(false), []);
 
   const hasTimer = activeEvent !== null;
-  const showActions = !hasTimer && !showAmountInput;
+  const showPumpAmount = pumpStoppedEventId !== null;
+  const showActions = !hasTimer && !showAmountInput && !showPumpAmount;
 
   return (
     <div
@@ -423,10 +469,22 @@ const ActionSection = ({
     >
       {/* Active timer from DB — visible to both parents, survives refresh */}
       {hasTimer && (
-        <ActiveTimer event={activeEvent} onStop={onStop} onCancel={onCancel} />
+        <ActiveTimer
+          event={activeEvent}
+          onStop={handleTimerStop}
+          onCancel={onCancel}
+        />
       )}
 
-      {/* Bottle amount input (local flow, not a timer) */}
+      {/* Pump: amount input after timer stops */}
+      {showPumpAmount && (
+        <AmountInput
+          onConfirm={handlePumpAmountConfirm}
+          onCancel={handlePumpAmountCancel}
+        />
+      )}
+
+      {/* Bottle/formula amount input (local flow, not a timer) */}
       {showAmountInput && (
         <AmountInput
           onConfirm={handleAmountConfirm}
@@ -488,6 +546,7 @@ export const SuggestionZone = () => {
     activeEvents,
     logEventDirect,
     stopEvent,
+    updateEventMeta,
     deleteEvent,
     loading,
   } = useBabyContext();
@@ -499,6 +558,7 @@ export const SuggestionZone = () => {
   // Find active (in-progress) events for each type
   const activeFeed = activeEvents.find((e) => e.type === "feed") ?? null;
   const activeSleep = activeEvents.find((e) => e.type === "sleep") ?? null;
+  const activePump = activeEvents.find((e) => e.type === "pump") ?? null;
 
   const handleLog = useCallback(
     (type: string, meta: Record<string, unknown>) => {
@@ -513,6 +573,19 @@ export const SuggestionZone = () => {
       stopEvent(id);
     },
     [stopEvent]
+  );
+
+  const handleUpdateMeta = useCallback(
+    (id: string, meta: Record<string, unknown>) => {
+      // Determine event type from active events
+      const event =
+        activeEvents.find((e) => e.id === id) ??
+        events.find((e) => e.id === id);
+      if (event) {
+        updateEventMeta(id, event.type, meta);
+      }
+    },
+    [activeEvents, events, updateEventMeta]
   );
 
   const handleCancel = useCallback(
@@ -533,8 +606,20 @@ export const SuggestionZone = () => {
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
+        onUpdateMeta={handleUpdateMeta}
         type="feed"
         variants={FEED_VARIANTS}
+      />
+      <ActionSection
+        activeEvent={activePump}
+        defaultVariant="left"
+        icon="🤱"
+        onCancel={handleCancel}
+        onLog={handleLog}
+        onStop={handleStop}
+        onUpdateMeta={handleUpdateMeta}
+        type="pump"
+        variants={PUMP_VARIANTS}
       />
       <ActionSection
         activeEvent={null}
@@ -543,6 +628,7 @@ export const SuggestionZone = () => {
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
+        onUpdateMeta={handleUpdateMeta}
         type="diaper"
         variants={DIAPER_VARIANTS}
       />
@@ -553,6 +639,7 @@ export const SuggestionZone = () => {
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
+        onUpdateMeta={handleUpdateMeta}
         type="sleep"
         variants={SLEEP_VARIANTS}
       />
