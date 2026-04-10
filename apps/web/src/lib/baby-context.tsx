@@ -49,7 +49,9 @@ interface BabyContextValue {
   updateEventMeta: (
     id: string,
     type: string,
-    meta: Record<string, unknown>
+    meta: Record<string, unknown>,
+    startedAt?: string,
+    endedAt?: string | null
   ) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
   undoableAction: UndoableAction | null;
@@ -115,6 +117,8 @@ const UPDATE_EVENT = `
 const UPDATE_EVENT_META = `
   mutation UpdateEventMeta(
     $id: String!
+    $startedAt: String
+    $endedAt: String
     $feedMeta: FeedMetadataInput
     $sleepMeta: SleepMetadataInput
     $diaperMeta: DiaperMetadataInput
@@ -123,6 +127,8 @@ const UPDATE_EVENT_META = `
   ) {
     updateEvent(
       id: $id
+      startedAt: $startedAt
+      endedAt: $endedAt
       feedMeta: $feedMeta
       sleepMeta: $sleepMeta
       diaperMeta: $diaperMeta
@@ -238,10 +244,21 @@ export const BabyContextProvider = ({
   );
 
   const updateEventMeta = useCallback(
-    async (id: string, type: string, meta: Record<string, unknown>) => {
+    async (
+      id: string,
+      type: string,
+      meta: Record<string, unknown>,
+      startedAt?: string,
+      endedAt?: string | null
+    ) => {
       const metaKey = `${type}Meta`;
       try {
-        await gqlRequest(UPDATE_EVENT_META, { id, [metaKey]: meta });
+        await gqlRequest(UPDATE_EVENT_META, {
+          id,
+          [metaKey]: meta,
+          ...(startedAt ? { startedAt } : {}),
+          ...(endedAt === undefined ? {} : { endedAt }),
+        });
         await refreshEvents();
       } catch {
         await refreshEvents();

@@ -279,8 +279,7 @@ export const EventEditSheet = ({
   open: boolean;
   onClose: () => void;
 }) => {
-  const { logEventDirect, updateEventMeta, stopEvent, deleteEvent } =
-    useBabyContext();
+  const { logEventDirect, updateEventMeta, deleteEvent } = useBabyContext();
   const isNew = event === null;
 
   const [form, setForm] = useState<EventFormData>(() => {
@@ -387,10 +386,17 @@ export const EventEditSheet = ({
           ...(endedAt ? { _endedAt: endedAt } : {}),
         });
       } else if (event) {
-        await updateEventMeta(event.id, form.type, form.meta);
-        if (form.endedAt && !event.endedAt) {
-          await stopEvent(event.id);
-        }
+        const startedAt = new Date(form.startedAt).toISOString();
+        const endedAt = form.endedAt
+          ? new Date(form.endedAt).toISOString()
+          : null;
+        await updateEventMeta(
+          event.id,
+          form.type,
+          form.meta,
+          startedAt,
+          endedAt
+        );
       }
       triggerFeedback("logged");
       onClose();
@@ -399,7 +405,7 @@ export const EventEditSheet = ({
     } finally {
       setSaving(false);
     }
-  }, [isNew, event, form, logEventDirect, updateEventMeta, stopEvent, onClose]);
+  }, [isNew, event, form, logEventDirect, updateEventMeta, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!event) return;
