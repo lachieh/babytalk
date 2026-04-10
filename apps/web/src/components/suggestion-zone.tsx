@@ -383,6 +383,11 @@ const ActionSection = ({
   const [selected, setSelected] = useState(defaultVariant);
   const [expanded, setExpanded] = useState(false);
   const [showAmountInput, setShowAmountInput] = useState(false);
+
+  // Sync selected variant when the inferred default changes (e.g. after logging)
+  useEffect(() => {
+    setSelected(defaultVariant);
+  }, [defaultVariant]);
   // For pump: after stopping timer, capture amount before finalizing
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
