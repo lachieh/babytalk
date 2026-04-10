@@ -6,6 +6,7 @@ import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 
 import { EventEditSheet } from "./event-edit-sheet";
+import { DayView, WeekView } from "./timeline-charts";
 
 /* ── Helpers ───────────────────────────────────────────────── */
 
@@ -163,8 +164,33 @@ const EventRow = ({
 
 /* ── History View ──────────────────────────────────────────── */
 
+type HistoryTab = "list" | "day" | "week";
+
+const TabButton = ({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) => (
+  <button
+    className={`flex-1 rounded-lg py-1.5 text-xs font-medium transition-colors ${
+      active
+        ? "bg-primary-500 text-white"
+        : "text-neutral-400 hover:text-neutral-600"
+    }`}
+    onClick={onClick}
+    type="button"
+  >
+    {label}
+  </button>
+);
+
 export const HistoryView = () => {
   const { events, loading } = useBabyContext();
+  const [tab, setTab] = useState<HistoryTab>("list");
   const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
@@ -189,50 +215,84 @@ export const HistoryView = () => {
     setIsNew(false);
   }, []);
 
+  const handleSetDay = useCallback(() => setTab("day"), []);
+  const handleSetWeek = useCallback(() => setTab("week"), []);
+  const handleSetList = useCallback(() => setTab("list"), []);
+
   if (loading) return null;
 
   return (
-    <div className="px-4 py-2">
-      {/* Add button */}
-      <button
-        className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
-        onClick={handleAdd}
-        type="button"
-      >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 4v16m8-8H4"
-          />
-        </svg>
-        Add past entry
-      </button>
+    <div className="py-2">
+      {/* Sub-tab switcher */}
+      <div className="mx-4 mb-3 flex gap-1 rounded-xl bg-neutral-100 p-1">
+        <TabButton active={tab === "day"} label="Day" onClick={handleSetDay} />
+        <TabButton
+          active={tab === "week"}
+          label="Week"
+          onClick={handleSetWeek}
+        />
+        <TabButton
+          active={tab === "list"}
+          label="List"
+          onClick={handleSetList}
+        />
+      </div>
 
-      {/* Day groups */}
-      {events.length === 0 ? (
-        <p className="py-8 text-center text-sm text-neutral-400">
-          No events logged yet
-        </p>
-      ) : (
-        [...grouped.entries()].map(([dateKey, dayEvents]) => (
-          <div key={dateKey} className="mb-4">
-            <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
-              {dayLabel(dayEvents[0].startedAt)}
+      {/* Day timeline view */}
+      {tab === "day" && <DayView events={events} onTapEvent={handleEdit} />}
+
+      {/* Week timeline view */}
+      {tab === "week" && <WeekView events={events} onTapEvent={handleEdit} />}
+
+      {/* List view */}
+      {tab === "list" && (
+        <div className="px-4">
+          {/* Add button */}
+          <button
+            className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
+            onClick={handleAdd}
+            type="button"
+          >
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+            Add past entry
+          </button>
+
+          {/* Day groups */}
+          {events.length === 0 ? (
+            <p className="py-8 text-center text-sm text-neutral-400">
+              No events logged yet
             </p>
-            <div className="space-y-0.5">
-              {dayEvents.map((event) => (
-                <EventRow event={event} key={event.id} onEdit={handleEdit} />
-              ))}
-            </div>
-          </div>
-        ))
+          ) : (
+            [...grouped.entries()].map(([dateKey, dayEvents]) => (
+              <div key={dateKey} className="mb-4">
+                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+                  {dayLabel(dayEvents[0].startedAt)}
+                </p>
+                <div className="space-y-0.5">
+                  {dayEvents.map((event) => (
+                    <EventRow
+                      event={event}
+                      key={event.id}
+                      onEdit={handleEdit}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       )}
 
       {/* Edit/Add sheet */}
