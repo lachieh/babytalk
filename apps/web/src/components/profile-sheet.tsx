@@ -32,6 +32,14 @@ const PROFILE_QUERY = `
   }
 `;
 
+const GET_LATEST_MEASUREMENT = `
+  query LatestMeasurement($babyId: String!) {
+    measurements(babyId: $babyId, limit: 1) {
+      weightG measuredAt
+    }
+  }
+`;
+
 const pluralize = (count: number, singular: string): string =>
   count === 1 ? `${count} ${singular}` : `${count} ${singular}s`;
 
@@ -172,11 +180,21 @@ const PartnerInvite = ({
   );
 };
 
+function getWeightLabel(
+  latest: { weightG: number; measuredAt: string } | null | undefined,
+  birthWeightG: number | null
+): string | null {
+  if (latest) return formatWeight(latest.weightG);
+  if (birthWeightG !== null) return `${formatWeight(birthWeightG)} at birth`;
+  return null;
+}
+
 const ProfileContent = ({
   me,
   household,
   babies,
   members,
+  latestWeights,
   copied,
   onShare,
   onSignOut,
@@ -184,6 +202,7 @@ const ProfileContent = ({
   babies: BabyInfo[];
   copied: boolean;
   household: HouseholdInfo | null;
+  latestWeights: Record<string, { weightG: number; measuredAt: string } | null>;
   me: UserInfo | null;
   members: UserInfo[];
   onShare: () => void;
@@ -218,18 +237,25 @@ const ProfileContent = ({
             {babies.length === 1 ? "Baby" : "Babies"}
           </h3>
           <div className="space-y-2">
-            {babies.map((baby) => (
-              <div key={baby.id} className="rounded-xl bg-neutral-50 px-4 py-3">
-                <p className="text-sm font-medium text-neutral-800">
-                  {baby.name}
-                </p>
-                <p className="mt-0.5 text-sm text-neutral-400">
-                  {formatAge(baby.birthDate)}
-                  {baby.birthWeightG !== null &&
-                    ` · ${formatWeight(baby.birthWeightG)}`}
-                </p>
-              </div>
-            ))}
+            {babies.map((baby) => {
+              const latest = latestWeights[baby.id];
+              const weightLabel = getWeightLabel(latest, baby.birthWeightG);
+
+              return (
+                <div
+                  key={baby.id}
+                  className="rounded-xl bg-neutral-50 px-4 py-3"
+                >
+                  <p className="text-sm font-medium text-neutral-800">
+                    {baby.name}
+                  </p>
+                  <p className="mt-0.5 text-sm text-neutral-400">
+                    {formatAge(baby.birthDate)}
+                    {weightLabel !== null && ` · ${weightLabel}`}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
@@ -287,6 +313,9 @@ export const ProfileSheet = ({
   const [household, setHousehold] = useState<HouseholdInfo | null>(null);
   const [babies, setBabies] = useState<BabyInfo[]>([]);
   const [members, setMembers] = useState<UserInfo[]>([]);
+  const [latestWeights, setLatestWeights] = useState<
+    Record<string, { weightG: number; measuredAt: string } | null>
+  >({});
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -307,6 +336,27 @@ export const ProfileSheet = ({
         setHousehold(data.myHousehold);
         setBabies(data.myBabies);
         setMembers(data.householdMembers);
+
+        // Fetch latest measurement for each baby
+        const weightMap: Record<
+          string,
+          { weightG: number; measuredAt: string } | null
+        > = {};
+        for (const baby of data.myBabies) {
+          try {
+            const mData = await gqlRequest<{
+              measurements: { weightG: number | null; measuredAt: string }[];
+            }>(GET_LATEST_MEASUREMENT, { babyId: baby.id });
+            const [latest] = mData.measurements;
+            weightMap[baby.id] =
+              latest?.weightG !== null && latest?.weightG !== undefined
+                ? { weightG: latest.weightG, measuredAt: latest.measuredAt }
+                : null;
+          } catch {
+            weightMap[baby.id] = null;
+          }
+        }
+        setLatestWeights(weightMap);
       } catch {
         // Silently fail — profile is non-critical
       } finally {
@@ -411,6 +461,7 @@ export const ProfileSheet = ({
             household={household}
             babies={babies}
             members={members}
+            latestWeights={latestWeights}
             copied={copied}
             onShare={handleShareLink}
             onSignOut={handleSignOut}
