@@ -4,6 +4,7 @@ import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
+import { GrowthView } from "@/components/growth-view";
 import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
 import { ProfileSheet } from "@/components/profile-sheet";
@@ -285,11 +286,12 @@ const BottomBar = ({ onOpenChat }: { onOpenChat: () => void }) => (
 
 export default function DashboardPage() {
   useAutoDarkMode();
-  const [tab, setTab] = useState<"today" | "history">("today");
+  const [tab, setTab] = useState<"today" | "history" | "growth">("today");
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const switchToToday = useCallback(() => setTab("today"), []);
   const switchToHistory = useCallback(() => setTab("history"), []);
+  const switchToGrowth = useCallback(() => setTab("growth"), []);
   const openChat = useCallback(() => setChatOpen(true), []);
   const closeChat = useCallback(() => setChatOpen(false), []);
   const tamboEnabled = Boolean(getTamboApiKey());
@@ -342,6 +344,13 @@ export default function DashboardPage() {
         >
           History
         </button>
+        <button
+          className={`flex-1 py-2.5 text-center text-sm font-medium transition-colors ${tab === "growth" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-400"}`}
+          onClick={switchToGrowth}
+          type="button"
+        >
+          Growth
+        </button>
       </div>
 
       {/* Scrollable content area */}
@@ -358,6 +367,7 @@ export default function DashboardPage() {
           </>
         )}
         {tab === "history" && <HistoryView />}
+        {tab === "growth" && <GrowthView />}
       </div>
 
       {/* Bottom bar — voice + chat only when Tambo is configured */}
