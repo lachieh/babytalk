@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
@@ -299,6 +299,26 @@ export const EventEditSheet = ({
       meta: { method: "breast", side: "left" },
     };
   });
+
+  // Reset form when a different event is selected or sheet opens
+  useEffect(() => {
+    if (!open) return;
+    if (event) {
+      setForm({
+        type: event.type as EventType,
+        startedAt: toLocalDatetime(event.startedAt),
+        endedAt: event.endedAt ? toLocalDatetime(event.endedAt) : "",
+        meta: parseMeta(event),
+      });
+    } else {
+      setForm({
+        type: "feed",
+        startedAt: toLocalDatetime(new Date().toISOString()),
+        endedAt: "",
+        meta: { method: "breast", side: "left" },
+      });
+    }
+  }, [event, open]);
 
   const [saving, setSaving] = useState(false);
 

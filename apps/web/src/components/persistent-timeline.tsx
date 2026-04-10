@@ -1,12 +1,18 @@
 "use client";
 
+import { useCallback, useState } from "react";
+
+import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 
+import { EventEditSheet } from "./event-edit-sheet";
+
 const typeEmoji: Record<string, string> = {
-  feed: "\u{1F37C}",
-  sleep: "\u{1F634}",
-  diaper: "\u{1F6BC}",
-  note: "\u{1F4DD}",
+  feed: "🍼",
+  pump: "🤱",
+  sleep: "😴",
+  diaper: "🚼",
+  note: "📝",
 };
 
 const formatTime = (iso: string) =>
@@ -22,11 +28,16 @@ const formatMeta = (type: string, raw: string): string => {
         if (meta.side) parts.push(meta.side);
         return parts.join(", ");
       }
+      case "pump": {
+        const parts = [meta.side];
+        if (meta.amountMl) parts.push(`${meta.amountMl}ml`);
+        return parts.join(", ");
+      }
       case "sleep": {
         return meta.location || "sleep";
       }
       case "diaper": {
-        const parts = [];
+        const parts: string[] = [];
         if (meta.wet) parts.push("wet");
         if (meta.soiled) parts.push("soiled");
         return parts.join(" + ") || "diaper";
@@ -53,12 +64,66 @@ const formatDuration = (start: string, end: string | null): string | null => {
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 };
 
+const TimelineRow = ({
+  event,
+  onEdit,
+}: {
+  event: BabyEvent;
+  onEdit: (event: BabyEvent) => void;
+}) => {
+  const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
+  const duration = formatDuration(event.startedAt, event.endedAt);
+  const meta = formatMeta(event.type, event.metadata);
+
+  return (
+    <button
+      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+      onClick={handleClick}
+      type="button"
+    >
+      <span className="text-base">{typeEmoji[event.type] ?? "📋"}</span>
+      <span className="w-14 text-xs tabular-nums text-neutral-400">
+        {formatTime(event.startedAt)}
+      </span>
+      <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
+        {event.type}
+      </span>
+      <span className="text-right text-xs text-neutral-400">
+        {duration && (
+          <span className="mr-1.5 text-neutral-500">{duration}</span>
+        )}
+        {meta}
+      </span>
+      <svg
+        className="h-3.5 w-3.5 text-neutral-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+};
+
 export const PersistentTimeline = () => {
   const { events, loading } = useBabyContext();
+  const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const handleEdit = useCallback((event: BabyEvent) => {
+    setEditingEvent(event);
+    setSheetOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setSheetOpen(false);
+    setEditingEvent(null);
+  }, []);
 
   if (loading) return null;
 
-  // Only show today's events
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
@@ -78,35 +143,17 @@ export const PersistentTimeline = () => {
       <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
         Today
       </p>
-      <div className="space-y-1">
-        {todayEvents.slice(0, 10).map((event) => {
-          const duration = formatDuration(event.startedAt, event.endedAt);
-          const meta = formatMeta(event.type, event.metadata);
-
-          return (
-            <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-neutral-50"
-              key={event.id}
-            >
-              <span className="text-base">
-                {typeEmoji[event.type] ?? "\u{1F4CB}"}
-              </span>
-              <span className="w-14 text-xs tabular-nums text-neutral-400">
-                {formatTime(event.startedAt)}
-              </span>
-              <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
-                {event.type}
-              </span>
-              <span className="text-right text-xs text-neutral-400">
-                {duration && (
-                  <span className="mr-1.5 text-neutral-500">{duration}</span>
-                )}
-                {meta}
-              </span>
-            </div>
-          );
-        })}
+      <div className="space-y-0.5">
+        {todayEvents.slice(0, 10).map((event) => (
+          <TimelineRow event={event} key={event.id} onEdit={handleEdit} />
+        ))}
       </div>
+
+      <EventEditSheet
+        event={editingEvent}
+        onClose={handleClose}
+        open={sheetOpen}
+      />
     </div>
   );
 };
