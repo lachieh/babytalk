@@ -400,8 +400,8 @@ export const EventEditSheet = ({
       }
       triggerFeedback("logged");
       onClose();
-    } catch {
-      // Error handling — stay open
+    } catch (error) {
+      console.error("[EventEditSheet] Save failed:", error);
     } finally {
       setSaving(false);
     }
