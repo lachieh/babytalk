@@ -4,6 +4,7 @@ import { useTambo, useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
+import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { StatusWidget } from "@/components/status-widget";
@@ -284,8 +285,11 @@ const BottomBar = ({ onOpenChat }: { onOpenChat: () => void }) => (
 
 export default function DashboardPage() {
   useAutoDarkMode();
+  const [tab, setTab] = useState<"today" | "history">("today");
   const [chatOpen, setChatOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const switchToToday = useCallback(() => setTab("today"), []);
+  const switchToHistory = useCallback(() => setTab("history"), []);
   const openChat = useCallback(() => setChatOpen(true), []);
   const closeChat = useCallback(() => setChatOpen(false), []);
   const tamboEnabled = Boolean(getTamboApiKey());
@@ -322,24 +326,38 @@ export default function DashboardPage() {
         <StatusWidget />
       </header>
 
+      {/* Tab bar */}
+      <div className="flex border-b border-neutral-100 bg-surface-raised">
+        <button
+          className={`flex-1 py-2.5 text-center text-sm font-medium transition-colors ${tab === "today" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-400"}`}
+          onClick={switchToToday}
+          type="button"
+        >
+          Today
+        </button>
+        <button
+          className={`flex-1 py-2.5 text-center text-sm font-medium transition-colors ${tab === "history" ? "border-b-2 border-primary-500 text-primary-600" : "text-neutral-400"}`}
+          onClick={switchToHistory}
+          type="button"
+        >
+          History
+        </button>
+      </div>
+
       {/* Scrollable content area */}
       <div className="flex-1 overflow-y-auto">
-        {/* AI Insight — proactive, contextual */}
-        <div className="pt-3">
-          <AIInsightCard />
-        </div>
-
-        {/* Suggestion Zone — primary interaction surface */}
-        <SuggestionZone />
-
-        {/* Last AI response — only when Tambo is configured */}
-        {tamboEnabled && <LastResponse />}
-
-        {/* Divider */}
-        <div className="mx-4 border-t border-neutral-100" />
-
-        {/* Persistent Timeline — always visible */}
-        <PersistentTimeline />
+        {tab === "today" && (
+          <>
+            <div className="pt-3">
+              <AIInsightCard />
+            </div>
+            <SuggestionZone />
+            {tamboEnabled && <LastResponse />}
+            <div className="mx-4 border-t border-neutral-100" />
+            <PersistentTimeline />
+          </>
+        )}
+        {tab === "history" && <HistoryView />}
       </div>
 
       {/* Bottom bar — voice + chat only when Tambo is configured */}

@@ -158,7 +158,7 @@ export const BabyContextProvider = ({
     try {
       const data = await gqlRequest<{ recentEvents: BabyEvent[] }>(
         GET_RECENT_EVENTS,
-        { babyId: baby.id, limit: 20 }
+        { babyId: baby.id, limit: 100 }
       );
       setEvents(data.recentEvents);
     } catch {
