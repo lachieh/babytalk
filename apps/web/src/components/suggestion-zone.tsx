@@ -197,7 +197,7 @@ const VariantPopover = ({
 
   return (
     <div
-      className="animate-fade-up absolute bottom-full left-1/2 z-50 mb-2 min-w-[160px] -translate-x-1/2 overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg"
+      className="animate-fade-up absolute bottom-full left-0 z-50 mb-2 min-w-[160px] overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg"
       ref={popoverRef}
     >
       {variants.map((v) => (
