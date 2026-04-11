@@ -5,6 +5,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
 import { gqlRequest } from "@/lib/tambo/graphql";
+import {
+  getPercentileData,
+  interpolatePercentile,
+  PERCENTILE_LABELS,
+} from "@/lib/who-growth-data";
+import type { PercentileKey } from "@/lib/who-growth-data";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -88,38 +94,106 @@ function isImperialLocale(): boolean {
   return navigator.language.startsWith("en-US");
 }
 
-/* ── SVG Weight Chart ──────────────────────────────────────── */
+/* ── SVG Weight Chart with WHO Percentiles ─────────────────── */
 
-const WeightChart = ({ measurements }: { measurements: Measurement[] }) => {
+const PERCENTILE_KEYS: PercentileKey[] = ["p3", "p15", "p50", "p85", "p97"];
+const PERCENTILE_COLORS: Record<PercentileKey, string> = {
+  p3: "oklch(80% 0.02 60)",
+  p15: "oklch(75% 0.03 60)",
+  p50: "oklch(65% 0.04 60)",
+  p85: "oklch(75% 0.03 60)",
+  p97: "oklch(80% 0.02 60)",
+};
+
+const WeightChart = ({
+  measurements,
+  birthDate,
+  gender,
+}: {
+  measurements: Measurement[];
+  birthDate: string;
+  gender: string | null;
+}) => {
   const filtered = measurements.filter((m: Measurement) => m.weightG !== null);
   const withWeight = [...filtered].toReversed();
 
-  if (withWeight.length < 2) {
+  if (withWeight.length < 1) {
     return (
       <div className="flex h-32 items-center justify-center rounded-2xl bg-neutral-50 text-sm text-neutral-400">
-        Add 2+ weights to see the chart
+        Add a weight to see the chart
       </div>
     );
   }
 
-  const weights = withWeight.map((m) => m.weightG as number);
-  const minW = Math.min(...weights);
-  const maxW = Math.max(...weights);
+  const birthTime = new Date(birthDate).getTime();
+  const percentileData = getPercentileData(gender);
+
+  // Calculate age in days for each measurement
+  const dataPoints = withWeight.map((m) => ({
+    ageDays: Math.max(
+      0,
+      (new Date(m.measuredAt).getTime() - birthTime) / 86_400_000
+    ),
+    weightG: m.weightG as number,
+    id: m.id,
+  }));
+
+  // Determine chart range — use percentile range if available, otherwise data range
+  const allWeights = dataPoints.map((d) => d.weightG);
+  const minAge = Math.min(...dataPoints.map((d) => d.ageDays));
+  const maxAge = Math.max(...dataPoints.map((d) => d.ageDays), 30);
+  const ageRange = maxAge - minAge || 30;
+
+  let minW = Math.min(...allWeights);
+  let maxW = Math.max(...allWeights);
+
+  // Extend range to fit percentile curves if visible
+  if (percentileData) {
+    const p3AtMinAge = interpolatePercentile(percentileData, minAge, "p3");
+    const p97AtMaxAge = interpolatePercentile(percentileData, maxAge, "p97");
+    minW = Math.min(minW, p3AtMinAge);
+    maxW = Math.max(maxW, p97AtMaxAge);
+  }
+
+  const weightPadding = (maxW - minW) * 0.1;
+  minW -= weightPadding;
+  maxW += weightPadding;
   const rangeW = maxW - minW || 1;
 
   const padding = 16;
   const width = 320;
-  const height = 120;
+  const height = 160;
   const chartW = width - padding * 2;
   const chartH = height - padding * 2;
 
-  const points = withWeight.map((m, i) => {
-    const x = padding + (i / (withWeight.length - 1)) * chartW;
-    const y =
-      padding + chartH - (((m.weightG as number) - minW) / rangeW) * chartH;
-    return { x, y, m };
-  });
+  const toX = (ageDays: number) =>
+    padding + ((ageDays - minAge) / ageRange) * chartW;
+  const toY = (weightG: number) =>
+    padding + chartH - ((weightG - minW) / rangeW) * chartH;
 
+  // Build percentile curve paths
+  const percentilePaths: { key: PercentileKey; d: string }[] = [];
+  if (percentileData) {
+    const steps = 20;
+    for (const key of PERCENTILE_KEYS) {
+      const pathPoints: string[] = [];
+      for (let i = 0; i <= steps; i += 1) {
+        const age = minAge + (i / steps) * ageRange;
+        const w = interpolatePercentile(percentileData, age, key);
+        const x = toX(age);
+        const y = toY(w);
+        pathPoints.push(`${i === 0 ? "M" : "L"}${x},${y}`);
+      }
+      percentilePaths.push({ key, d: pathPoints.join(" ") });
+    }
+  }
+
+  // Build data polyline
+  const points = dataPoints.map((d) => ({
+    x: toX(d.ageDays),
+    y: toY(d.weightG),
+    id: d.id,
+  }));
   const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
 
   return (
@@ -127,29 +201,72 @@ const WeightChart = ({ measurements }: { measurements: Measurement[] }) => {
       <svg
         className="w-full"
         viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
       >
-        <polyline
-          fill="none"
-          points={polyline}
-          stroke="oklch(55% 0.14 30)"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="2"
-        />
+        {/* Percentile curves */}
+        {percentilePaths.map((curve) => (
+          <path
+            d={curve.d}
+            fill="none"
+            key={curve.key}
+            stroke={PERCENTILE_COLORS[curve.key]}
+            strokeDasharray={curve.key === "p50" ? "none" : "4 3"}
+            strokeWidth={curve.key === "p50" ? "1.5" : "1"}
+          />
+        ))}
+
+        {/* Percentile labels */}
+        {percentileData &&
+          PERCENTILE_KEYS.map((key) => {
+            const w = interpolatePercentile(percentileData, maxAge, key);
+            return (
+              <text
+                fill="oklch(65% 0.02 60)"
+                fontSize="7"
+                key={key}
+                x={width - padding + 2}
+                y={toY(w) + 2}
+              >
+                {PERCENTILE_LABELS[key]}
+              </text>
+            );
+          })}
+
+        {/* Baby's actual weight line */}
+        {points.length > 1 && (
+          <polyline
+            fill="none"
+            points={polyline}
+            stroke="oklch(55% 0.14 30)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+          />
+        )}
         {points.map((p) => (
           <circle
             cx={p.x}
             cy={p.y}
             fill="oklch(55% 0.14 30)"
-            key={p.m.id}
+            key={p.id}
             r="4"
           />
         ))}
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] text-neutral-400">
-        <span>{formatDate(withWeight[0].measuredAt)}</span>
-        <span>{formatDate(withWeight.at(-1)?.measuredAt ?? "")}</span>
+
+      {/* Legend */}
+      <div className="mt-2 flex items-center justify-between">
+        <div className="flex gap-3 text-[10px] text-neutral-400">
+          <span>{formatDate(withWeight[0].measuredAt)}</span>
+          {withWeight.length > 1 && (
+            <span>{formatDate(withWeight.at(-1)?.measuredAt ?? "")}</span>
+          )}
+        </div>
+        {percentileData && (
+          <span className="text-[10px] text-neutral-300">
+            WHO {gender === "male" ? "boys" : "girls"}
+          </span>
+        )}
       </div>
     </div>
   );
@@ -618,7 +735,11 @@ export const GrowthView = () => {
 
       {/* Weight chart */}
       <div className="mt-3">
-        <WeightChart measurements={measurements} />
+        <WeightChart
+          birthDate={baby.birthDate}
+          gender={baby.gender ?? null}
+          measurements={measurements}
+        />
       </div>
 
       {/* Add button */}

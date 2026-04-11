@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
 
+import { EditBabySheet } from "./edit-baby-sheet";
+
 interface UserInfo {
   email: string;
   id: string;
@@ -201,6 +203,51 @@ function getWeightLabel(
   return null;
 }
 
+const BabyCard = ({
+  baby,
+  weightLabel,
+  onEdit,
+}: {
+  baby: BabyInfo;
+  weightLabel: string | null;
+  onEdit: (baby: BabyInfo) => void;
+}) => {
+  const handleClick = useCallback(() => onEdit(baby), [onEdit, baby]);
+  const genderLabel = formatGender(baby.gender);
+
+  return (
+    <button
+      className="flex w-full items-center rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+      onClick={handleClick}
+      type="button"
+    >
+      <div className="flex-1">
+        <p className="text-sm font-medium text-neutral-800">
+          {baby.name}
+          {genderLabel !== null && (
+            <span className="ml-1.5 text-xs font-normal text-neutral-400">
+              {genderLabel}
+            </span>
+          )}
+        </p>
+        <p className="mt-0.5 text-sm text-neutral-400">
+          {formatAge(baby.birthDate)}
+          {weightLabel !== null && ` · ${weightLabel}`}
+        </p>
+      </div>
+      <svg
+        className="h-4 w-4 text-neutral-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  );
+};
+
 const ProfileContent = ({
   me,
   household,
@@ -209,6 +256,7 @@ const ProfileContent = ({
   latestWeights,
   copied,
   onShare,
+  onEditBaby,
   onSignOut,
 }: {
   babies: BabyInfo[];
@@ -217,6 +265,7 @@ const ProfileContent = ({
   latestWeights: Record<string, { weightG: number; measuredAt: string } | null>;
   me: UserInfo | null;
   members: UserInfo[];
+  onEditBaby: (baby: BabyInfo) => void;
   onShare: () => void;
   onSignOut: () => void;
 }) => {
@@ -249,32 +298,17 @@ const ProfileContent = ({
             {babies.length === 1 ? "Baby" : "Babies"}
           </h3>
           <div className="space-y-2">
-            {babies.map((baby) => {
-              const latest = latestWeights[baby.id];
-              const weightLabel = getWeightLabel(latest, baby.birthWeightG);
-
-              const genderLabel = formatGender(baby.gender);
-
-              return (
-                <div
-                  key={baby.id}
-                  className="rounded-xl bg-neutral-50 px-4 py-3"
-                >
-                  <p className="text-sm font-medium text-neutral-800">
-                    {baby.name}
-                    {genderLabel !== null && (
-                      <span className="ml-1.5 text-xs font-normal text-neutral-400">
-                        {genderLabel}
-                      </span>
-                    )}
-                  </p>
-                  <p className="mt-0.5 text-sm text-neutral-400">
-                    {formatAge(baby.birthDate)}
-                    {weightLabel !== null && ` · ${weightLabel}`}
-                  </p>
-                </div>
-              );
-            })}
+            {babies.map((baby) => (
+              <BabyCard
+                baby={baby}
+                key={baby.id}
+                onEdit={onEditBaby}
+                weightLabel={getWeightLabel(
+                  latestWeights[baby.id],
+                  baby.birthWeightG
+                )}
+              />
+            ))}
           </div>
         </section>
       )}
@@ -337,6 +371,9 @@ export const ProfileSheet = ({
   >({});
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editingBaby, setEditingBaby] = useState<BabyInfo | null>(null);
+  const [editBabyOpen, setEditBabyOpen] = useState(false);
+  const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
     if (!open) return;
@@ -384,7 +421,7 @@ export const ProfileSheet = ({
     };
 
     fetchProfile();
-  }, [open]);
+  }, [open, fetchKey]);
 
   const handleShareLink = useCallback(async () => {
     if (!household?.inviteCode) return;
@@ -413,6 +450,20 @@ export const ProfileSheet = ({
     localStorage.removeItem("babytalk_token");
     router.replace("/auth/login");
   }, [router]);
+
+  const handleEditBaby = useCallback((baby: BabyInfo) => {
+    setEditingBaby(baby);
+    setEditBabyOpen(true);
+  }, []);
+
+  const handleEditBabyClose = useCallback(() => {
+    setEditBabyOpen(false);
+    setEditingBaby(null);
+  }, []);
+
+  const handleEditBabySaved = useCallback(() => {
+    setFetchKey((k) => k + 1);
+  }, []);
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -482,10 +533,18 @@ export const ProfileSheet = ({
             members={members}
             latestWeights={latestWeights}
             copied={copied}
+            onEditBaby={handleEditBaby}
             onShare={handleShareLink}
             onSignOut={handleSignOut}
           />
         )}
+
+        <EditBabySheet
+          baby={editingBaby}
+          onClose={handleEditBabyClose}
+          onSaved={handleEditBabySaved}
+          open={editBabyOpen}
+        />
       </div>
     </div>
   );

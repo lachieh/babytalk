@@ -26,6 +26,7 @@ export interface Baby {
   id: string;
   name: string;
   birthDate: string;
+  gender: string | null;
 }
 
 interface UndoableAction {
@@ -61,7 +62,7 @@ interface BabyContextValue {
 /* ── GraphQL ───────────────────────────────────────────────── */
 
 const GET_MY_BABIES = `
-  query { myBabies { id name birthDate } }
+  query { myBabies { id name birthDate gender } }
 `;
 
 const GET_RECENT_EVENTS = `
