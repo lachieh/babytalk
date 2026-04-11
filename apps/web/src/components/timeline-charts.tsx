@@ -26,7 +26,10 @@ function formatHour(hour: number): string {
   return `${hour - 12}p`;
 }
 
+const INSTANT_TYPES = new Set(["diaper"]);
+
 function isInstantEvent(event: BabyEvent): boolean {
+  if (INSTANT_TYPES.has(event.type)) return true;
   if (!event.endedAt) return false;
   return event.startedAt === event.endedAt;
 }

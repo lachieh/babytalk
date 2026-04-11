@@ -54,9 +54,15 @@ const formatMeta = (type: string, raw: string): string => {
   }
 };
 
-const formatDuration = (start: string, end: string | null): string | null => {
+const INSTANT_TYPES = new Set(["diaper"]);
+
+const formatDuration = (
+  start: string,
+  end: string | null,
+  type: string
+): string | null => {
+  if (INSTANT_TYPES.has(type)) return null;
   if (!end) return null;
-  // Instant events (startedAt === endedAt) have no duration to display
   if (start === end) return null;
   const ms = new Date(end).getTime() - new Date(start).getTime();
   const mins = Math.round(ms / 60_000);
@@ -75,7 +81,7 @@ const TimelineRow = ({
   onEdit: (event: BabyEvent) => void;
 }) => {
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
-  const duration = formatDuration(event.startedAt, event.endedAt);
+  const duration = formatDuration(event.startedAt, event.endedAt, event.type);
   const meta = formatMeta(event.type, event.metadata);
 
   return (

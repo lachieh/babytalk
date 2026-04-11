@@ -34,6 +34,15 @@ function parseMeta(event: BabyEvent): Record<string, unknown> {
   }
 }
 
+function hasDuration(form: EventFormData): boolean {
+  if (form.type === "diaper" || form.type === "note") return false;
+  if (form.type === "feed") {
+    const method = form.meta.method as string | undefined;
+    return method === "breast";
+  }
+  return true;
+}
+
 function saveButtonLabel(saving: boolean, isNew: boolean): string {
   if (saving) return "Saving...";
   if (isNew) return "Add";
@@ -493,9 +502,30 @@ export const EventEditSheet = ({
           )}
 
           {/* Timing */}
-          <div className="grid grid-cols-2 gap-3">
+          {hasDuration(form) ? (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block text-xs font-medium text-neutral-500">
+                Started
+                <input
+                  className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
+                  onChange={handleStartChange}
+                  type="datetime-local"
+                  value={form.startedAt}
+                />
+              </label>
+              <label className="block text-xs font-medium text-neutral-500">
+                Ended
+                <input
+                  className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
+                  onChange={handleEndChange}
+                  type="datetime-local"
+                  value={form.endedAt}
+                />
+              </label>
+            </div>
+          ) : (
             <label className="block text-xs font-medium text-neutral-500">
-              Started
+              Time
               <input
                 className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
                 onChange={handleStartChange}
@@ -503,16 +533,7 @@ export const EventEditSheet = ({
                 value={form.startedAt}
               />
             </label>
-            <label className="block text-xs font-medium text-neutral-500">
-              Ended
-              <input
-                className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-                onChange={handleEndChange}
-                type="datetime-local"
-                value={form.endedAt}
-              />
-            </label>
-          </div>
+          )}
 
           {/* Type-specific fields */}
           {form.type === "feed" && (

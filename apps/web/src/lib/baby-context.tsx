@@ -195,9 +195,10 @@ export const BabyContextProvider = ({
     if (baby) refreshEvents();
   }, [baby, refreshEvents]);
 
-  // Active events = in-progress (endedAt is null), shared across devices
+  // Active events = in-progress timers (endedAt is null).
+  // Exclude instant event types (diaper) which may have endedAt=null from legacy data.
   const activeEvents = useMemo(
-    () => events.filter((e) => e.endedAt === null),
+    () => events.filter((e) => e.endedAt === null && e.type !== "diaper"),
     [events]
   );
 
