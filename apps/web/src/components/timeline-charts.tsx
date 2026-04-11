@@ -26,10 +26,23 @@ function formatHour(hour: number): string {
   return `${hour - 12}p`;
 }
 
+function isInstantEvent(event: BabyEvent): boolean {
+  if (!event.endedAt) return false;
+  return event.startedAt === event.endedAt;
+}
+
 function eventPosition(event: BabyEvent): { top: number; height: number } {
   const start = new Date(event.startedAt);
-  const end = event.endedAt ? new Date(event.endedAt) : new Date();
   const startMinutes = start.getHours() * 60 + start.getMinutes();
+
+  if (isInstantEvent(event)) {
+    return {
+      top: (startMinutes / 60) * HOUR_HEIGHT,
+      height: 6,
+    };
+  }
+
+  const end = event.endedAt ? new Date(event.endedAt) : new Date();
   const endMinutes = end.getHours() * 60 + end.getMinutes();
   const durationMinutes = Math.max(endMinutes - startMinutes, 15);
 
@@ -148,16 +161,21 @@ const EventBlock = ({
   const pos = eventPosition(event);
   const colors = typeColors[event.type] ?? typeColors.note;
   const label = formatMeta(event.type, event.metadata);
+  const instant = isInstantEvent(event);
   const handleClick = useCallback(() => onTap?.(event), [onTap, event]);
 
   return (
     <button
-      className={`absolute left-0.5 right-0.5 overflow-hidden rounded-sm border-l-2 px-1 text-left text-[10px] leading-tight ${colors.bg} ${colors.border}`}
+      className={`absolute left-0.5 right-0.5 overflow-hidden text-left text-[10px] leading-tight ${
+        instant
+          ? `rounded-full ${colors.bg} border ${colors.border}`
+          : `rounded-sm border-l-2 px-1 ${colors.bg} ${colors.border}`
+      }`}
       onClick={handleClick}
       style={{ top: pos.top, height: pos.height }}
       type="button"
     >
-      {pos.height > 16 && (
+      {!instant && pos.height > 16 && (
         <span className="font-medium text-neutral-700">{label}</span>
       )}
     </button>

@@ -407,7 +407,13 @@ const ActionSection = ({
         setShowAmountInput(true);
         return;
       }
-      // Breast: log with endedAt=null (starts timer). Solid: log instantly.
+      if (method === "solid") {
+        // Solid: instant event
+        const now = new Date().toISOString();
+        onLog(type, { ...meta, _startedAt: now, _endedAt: now });
+        return;
+      }
+      // Breast: log with endedAt=null (starts timer)
       onLog(type, meta);
       return;
     }
@@ -418,7 +424,14 @@ const ActionSection = ({
       return;
     }
 
-    // Sleep + diaper: log immediately (sleep with endedAt=null starts timer)
+    if (type === "diaper") {
+      // Diaper: instant event — set endedAt = startedAt (point in time, not duration)
+      const now = new Date().toISOString();
+      onLog(type, { ...meta, _startedAt: now, _endedAt: now });
+      return;
+    }
+
+    // Sleep: log with endedAt=null (starts timer)
     onLog(type, meta);
   }, [type, selectedVariant, onLog]);
 
@@ -457,7 +470,14 @@ const ActionSection = ({
   const handleAmountConfirm = useCallback(
     (amountMl: number) => {
       setShowAmountInput(false);
-      onLog(type, { ...selectedVariant.meta, amountMl });
+      // Bottle/formula are instant events (known quantity, no timer)
+      const now = new Date().toISOString();
+      onLog(type, {
+        ...selectedVariant.meta,
+        amountMl,
+        _startedAt: now,
+        _endedAt: now,
+      });
     },
     [type, selectedVariant, onLog]
   );

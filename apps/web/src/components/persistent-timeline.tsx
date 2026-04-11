@@ -56,8 +56,11 @@ const formatMeta = (type: string, raw: string): string => {
 
 const formatDuration = (start: string, end: string | null): string | null => {
   if (!end) return null;
+  // Instant events (startedAt === endedAt) have no duration to display
+  if (start === end) return null;
   const ms = new Date(end).getTime() - new Date(start).getTime();
   const mins = Math.round(ms / 60_000);
+  if (mins <= 0) return null;
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
