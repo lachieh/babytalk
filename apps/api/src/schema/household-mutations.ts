@@ -9,6 +9,7 @@ import {
   BabyEventType,
   BabyType,
   DiaperMetadataInput,
+  GenderEnum,
   EventTypeEnum,
   FeedMetadataInput,
   HouseholdType,
@@ -140,6 +141,7 @@ builder.mutationField("addBaby", (t) =>
     args: {
       birthDate: t.arg.string({ required: true }),
       birthWeightG: t.arg.int({ required: false }),
+      gender: t.arg({ required: false, type: GenderEnum }),
       name: t.arg.string({ required: true }),
     },
     resolve: async (_root, args, ctx) => {
@@ -150,12 +152,56 @@ builder.mutationField("addBaby", (t) =>
         .values({
           birthDate: args.birthDate,
           birthWeightG: args.birthWeightG ?? null,
+          gender: args.gender ?? null,
           householdId,
           name: args.name,
         })
         .returning();
 
       return baby;
+    },
+    type: BabyType,
+  })
+);
+
+builder.mutationField("updateBaby", (t) =>
+  t.field({
+    args: {
+      birthDate: t.arg.string({ required: false }),
+      birthWeightG: t.arg.int({ required: false }),
+      gender: t.arg({ required: false, type: GenderEnum }),
+      id: t.arg.string({ required: true }),
+      name: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const { householdId } = await requireHousehold(ctx);
+      await requireBabyAccess(ctx, args.id, householdId);
+
+      const updates: Record<string, unknown> = {};
+      if (args.name !== undefined && args.name !== null)
+        updates.name = args.name;
+      if (args.birthDate !== undefined && args.birthDate !== null)
+        updates.birthDate = args.birthDate;
+      if (args.birthWeightG !== undefined)
+        updates.birthWeightG = args.birthWeightG;
+      if (args.gender !== undefined) updates.gender = args.gender;
+
+      if (Object.keys(updates).length === 0) {
+        const [existing] = await ctx.db
+          .select()
+          .from(babies)
+          .where(eq(babies.id, args.id))
+          .limit(1);
+        return existing;
+      }
+
+      const [updated] = await ctx.db
+        .update(babies)
+        .set(updates)
+        .where(eq(babies.id, args.id))
+        .returning();
+
+      return updated;
     },
     type: BabyType,
   })

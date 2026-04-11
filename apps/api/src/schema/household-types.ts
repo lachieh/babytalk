@@ -45,10 +45,15 @@ HouseholdType.implement({
   }),
 });
 
+export const GenderEnum = builder.enumType("Gender", {
+  values: ["male", "female", "other"] as const,
+});
+
 export const BabyType = builder.objectRef<{
   birthDate: string;
   birthWeightG: number | null;
   createdAt: Date;
+  gender: string | null;
   householdId: string;
   id: string;
   name: string;
@@ -62,6 +67,7 @@ BabyType.implement({
       resolve: (parent) => parent.createdAt.toISOString(),
       type: "String",
     }),
+    gender: t.exposeString("gender", { nullable: true }),
     id: t.exposeString("id"),
     name: t.exposeString("name"),
   }),

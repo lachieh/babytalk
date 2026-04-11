@@ -15,6 +15,7 @@ export const babies = pgTable("babies", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  gender: text("gender"),
   householdId: uuid("household_id")
     .notNull()
     .references(() => households.id),

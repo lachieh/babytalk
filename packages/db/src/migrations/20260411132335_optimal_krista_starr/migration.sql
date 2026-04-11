@@ -1,0 +1,1 @@
+ALTER TABLE "babies" ADD COLUMN "gender" text;

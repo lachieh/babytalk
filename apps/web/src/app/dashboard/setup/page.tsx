@@ -11,8 +11,8 @@ const CREATE_HOUSEHOLD = `
 `;
 
 const ADD_BABY = `
-  mutation AddBaby($name: String!, $birthDate: String!, $birthWeightG: Int) {
-    addBaby(name: $name, birthDate: $birthDate, birthWeightG: $birthWeightG) {
+  mutation AddBaby($name: String!, $birthDate: String!, $birthWeightG: Int, $gender: Gender) {
+    addBaby(name: $name, birthDate: $birthDate, birthWeightG: $birthWeightG, gender: $gender) {
       id name
     }
   }
@@ -33,6 +33,7 @@ export default function SetupPage() {
   const [birthWeightOz, setBirthWeightOz] = useState("");
   const [birthWeightG, setBirthWeightG] = useState("");
   const [weightUnit, setWeightUnit] = useState<"lb" | "g">("lb");
+  const [gender, setGender] = useState("");
   const [partnerEmail, setPartnerEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -69,6 +70,7 @@ export default function SetupPage() {
         await gqlRequest(ADD_BABY, {
           birthDate,
           birthWeightG: weightGrams,
+          gender: gender || null,
           name: babyName,
         });
 
@@ -97,6 +99,7 @@ export default function SetupPage() {
       birthWeightOz,
       birthWeightG,
       weightUnit,
+      gender,
       partnerEmail,
       router,
     ]
@@ -131,6 +134,11 @@ export default function SetupPage() {
 
   const handleSelectLb = useCallback(() => setWeightUnit("lb"), []);
   const handleSelectG = useCallback(() => setWeightUnit("g"), []);
+
+  const handleGenderChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value),
+    []
+  );
 
   const handlePartnerEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setPartnerEmail(e.target.value),
@@ -203,6 +211,26 @@ export default function SetupPage() {
               type="text"
               value={babyName}
             />
+          </div>
+          <div>
+            <label
+              htmlFor="gender"
+              className="block text-sm font-medium text-neutral-600"
+            >
+              Gender
+              <span className="ml-1 text-neutral-300">optional</span>
+            </label>
+            <select
+              id="gender"
+              className="mt-1 w-full rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+              onChange={handleGenderChange}
+              value={gender}
+            >
+              <option value="">Prefer not to say</option>
+              <option value="male">Boy</option>
+              <option value="female">Girl</option>
+              <option value="other">Other</option>
+            </select>
           </div>
           <div>
             <label

@@ -14,6 +14,7 @@ interface UserInfo {
 interface BabyInfo {
   birthDate: string;
   birthWeightG: number | null;
+  gender: string | null;
   id: string;
   name: string;
 }
@@ -27,7 +28,7 @@ const PROFILE_QUERY = `
   query ProfileData {
     me { id email name }
     myHousehold { id inviteCode }
-    myBabies { id name birthDate birthWeightG }
+    myBabies { id name birthDate birthWeightG gender }
     householdMembers { id email name }
   }
 `;
@@ -180,6 +181,17 @@ const PartnerInvite = ({
   );
 };
 
+const GENDER_LABELS: Record<string, string> = {
+  female: "Girl",
+  male: "Boy",
+  other: "Other",
+};
+
+function formatGender(gender: string | null): string | null {
+  if (!gender) return null;
+  return GENDER_LABELS[gender] ?? null;
+}
+
 function getWeightLabel(
   latest: { weightG: number; measuredAt: string } | null | undefined,
   birthWeightG: number | null
@@ -241,6 +253,8 @@ const ProfileContent = ({
               const latest = latestWeights[baby.id];
               const weightLabel = getWeightLabel(latest, baby.birthWeightG);
 
+              const genderLabel = formatGender(baby.gender);
+
               return (
                 <div
                   key={baby.id}
@@ -248,6 +262,11 @@ const ProfileContent = ({
                 >
                   <p className="text-sm font-medium text-neutral-800">
                     {baby.name}
+                    {genderLabel !== null && (
+                      <span className="ml-1.5 text-xs font-normal text-neutral-400">
+                        {genderLabel}
+                      </span>
+                    )}
                   </p>
                   <p className="mt-0.5 text-sm text-neutral-400">
                     {formatAge(baby.birthDate)}
