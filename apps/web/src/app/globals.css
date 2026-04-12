@@ -7,56 +7,53 @@
    ============================================================ */
 
 @theme {
-  /* --- Warm-tinted neutrals (hue 60 = warm amber undertone) --- */
-  --color-neutral-50: oklch(97% 0.008 60);
-  --color-neutral-100: oklch(94% 0.008 60);
-  --color-neutral-200: oklch(88% 0.01 60);
-  --color-neutral-300: oklch(78% 0.01 60);
-  --color-neutral-400: oklch(64% 0.01 60);
-  --color-neutral-500: oklch(52% 0.01 60);
-  --color-neutral-600: oklch(42% 0.012 60);
-  --color-neutral-700: oklch(33% 0.012 60);
-  --color-neutral-800: oklch(24% 0.01 60);
-  --color-neutral-900: oklch(16% 0.008 60);
-  --color-neutral-950: oklch(10% 0.006 60);
+  /* --- Cream/linen neutrals (warm, editorial) --- */
+  --color-neutral-50: oklch(97% 0.012 75);
+  --color-neutral-100: oklch(94% 0.012 75);
+  --color-neutral-200: oklch(88% 0.015 70);
+  --color-neutral-300: oklch(78% 0.012 65);
+  --color-neutral-400: oklch(62% 0.01 60);
+  --color-neutral-500: oklch(50% 0.01 55);
+  --color-neutral-600: oklch(40% 0.012 50);
+  --color-neutral-700: oklch(32% 0.012 50);
+  --color-neutral-800: oklch(24% 0.01 50);
+  --color-neutral-900: oklch(18% 0.008 50);
+  --color-neutral-950: oklch(12% 0.006 50);
 
-  /* --- Primary: Warm terracotta-rose (not generic SaaS blue) --- */
-  --color-primary-50: oklch(95% 0.02 30);
-  --color-primary-100: oklch(90% 0.04 30);
-  --color-primary-200: oklch(82% 0.06 30);
-  --color-primary-300: oklch(72% 0.09 30);
-  --color-primary-400: oklch(62% 0.12 30);
-  --color-primary-500: oklch(55% 0.14 30);
-  --color-primary-600: oklch(48% 0.14 30);
-  --color-primary-700: oklch(40% 0.12 30);
+  /* --- Primary: Olive/sage (not terracotta — matches mockup) --- */
+  --color-primary-50: oklch(95% 0.02 100);
+  --color-primary-100: oklch(90% 0.03 100);
+  --color-primary-200: oklch(82% 0.05 100);
+  --color-primary-300: oklch(70% 0.06 100);
+  --color-primary-400: oklch(58% 0.07 100);
+  --color-primary-500: oklch(48% 0.06 100);
+  --color-primary-600: oklch(42% 0.06 100);
+  --color-primary-700: oklch(36% 0.05 100);
 
-  /* --- Event type accents (soft, muted) --- */
-  /* Feed: soft sage blue */
-  --color-feed-50: oklch(96% 0.015 230);
-  --color-feed-100: oklch(92% 0.03 230);
-  --color-feed-200: oklch(85% 0.05 230);
-  --color-feed-500: oklch(55% 0.1 230);
-  --color-feed-600: oklch(45% 0.1 230);
+  /* --- Event type accents (muted, olive-family) --- */
+  --color-feed-50: oklch(95% 0.012 90);
+  --color-feed-100: oklch(90% 0.02 90);
+  --color-feed-200: oklch(84% 0.03 90);
+  --color-feed-500: oklch(50% 0.05 90);
+  --color-feed-600: oklch(42% 0.05 90);
 
-  /* Sleep: soft lavender */
-  --color-sleep-50: oklch(95% 0.02 290);
-  --color-sleep-100: oklch(90% 0.04 290);
-  --color-sleep-200: oklch(84% 0.06 290);
-  --color-sleep-500: oklch(55% 0.1 290);
-  --color-sleep-600: oklch(45% 0.1 290);
+  --color-sleep-50: oklch(95% 0.012 90);
+  --color-sleep-100: oklch(90% 0.02 90);
+  --color-sleep-200: oklch(84% 0.03 90);
+  --color-sleep-500: oklch(50% 0.05 90);
+  --color-sleep-600: oklch(42% 0.05 90);
 
-  /* Diaper: soft honey */
-  --color-diaper-50: oklch(96% 0.02 80);
-  --color-diaper-100: oklch(91% 0.04 80);
-  --color-diaper-200: oklch(85% 0.06 80);
-  --color-diaper-500: oklch(55% 0.1 80);
-  --color-diaper-600: oklch(45% 0.1 80);
+  --color-diaper-50: oklch(95% 0.012 90);
+  --color-diaper-100: oklch(90% 0.02 90);
+  --color-diaper-200: oklch(84% 0.03 90);
+  --color-diaper-500: oklch(50% 0.05 90);
+  --color-diaper-600: oklch(42% 0.05 90);
 
   /* Note: warm stone */
-  --color-note-50: oklch(96% 0.008 60);
-  --color-note-100: oklch(92% 0.01 60);
-  --color-note-200: oklch(86% 0.015 60);
-  --color-note-500: oklch(52% 0.01 60);
+  --color-note-50: oklch(96% 0.008 75);
+  --color-note-100: oklch(92% 0.01 75);
+  --color-note-200: oklch(86% 0.015 75);
+  --color-note-500: oklch(50% 0.01 75);
 
   /* --- Semantic: Softened status colors --- */
   /* Success: sage green */
@@ -84,10 +81,10 @@
   --color-urgency-soon: oklch(70% 0.1 85);
   --color-urgency-overdue: oklch(65% 0.1 15);
 
-  /* --- Surface colors --- */
-  --color-surface: oklch(98.5% 0.005 60);
-  --color-surface-raised: oklch(99.5% 0.003 60);
-  --color-surface-sunken: oklch(96% 0.008 60);
+  /* --- Surface colors (cream/linen, not white) --- */
+  --color-surface: oklch(96% 0.015 75);
+  --color-surface-raised: oklch(97.5% 0.012 75);
+  --color-surface-sunken: oklch(93% 0.018 75);
 
   /* --- Typography scale (perfect fourth ratio: 1.333) --- */
   --font-size-xs: clamp(0.7rem, 0.65rem + 0.25vw, 0.75rem);
@@ -118,6 +115,7 @@
 
   /* --- Font family --- */
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", "Georgia", serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 }
 

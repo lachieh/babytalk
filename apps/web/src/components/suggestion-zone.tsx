@@ -119,13 +119,6 @@ const PUMP_VARIANTS: Variant[] = [
 
 /* ── Styles ────────────────────────────────────────────────── */
 
-const sectionStyles: Record<string, { bg: string; border: string }> = {
-  feed: { bg: "bg-feed-50", border: "border-feed-200" },
-  pump: { bg: "bg-feed-50", border: "border-feed-200" },
-  diaper: { bg: "bg-diaper-50", border: "border-diaper-200" },
-  sleep: { bg: "bg-sleep-50", border: "border-sleep-200" },
-};
-
 /* ── Dropdown Popover ─────────────────────────────────────── */
 
 const PopoverOption = ({
@@ -371,7 +364,7 @@ const ActionSection = ({
   onCancel,
 }: {
   type: string;
-  icon: string;
+  icon: React.ReactNode;
   variants: Variant[];
   defaultVariant: string;
   activeEvent: BabyEvent | null;
@@ -392,8 +385,6 @@ const ActionSection = ({
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
   );
-  const styles = sectionStyles[type];
-
   const selectedVariant =
     variants.find((v) => v.key === selected) ?? variants[0];
 
@@ -489,47 +480,54 @@ const ActionSection = ({
   const showActions = !hasTimer && !showAmountInput && !showPumpAmount;
 
   return (
-    <div
-      className={`flex-1 rounded-2xl border p-3 transition-all ${styles?.bg ?? ""} ${styles?.border ?? "border-neutral-200"}`}
-    >
-      {/* Active timer from DB — visible to both parents, survives refresh */}
+    <div className="flex-1">
+      {/* Active timer */}
       {hasTimer && (
-        <ActiveTimer
-          event={activeEvent}
-          onStop={handleTimerStop}
-          onCancel={onCancel}
-        />
+        <div className="rounded-lg border border-neutral-200 p-3">
+          <ActiveTimer
+            event={activeEvent}
+            onStop={handleTimerStop}
+            onCancel={onCancel}
+          />
+        </div>
       )}
 
       {/* Pump: amount input after timer stops */}
       {showPumpAmount && (
-        <AmountInput
-          onConfirm={handlePumpAmountConfirm}
-          onCancel={handlePumpAmountCancel}
-        />
+        <div className="rounded-lg border border-neutral-200 p-3">
+          <AmountInput
+            onConfirm={handlePumpAmountConfirm}
+            onCancel={handlePumpAmountCancel}
+          />
+        </div>
       )}
 
-      {/* Bottle/formula amount input (local flow, not a timer) */}
+      {/* Bottle/formula amount input */}
       {showAmountInput && (
-        <AmountInput
-          onConfirm={handleAmountConfirm}
-          onCancel={handleAmountCancel}
-        />
+        <div className="rounded-lg border border-neutral-200 p-3">
+          <AmountInput
+            onConfirm={handleAmountConfirm}
+            onCancel={handleAmountCancel}
+          />
+        </div>
       )}
 
-      {/* Normal state: tap to log */}
+      {/* Normal state: bordered square button */}
       {showActions && (
         <>
           <button
-            className="flex w-full flex-col items-center gap-1 rounded-xl bg-surface-raised/80 px-3 py-3 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.96]"
+            className="flex w-full flex-col items-center gap-2 rounded-lg border border-neutral-200 px-3 py-4 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97] active:bg-neutral-50"
             onClick={handleMainTap}
             type="button"
           >
-            <span className="text-2xl">{icon}</span>
+            <span className="text-neutral-600">{icon}</span>
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
+              {type}
+            </span>
           </button>
-          <div className="relative mt-2">
+          <div className="relative mt-1.5">
             <button
-              className="flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-600 transition-colors hover:bg-surface-raised"
+              className="flex w-full items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
               onClick={handleVariantTap}
               type="button"
             >
@@ -564,6 +562,73 @@ const ActionSection = ({
 };
 
 /* ── SuggestionZone ────────────────────────────────────────── */
+
+/* ── Line Icons ────────────────────────────────────────────── */
+
+const IconBottle = (
+  <svg
+    width="24"
+    height="24"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 3h6v3H9zM7 6h10v2a5 5 0 01-5 5h0a5 5 0 01-5-5V6zM9 13v5a3 3 0 003 3h0a3 3 0 003-3v-5"
+    />
+  </svg>
+);
+
+const IconPump = (
+  <svg
+    width="24"
+    height="24"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M12 3v3m0 0a4 4 0 014 4v2l2 1v2H6v-2l2-1v-2a4 4 0 014-4zm-3 12h6v2a3 3 0 01-6 0v-2z"
+    />
+  </svg>
+);
+
+const IconDiaper = (
+  <svg
+    width="24"
+    height="24"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <ellipse cx="12" cy="12" rx="8" ry="5" />
+    <path strokeLinecap="round" d="M8 12h8" />
+  </svg>
+);
+
+const IconSleep = (
+  <svg
+    width="24"
+    height="24"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth="1.5"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
+    />
+  </svg>
+);
 
 export const SuggestionZone = () => {
   const {
@@ -627,7 +692,7 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activeFeed}
         defaultVariant={feedDefault}
-        icon="🍼"
+        icon={IconBottle}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -638,7 +703,7 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activePump}
         defaultVariant="left"
-        icon="🤱"
+        icon={IconPump}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -649,7 +714,7 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={null}
         defaultVariant={diaperDefault}
-        icon="🚼"
+        icon={IconDiaper}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -660,7 +725,7 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activeSleep}
         defaultVariant={sleepDefault}
-        icon="😴"
+        icon={IconSleep}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}

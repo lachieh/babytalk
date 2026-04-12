@@ -7,13 +7,29 @@ import { useBabyContext } from "@/lib/baby-context";
 
 import { EventEditSheet } from "./event-edit-sheet";
 
-const typeEmoji: Record<string, string> = {
-  feed: "🍼",
-  pump: "🤱",
-  sleep: "😴",
-  diaper: "🚼",
-  note: "📝",
-};
+function formatTypeLabel(type: string, metadata: string): string {
+  try {
+    const meta = JSON.parse(metadata);
+    if (type === "feed") {
+      const method = meta.method ?? "";
+      if (method === "breast") return `Breast Feed`;
+      if (method === "bottle") return `Bottle Feed`;
+      if (method === "formula") return `Formula`;
+      if (method === "solid") return `Solid Feed`;
+      return "Feed";
+    }
+    if (type === "sleep") return "Nap";
+    if (type === "diaper") {
+      if (meta.wet && meta.soiled) return "Wet + Soiled Diaper";
+      if (meta.soiled) return "Soiled Diaper";
+      return "Wet Diaper";
+    }
+    if (type === "pump") return "Pump";
+  } catch {
+    /* ignore */
+  }
+  return type;
+}
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -84,27 +100,27 @@ const TimelineRow = ({
   const duration = formatDuration(event.startedAt, event.endedAt, event.type);
   const meta = formatMeta(event.type, event.metadata);
 
+  const typeLabel = formatTypeLabel(event.type, event.metadata);
+
   return (
     <button
-      className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+      className="flex w-full items-start gap-4 border-b border-neutral-200 px-4 py-4 text-left transition-colors active:bg-neutral-50"
       onClick={handleClick}
       type="button"
     >
-      <span className="text-base">{typeEmoji[event.type] ?? "📋"}</span>
-      <span className="w-14 text-xs tabular-nums text-neutral-400">
+      <span className="w-16 pt-0.5 text-xs tabular-nums text-neutral-500">
         {formatTime(event.startedAt)}
       </span>
-      <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
-        {event.type}
-      </span>
-      <span className="text-right text-xs text-neutral-400">
-        {duration && (
-          <span className="mr-1.5 text-neutral-500">{duration}</span>
-        )}
-        {meta}
-      </span>
+      <div className="flex-1">
+        <p className="text-xs font-medium uppercase tracking-wider text-neutral-700">
+          {typeLabel}
+        </p>
+        <p className="mt-0.5 text-xs text-neutral-400">
+          {[duration, meta].filter(Boolean).join(" · ")}
+        </p>
+      </div>
       <svg
-        className="h-3.5 w-3.5 text-neutral-300"
+        className="mt-1 h-3.5 w-3.5 text-neutral-300"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -148,11 +164,8 @@ export const PersistentTimeline = () => {
   }
 
   return (
-    <div className="px-4 py-2">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
-        Today
-      </p>
-      <div className="space-y-0.5">
+    <div>
+      <div>
         {todayEvents.slice(0, 10).map((event) => (
           <TimelineRow event={event} key={event.id} onEdit={handleEdit} />
         ))}
