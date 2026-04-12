@@ -17,6 +17,15 @@ export default function LoginPage() {
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Store any redirect param so the verify page can use it after auth
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    if (redirect) {
+      localStorage.setItem("babytalk_auth_redirect", redirect);
+    }
+  }
+
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();

@@ -7,6 +7,13 @@ import {
 const getToken = () =>
   typeof window === "undefined" ? null : localStorage.getItem("babytalk_token");
 
+function isAuthError(message: string, status: number): boolean {
+  if (status === 401) return true;
+  if (message === "Not authenticated") return true;
+  if (message.includes("jwt")) return true;
+  return false;
+}
+
 export const gqlRequest = async <T = unknown>(
   query: string,
   variables?: Record<string, unknown>
@@ -28,7 +35,18 @@ export const gqlRequest = async <T = unknown>(
 
   const json = await res.json();
   if (json.errors) {
-    throw new Error(json.errors[0].message);
+    const [firstError] = json.errors;
+    const { message } = firstError;
+
+    // If the API says we're not authenticated, clear the stale token and redirect
+    if (typeof window !== "undefined" && isAuthError(message, res.status)) {
+      localStorage.removeItem("babytalk_token");
+      const returnTo = window.location.pathname + window.location.search;
+      window.location.href = `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
+      throw new Error("Session expired — redirecting to login");
+    }
+
+    throw new Error(message);
   }
   return json.data as T;
 };

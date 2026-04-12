@@ -120,85 +120,80 @@
 }
 
 /* --- Dark mode overrides ---
-   Mood: cozy late-night nursery. Warm charcoal with amber undertone,
-   jewel-tone event accents that glow softly. Not stark, not cold.
+   Mood: cozy late-night nursery. Deep olive-charcoal, not stark black.
+   Matches the cream/olive light mode palette.
    Supports both prefers-color-scheme AND .dark class for time-based auto mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Surfaces: warm cocoa-charcoal, not pure black or cold gray */
-    --color-surface: oklch(16% 0.015 55);
-    --color-surface-raised: oklch(20% 0.018 55);
-    --color-surface-sunken: oklch(13% 0.012 55);
+    /* Surfaces: deep olive-charcoal */
+    --color-surface: oklch(15% 0.015 90);
+    --color-surface-raised: oklch(19% 0.018 90);
+    --color-surface-sunken: oklch(12% 0.012 90);
 
-    /* Neutrals: warm off-white text, amber-tinted mid-tones */
-    --color-neutral-50: oklch(15% 0.012 55);
-    --color-neutral-100: oklch(19% 0.014 55);
-    --color-neutral-200: oklch(25% 0.016 55);
-    --color-neutral-300: oklch(35% 0.014 55);
-    --color-neutral-400: oklch(50% 0.012 55);
-    --color-neutral-500: oklch(60% 0.01 55);
-    --color-neutral-600: oklch(70% 0.008 55);
-    --color-neutral-700: oklch(78% 0.007 50);
-    --color-neutral-800: oklch(87% 0.006 50);
-    --color-neutral-900: oklch(93% 0.004 50);
-    --color-neutral-950: oklch(96% 0.003 50);
+    /* Neutrals: cream-tinted text on dark */
+    --color-neutral-50: oklch(14% 0.012 80);
+    --color-neutral-100: oklch(18% 0.014 80);
+    --color-neutral-200: oklch(24% 0.016 80);
+    --color-neutral-300: oklch(34% 0.014 75);
+    --color-neutral-400: oklch(48% 0.012 70);
+    --color-neutral-500: oklch(58% 0.01 70);
+    --color-neutral-600: oklch(68% 0.008 70);
+    --color-neutral-700: oklch(78% 0.007 70);
+    --color-neutral-800: oklch(87% 0.006 75);
+    --color-neutral-900: oklch(93% 0.004 75);
+    --color-neutral-950: oklch(96% 0.003 75);
 
-    /* Primary: terracotta-rose, slightly lifted for dark backgrounds */
-    --color-primary-50: oklch(20% 0.03 30);
-    --color-primary-100: oklch(25% 0.05 30);
-    --color-primary-200: oklch(32% 0.07 30);
-    --color-primary-300: oklch(45% 0.1 30);
-    --color-primary-400: oklch(58% 0.13 30);
-    --color-primary-500: oklch(65% 0.13 30);
-    --color-primary-600: oklch(58% 0.13 30);
-    --color-primary-700: oklch(48% 0.11 30);
+    /* Primary: olive/sage, lifted for dark backgrounds */
+    --color-primary-50: oklch(18% 0.02 100);
+    --color-primary-100: oklch(23% 0.03 100);
+    --color-primary-200: oklch(30% 0.04 100);
+    --color-primary-300: oklch(40% 0.05 100);
+    --color-primary-400: oklch(52% 0.06 100);
+    --color-primary-500: oklch(58% 0.06 100);
+    --color-primary-600: oklch(50% 0.06 100);
+    --color-primary-700: oklch(42% 0.05 100);
 
-    /* Feed: soft sage-blue glow */
-    --color-feed-50: oklch(20% 0.035 230);
-    --color-feed-100: oklch(25% 0.05 230);
-    --color-feed-200: oklch(32% 0.065 230);
-    --color-feed-500: oklch(62% 0.1 230);
-    --color-feed-600: oklch(55% 0.09 230);
+    /* Event accents: unified olive-family for dark */
+    --color-feed-50: oklch(18% 0.02 90);
+    --color-feed-100: oklch(23% 0.03 90);
+    --color-feed-200: oklch(30% 0.04 90);
+    --color-feed-500: oklch(58% 0.06 90);
+    --color-feed-600: oklch(50% 0.05 90);
 
-    /* Sleep: soft lavender glow */
-    --color-sleep-50: oklch(20% 0.04 285);
-    --color-sleep-100: oklch(25% 0.055 285);
-    --color-sleep-200: oklch(32% 0.07 285);
-    --color-sleep-500: oklch(62% 0.1 285);
-    --color-sleep-600: oklch(55% 0.09 285);
+    --color-sleep-50: oklch(18% 0.02 90);
+    --color-sleep-100: oklch(23% 0.03 90);
+    --color-sleep-200: oklch(30% 0.04 90);
+    --color-sleep-500: oklch(58% 0.06 90);
+    --color-sleep-600: oklch(50% 0.05 90);
 
-    /* Diaper: warm amber glow */
-    --color-diaper-50: oklch(20% 0.035 75);
-    --color-diaper-100: oklch(25% 0.05 75);
-    --color-diaper-200: oklch(32% 0.065 75);
-    --color-diaper-500: oklch(62% 0.1 75);
-    --color-diaper-600: oklch(55% 0.09 75);
+    --color-diaper-50: oklch(18% 0.02 90);
+    --color-diaper-100: oklch(23% 0.03 90);
+    --color-diaper-200: oklch(30% 0.04 90);
+    --color-diaper-500: oklch(58% 0.06 90);
+    --color-diaper-600: oklch(50% 0.05 90);
 
-    /* Note: warm stone */
-    --color-note-50: oklch(20% 0.015 55);
-    --color-note-100: oklch(25% 0.018 55);
-    --color-note-200: oklch(30% 0.02 55);
-    --color-note-500: oklch(60% 0.015 55);
+    --color-note-50: oklch(18% 0.012 80);
+    --color-note-100: oklch(23% 0.015 80);
+    --color-note-200: oklch(28% 0.018 80);
+    --color-note-500: oklch(58% 0.012 80);
 
-    /* Success: muted sage green */
-    --color-success-50: oklch(19% 0.03 150);
-    --color-success-100: oklch(24% 0.045 150);
-    --color-success-200: oklch(30% 0.06 150);
-    --color-success-500: oklch(60% 0.1 150);
-    --color-success-600: oklch(52% 0.09 150);
+    /* Semantic: subdued for dark */
+    --color-success-50: oklch(18% 0.025 140);
+    --color-success-100: oklch(23% 0.04 140);
+    --color-success-200: oklch(28% 0.05 140);
+    --color-success-500: oklch(58% 0.08 140);
+    --color-success-600: oklch(50% 0.07 140);
 
-    /* Warning: warm honey */
-    --color-warning-50: oklch(20% 0.04 80);
-    --color-warning-100: oklch(26% 0.06 80);
-    --color-warning-200: oklch(33% 0.08 80);
-    --color-warning-500: oklch(62% 0.12 80);
+    --color-warning-50: oklch(18% 0.03 85);
+    --color-warning-100: oklch(24% 0.05 85);
+    --color-warning-200: oklch(30% 0.06 85);
+    --color-warning-500: oklch(60% 0.1 85);
 
-    /* Danger: soft rose */
-    --color-danger-50: oklch(19% 0.03 15);
-    --color-danger-100: oklch(24% 0.045 15);
-    --color-danger-200: oklch(30% 0.06 15);
-    --color-danger-500: oklch(60% 0.12 15);
-    --color-danger-600: oklch(52% 0.1 15);
+    --color-danger-50: oklch(18% 0.025 15);
+    --color-danger-100: oklch(23% 0.04 15);
+    --color-danger-200: oklch(28% 0.05 15);
+    --color-danger-500: oklch(58% 0.1 15);
+    --color-danger-600: oklch(50% 0.08 15);
 
     /* Urgency: slightly brighter for readability on dark */
     --color-urgency-ok: oklch(68% 0.1 150);
@@ -209,70 +204,70 @@
 
 /* .dark class overrides (for time-based auto dark mode) */
 :root.dark {
-  --color-surface: oklch(16% 0.015 55);
-  --color-surface-raised: oklch(20% 0.018 55);
-  --color-surface-sunken: oklch(13% 0.012 55);
+  --color-surface: oklch(15% 0.015 90);
+  --color-surface-raised: oklch(19% 0.018 90);
+  --color-surface-sunken: oklch(12% 0.012 90);
 
-  --color-neutral-50: oklch(15% 0.012 55);
-  --color-neutral-100: oklch(19% 0.014 55);
-  --color-neutral-200: oklch(25% 0.016 55);
-  --color-neutral-300: oklch(35% 0.014 55);
-  --color-neutral-400: oklch(50% 0.012 55);
-  --color-neutral-500: oklch(60% 0.01 55);
-  --color-neutral-600: oklch(70% 0.008 55);
-  --color-neutral-700: oklch(78% 0.007 50);
-  --color-neutral-800: oklch(87% 0.006 50);
-  --color-neutral-900: oklch(93% 0.004 50);
-  --color-neutral-950: oklch(96% 0.003 50);
+  --color-neutral-50: oklch(14% 0.012 80);
+  --color-neutral-100: oklch(18% 0.014 80);
+  --color-neutral-200: oklch(24% 0.016 80);
+  --color-neutral-300: oklch(34% 0.014 75);
+  --color-neutral-400: oklch(48% 0.012 70);
+  --color-neutral-500: oklch(58% 0.01 70);
+  --color-neutral-600: oklch(68% 0.008 70);
+  --color-neutral-700: oklch(78% 0.007 70);
+  --color-neutral-800: oklch(87% 0.006 75);
+  --color-neutral-900: oklch(93% 0.004 75);
+  --color-neutral-950: oklch(96% 0.003 75);
 
-  --color-primary-50: oklch(20% 0.03 30);
-  --color-primary-100: oklch(25% 0.05 30);
-  --color-primary-200: oklch(32% 0.07 30);
-  --color-primary-300: oklch(45% 0.1 30);
-  --color-primary-400: oklch(58% 0.13 30);
-  --color-primary-500: oklch(65% 0.13 30);
-  --color-primary-600: oklch(58% 0.13 30);
-  --color-primary-700: oklch(48% 0.11 30);
+  --color-primary-50: oklch(18% 0.02 100);
+  --color-primary-100: oklch(23% 0.03 100);
+  --color-primary-200: oklch(30% 0.04 100);
+  --color-primary-300: oklch(40% 0.05 100);
+  --color-primary-400: oklch(52% 0.06 100);
+  --color-primary-500: oklch(58% 0.06 100);
+  --color-primary-600: oklch(50% 0.06 100);
+  --color-primary-700: oklch(42% 0.05 100);
 
-  --color-feed-50: oklch(20% 0.035 230);
-  --color-feed-100: oklch(25% 0.05 230);
-  --color-feed-200: oklch(32% 0.065 230);
-  --color-feed-500: oklch(62% 0.1 230);
-  --color-feed-600: oklch(55% 0.09 230);
+  --color-feed-50: oklch(18% 0.02 90);
+  --color-feed-100: oklch(23% 0.03 90);
+  --color-feed-200: oklch(30% 0.04 90);
+  --color-feed-500: oklch(58% 0.06 90);
+  --color-feed-600: oklch(50% 0.05 90);
 
-  --color-sleep-50: oklch(20% 0.04 285);
-  --color-sleep-100: oklch(25% 0.055 285);
-  --color-sleep-200: oklch(32% 0.07 285);
-  --color-sleep-500: oklch(62% 0.1 285);
-  --color-sleep-600: oklch(55% 0.09 285);
+  --color-sleep-50: oklch(18% 0.02 90);
+  --color-sleep-100: oklch(23% 0.03 90);
+  --color-sleep-200: oklch(30% 0.04 90);
+  --color-sleep-500: oklch(58% 0.06 90);
+  --color-sleep-600: oklch(50% 0.05 90);
 
-  --color-diaper-50: oklch(20% 0.035 75);
-  --color-diaper-100: oklch(25% 0.05 75);
-  --color-diaper-200: oklch(32% 0.065 75);
-  --color-diaper-500: oklch(62% 0.1 75);
-  --color-diaper-600: oklch(55% 0.09 75);
+  --color-diaper-50: oklch(18% 0.02 90);
+  --color-diaper-100: oklch(23% 0.03 90);
+  --color-diaper-200: oklch(30% 0.04 90);
+  --color-diaper-500: oklch(58% 0.06 90);
+  --color-diaper-600: oklch(50% 0.05 90);
 
-  --color-note-50: oklch(20% 0.015 55);
-  --color-note-100: oklch(25% 0.018 55);
-  --color-note-200: oklch(30% 0.02 55);
-  --color-note-500: oklch(60% 0.015 55);
+  --color-note-50: oklch(18% 0.012 80);
+  --color-note-100: oklch(23% 0.015 80);
+  --color-note-200: oklch(28% 0.018 80);
+  --color-note-500: oklch(58% 0.012 80);
 
-  --color-success-50: oklch(19% 0.03 150);
-  --color-success-100: oklch(24% 0.045 150);
-  --color-success-200: oklch(30% 0.06 150);
-  --color-success-500: oklch(60% 0.1 150);
-  --color-success-600: oklch(52% 0.09 150);
+  --color-success-50: oklch(18% 0.025 140);
+  --color-success-100: oklch(23% 0.04 140);
+  --color-success-200: oklch(28% 0.05 140);
+  --color-success-500: oklch(58% 0.08 140);
+  --color-success-600: oklch(50% 0.07 140);
 
-  --color-warning-50: oklch(20% 0.04 80);
-  --color-warning-100: oklch(26% 0.06 80);
-  --color-warning-200: oklch(33% 0.08 80);
-  --color-warning-500: oklch(62% 0.12 80);
+  --color-warning-50: oklch(18% 0.03 85);
+  --color-warning-100: oklch(24% 0.05 85);
+  --color-warning-200: oklch(30% 0.06 85);
+  --color-warning-500: oklch(60% 0.1 85);
 
-  --color-danger-50: oklch(19% 0.03 15);
-  --color-danger-100: oklch(24% 0.045 15);
-  --color-danger-200: oklch(30% 0.06 15);
-  --color-danger-500: oklch(60% 0.12 15);
-  --color-danger-600: oklch(52% 0.1 15);
+  --color-danger-50: oklch(18% 0.025 15);
+  --color-danger-100: oklch(23% 0.04 15);
+  --color-danger-200: oklch(28% 0.05 15);
+  --color-danger-500: oklch(58% 0.1 15);
+  --color-danger-600: oklch(50% 0.08 15);
 
   --color-urgency-ok: oklch(68% 0.1 150);
   --color-urgency-soon: oklch(72% 0.12 80);

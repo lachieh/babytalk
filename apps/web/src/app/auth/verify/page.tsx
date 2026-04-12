@@ -32,6 +32,7 @@ const VerifyContent = () => {
   useEffect(() => {
     const token = searchParams.get("token");
     const joinCode = searchParams.get("join");
+    const redirectTo = searchParams.get("redirect");
     if (!token) {
       setError("Missing token");
       return;
@@ -62,7 +63,17 @@ const VerifyContent = () => {
           }
         }
 
-        router.push("/dashboard");
+        // Check for redirect: URL param first, then localStorage (set by login page)
+        let storedRedirect: string | null = null;
+        if (typeof window === "undefined") {
+          storedRedirect = null;
+        } else {
+          storedRedirect = localStorage.getItem("babytalk_auth_redirect");
+          if (storedRedirect) {
+            localStorage.removeItem("babytalk_auth_redirect");
+          }
+        }
+        router.push(redirectTo ?? storedRedirect ?? "/dashboard");
       } catch {
         setError("Something went wrong");
       }
