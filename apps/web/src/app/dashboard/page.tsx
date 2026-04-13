@@ -11,6 +11,7 @@ import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon, getEventStyle } from "@/lib/event-styles";
 import { getTamboApiKey } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useVolumeUnit, formatVolume } from "@/lib/use-volume-unit";
@@ -181,44 +182,49 @@ const SummaryCard = () => {
   const lastDiaper = events.find((e) => e.type === "diaper");
   const diaperDetail = lastDiaper ? lastDiaperDetail(lastDiaper, now) : null;
 
+  const columns: {
+    type: string;
+    label: string;
+    value: string;
+    detail: string | null;
+  }[] = [
+    {
+      type: "sleep",
+      label: "Sleep",
+      value: `${sleepHours}h`,
+      detail: sleepDetail,
+    },
+    { type: "feed", label: "Fed", value: fedDisplay, detail: feedDetail },
+    {
+      type: "diaper",
+      label: "Diapers",
+      value: String(diaperCount),
+      detail: diaperDetail,
+    },
+  ];
+
   return (
-    <div className="mx-4 rounded-xl bg-primary-600 px-6 py-5">
-      <div className="flex justify-between text-center">
-        <div className="flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
-            Sleep
-          </p>
-          <p className="mt-1 font-serif text-2xl font-normal text-white">
-            {sleepHours}
-            <span className="text-base">h</span>
-          </p>
-          {sleepDetail && (
-            <p className="mt-0.5 text-[10px] text-white/50">{sleepDetail}</p>
-          )}
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
-            Fed
-          </p>
-          <p className="mt-1 font-serif text-2xl font-normal text-white">
-            {fedDisplay}
-          </p>
-          {feedDetail && (
-            <p className="mt-0.5 text-[10px] text-white/50">{feedDetail}</p>
-          )}
-        </div>
-        <div className="flex-1">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
-            Diapers
-          </p>
-          <p className="mt-1 font-serif text-2xl font-normal text-white">
-            {diaperCount}
-          </p>
-          {diaperDetail && (
-            <p className="mt-0.5 text-[10px] text-white/50">{diaperDetail}</p>
-          )}
-        </div>
-      </div>
+    <div className="flex gap-2 px-4">
+      {columns.map((col) => {
+        const style = getEventStyle(col.type);
+        return (
+          <div
+            key={col.type}
+            className={`flex flex-1 flex-col items-center rounded-xl border px-2 py-3 text-center ${style.bg}`}
+          >
+            <EventIcon type={col.type} />
+            <p className="mt-1 font-serif text-2xl font-normal text-neutral-800">
+              {col.value}
+            </p>
+            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
+              {col.label}
+            </p>
+            {col.detail && (
+              <p className="mt-1 text-[10px] text-neutral-400">{col.detail}</p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };
