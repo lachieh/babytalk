@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon, getEventStyle } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
 import { useVolumeUnit, displayToMl } from "@/lib/use-volume-unit";
 import type { VolumeUnit } from "@/lib/use-volume-unit";
@@ -356,7 +357,6 @@ const AmountInput = ({
 
 const ActionSection = ({
   type,
-  icon,
   variants,
   defaultVariant,
   activeEvent,
@@ -366,7 +366,6 @@ const ActionSection = ({
   onCancel,
 }: {
   type: string;
-  icon: React.ReactNode;
   variants: Variant[];
   defaultVariant: string;
   activeEvent: BabyEvent | null;
@@ -480,6 +479,7 @@ const ActionSection = ({
   const hasTimer = activeEvent !== null;
   const showPumpAmount = pumpStoppedEventId !== null;
   const showActions = !hasTimer && !showAmountInput && !showPumpAmount;
+  const style = getEventStyle(type);
 
   return (
     <div className="flex-1">
@@ -518,12 +518,12 @@ const ActionSection = ({
       {showActions && (
         <>
           <button
-            className="flex w-full flex-col items-center gap-2 rounded-lg border border-neutral-200 px-3 py-4 text-center transition-[background-color,transform] duration-[var(--duration-fast)] active:scale-[0.97] active:bg-neutral-50"
+            className={`flex w-full flex-col items-center gap-2 rounded-lg border px-3 py-4 text-center transition-[background-color,transform] active:scale-[0.97] ${style.buttonBg}`}
             onClick={handleMainTap}
             type="button"
           >
-            <span className="text-neutral-600">{icon}</span>
-            <span className="text-[10px] font-medium uppercase tracking-[0.15em] text-neutral-600">
+            <EventIcon type={type} />
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em]">
               {type}
             </span>
           </button>
@@ -564,73 +564,6 @@ const ActionSection = ({
 };
 
 /* ── SuggestionZone ────────────────────────────────────────── */
-
-/* ── Line Icons ────────────────────────────────────────────── */
-
-const IconBottle = (
-  <svg
-    width="24"
-    height="24"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M9 3h6v3H9zM7 6h10v2a5 5 0 01-5 5h0a5 5 0 01-5-5V6zM9 13v5a3 3 0 003 3h0a3 3 0 003-3v-5"
-    />
-  </svg>
-);
-
-const IconPump = (
-  <svg
-    width="24"
-    height="24"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 3v3m0 0a4 4 0 014 4v2l2 1v2H6v-2l2-1v-2a4 4 0 014-4zm-3 12h6v2a3 3 0 01-6 0v-2z"
-    />
-  </svg>
-);
-
-const IconDiaper = (
-  <svg
-    width="24"
-    height="24"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <ellipse cx="12" cy="12" rx="8" ry="5" />
-    <path strokeLinecap="round" d="M8 12h8" />
-  </svg>
-);
-
-const IconSleep = (
-  <svg
-    width="24"
-    height="24"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth="1.5"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"
-    />
-  </svg>
-);
 
 export const SuggestionZone = () => {
   const {
@@ -694,7 +627,6 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activeFeed}
         defaultVariant={feedDefault}
-        icon={IconBottle}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -705,7 +637,6 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activePump}
         defaultVariant="left"
-        icon={IconPump}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -716,7 +647,6 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={null}
         defaultVariant={diaperDefault}
-        icon={IconDiaper}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
@@ -727,7 +657,6 @@ export const SuggestionZone = () => {
       <ActionSection
         activeEvent={activeSleep}
         defaultVariant={sleepDefault}
-        icon={IconSleep}
         onCancel={handleCancel}
         onLog={handleLog}
         onStop={handleStop}
