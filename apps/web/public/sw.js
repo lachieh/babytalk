@@ -1,7 +1,10 @@
 /// Service Worker for BabyTalk PWA
 /// Handles: offline caching, background sync for mutations
 
-const CACHE_NAME = "babytalk-v1";
+// Bumped to v2 to evict the v1 cache, which served stale HTML referencing
+// content-hashed JS chunks that no longer exist after a deploy — leaving
+// returning users with a blank page until they hard-refreshed.
+const CACHE_NAME = "babytalk-v2";
 const OFFLINE_QUEUE_KEY = "babytalk_offline_queue";
 const MAX_QUEUE_SIZE = 100;
 const MAX_RETRIES = 3;
@@ -10,14 +13,11 @@ const STALE_DAYS = 7;
 // API URL — set by the main thread via postMessage, fallback to localhost for dev
 let configuredApiUrl = "http://localhost:4000/graphql";
 
-// Static assets to pre-cache
-const PRECACHE_URLS = ["/dashboard", "/offline"];
-
-// Install: pre-cache app shell
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
-  );
+// Install: take over as soon as possible. We intentionally skip pre-caching
+// HTML routes — Next.js content-hashes its JS/CSS chunks per build, so a
+// pre-cached HTML page from an old build references chunks that 404 after
+// the next deploy.
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
@@ -28,27 +28,36 @@ self.addEventListener("activate", (event) => {
       .keys()
       .then((keys) =>
         Promise.all(
-          keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
+          keys
+            .filter((k) => k !== CACHE_NAME && k !== "babytalk-queue")
+            .map((k) => caches.delete(k))
         )
       )
   );
   self.clients.claim();
 });
 
-// Fetch: network-first for API, cache-first for static
+// Fetch strategies:
+// - GraphQL API: network-first, queue mutations when offline
+// - HTML navigations: network-only (never cache — see CACHE_NAME comment)
+// - Hashed static assets (/_next/static/*): cache-first (immutable by hash)
+// - Everything else: network with cache fallback
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  if (request.method !== "GET" && !request.url.includes("/graphql")) return;
+
+  const url = new URL(request.url);
 
   // GraphQL API requests: network-first
   if (url.pathname.includes("/graphql")) {
     event.respondWith(
-      fetch(event.request).catch(() => {
+      fetch(request).catch(() => {
         // If it's a mutation, queue it for later
-        if (event.request.method === "POST") {
-          return event.request
+        if (request.method === "POST") {
+          return request
             .clone()
             .json()
-            .then((body) => queueMutation(body, event.request.headers))
+            .then((body) => queueMutation(body, request.headers))
             .then(
               () =>
                 new Response(
@@ -72,22 +81,57 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first
+  const isNavigation =
+    request.mode === "navigate" ||
+    request.destination === "document" ||
+    (request.headers.get("accept") || "").includes("text/html");
+
+  // HTML navigations: always go to the network. Caching HTML is unsafe with
+  // Next.js because the HTML embeds references to per-build, content-hashed
+  // chunk filenames; serving a stale HTML after a deploy points at chunks
+  // that have been removed from the server.
+  if (isNavigation) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  const isHashedStatic = url.pathname.startsWith("/_next/static/");
+
+  // Hashed static assets are immutable, so cache-first is safe.
+  if (isHashedStatic) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((response) => {
+            if (response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(request, clone);
+              });
+            }
+            return response;
+          })
+      )
+    );
+    return;
+  }
+
+  // Everything else (icons, manifest, etc.): network, fall back to cache.
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ||
-        fetch(event.request).then((response) => {
-          // Cache successful GET responses
-          if (event.request.method === "GET" && response.status === 200) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, clone);
-            });
-          }
-          return response;
-        })
-    )
+    fetch(request)
+      .then((response) => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(request, clone);
+          });
+        }
+        return response;
+      })
+      .catch(() =>
+        caches.match(request).then((cached) => cached || Response.error())
+      )
   );
 });
 

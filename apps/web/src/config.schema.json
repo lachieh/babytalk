@@ -11,7 +11,7 @@
       "type": "string"
     },
     "tamboUrl": {
-      "default": "http://localhost:8261",
+      "default": "https://api.tambo.co",
       "type": "string"
     }
   }
