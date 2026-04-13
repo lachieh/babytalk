@@ -646,16 +646,6 @@ export const SuggestionZone = () => {
         variants={PUMP_VARIANTS}
       />
       <ActionSection
-        activeEvent={null}
-        defaultVariant={diaperDefault}
-        onCancel={handleCancel}
-        onLog={handleLog}
-        onStop={handleStop}
-        onUpdateMeta={handleUpdateMeta}
-        type="diaper"
-        variants={DIAPER_VARIANTS}
-      />
-      <ActionSection
         activeEvent={activeSleep}
         defaultVariant={sleepDefault}
         onCancel={handleCancel}
@@ -664,6 +654,16 @@ export const SuggestionZone = () => {
         onUpdateMeta={handleUpdateMeta}
         type="sleep"
         variants={SLEEP_VARIANTS}
+      />
+      <ActionSection
+        activeEvent={null}
+        defaultVariant={diaperDefault}
+        onCancel={handleCancel}
+        onLog={handleLog}
+        onStop={handleStop}
+        onUpdateMeta={handleUpdateMeta}
+        type="diaper"
+        variants={DIAPER_VARIANTS}
       />
     </div>
   );
