@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon, getEventStyle } from "@/lib/event-styles";
-import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
+import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -32,56 +31,26 @@ const formatDuration = (
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 };
 
-function getEventSummary(type: string, metadata: string): string {
-  try {
-    const meta = JSON.parse(metadata);
-    switch (type) {
-      case "feed": {
-        if (meta.amountMl) return formatVolume(meta.amountMl, getVolumeUnit());
-        if (meta.method) return meta.method;
-        return "Feed";
-      }
-      case "pump": {
-        if (meta.amountMl) return formatVolume(meta.amountMl, getVolumeUnit());
-        return "Pump";
-      }
-      case "sleep": {
-        return "Sleep";
-      }
-      case "diaper": {
-        const parts: string[] = [];
-        if (meta.wet) parts.push("wet");
-        if (meta.soiled) parts.push("soiled");
-        return parts.join(" + ") || "Diaper";
-      }
-      default: {
-        return type;
-      }
-    }
-  } catch {
-    return type;
-  }
-}
-
 /* ── CSS variable glow colors per event type ─────────────── */
 
 const glowColors: Record<string, string> = {
   feed: "var(--color-feed-200)",
-  pump: "var(--color-pump-200)",
   sleep: "var(--color-sleep-200)",
   diaper: "var(--color-diaper-200)",
 };
 
-/* ── Timer state ──────────────────────────────────────────── */
+/* ── Card state ──────────────────────────────────────────── */
 
-interface TimerState {
+interface CardState {
   type: string;
   label: string;
-  summary: string;
-  minutesAgo: number;
+  /** Big value — today's total */
+  total: string;
+  /** Elapsed since last event */
+  elapsed: string;
+  /** Duration of last event (parenthesised) */
   duration: string | null;
   isActive: boolean;
-  event: BabyEvent;
 }
 
 const labels: Record<string, string> = {
@@ -94,6 +63,7 @@ const labels: Record<string, string> = {
 
 export const StatusWidget = () => {
   const { events, loading } = useBabyContext();
+  const { unit } = useVolumeUnit();
 
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -101,55 +71,99 @@ export const StatusWidget = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const timers = useMemo(() => {
-    const states: TimerState[] = [];
+  const cards = useMemo(() => {
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEvents = events.filter(
+      (e) => new Date(e.startedAt) >= todayStart
+    );
+
+    const states: CardState[] = [];
 
     for (const eventType of ["feed", "sleep", "diaper"] as const) {
+      // ── Today's total ──
+      let total: string;
+      if (eventType === "sleep") {
+        let mins = 0;
+        for (const e of todayEvents) {
+          if (e.type !== "sleep") continue;
+          const end = e.endedAt ? new Date(e.endedAt).getTime() : now;
+          mins += (end - new Date(e.startedAt).getTime()) / 60_000;
+        }
+        const h = Math.floor(mins / 60);
+        const m = Math.floor(mins % 60);
+        total = m > 0 ? `${h}h ${m}m` : `${h}h`;
+      } else if (eventType === "feed") {
+        let totalMl = 0;
+        for (const e of todayEvents) {
+          if (e.type !== "feed") continue;
+          try {
+            const meta = JSON.parse(e.metadata);
+            totalMl += meta.amountMl || 0;
+          } catch {
+            /* ignore */
+          }
+        }
+        total =
+          totalMl > 0
+            ? formatVolume(totalMl, unit)
+            : `${todayEvents.filter((e) => e.type === "feed").length}x`;
+      } else {
+        const count = todayEvents.filter((e) => e.type === "diaper").length;
+        total = `${count}x`;
+      }
+
+      // ── Last event timing ──
       const lastEvent = events.find(
         (e) => e.type === eventType && e.endedAt !== null
       );
       const activeEvent = events.find(
         (e) => e.type === eventType && e.endedAt === null
       );
-
       const referenceEvent = activeEvent ?? lastEvent;
-      if (!referenceEvent) continue;
 
-      const elapsed =
-        (now - new Date(referenceEvent.startedAt).getTime()) / 60_000;
-      const duration = activeEvent
-        ? formatDuration(activeEvent.startedAt, new Date(now).toISOString())
-        : formatDuration(referenceEvent.startedAt, referenceEvent.endedAt);
+      let elapsed = "—";
+      let duration: string | null = null;
+      let isActive = false;
+
+      if (referenceEvent) {
+        const minutesAgo =
+          (now - new Date(referenceEvent.startedAt).getTime()) / 60_000;
+        elapsed = formatElapsed(minutesAgo);
+        duration = activeEvent
+          ? formatDuration(activeEvent.startedAt, new Date(now).toISOString())
+          : formatDuration(referenceEvent.startedAt, referenceEvent.endedAt);
+        isActive = activeEvent !== undefined;
+      }
 
       states.push({
         type: eventType,
         label: labels[eventType],
-        summary: getEventSummary(eventType, referenceEvent.metadata),
-        minutesAgo: elapsed,
+        total,
+        elapsed,
         duration,
-        isActive: activeEvent !== undefined,
-        event: referenceEvent,
+        isActive,
       });
     }
 
     return states;
-  }, [events, now]);
+  }, [events, now, unit]);
 
   if (loading) return null;
-  if (timers.length === 0) return null;
+  if (cards.length === 0) return null;
 
   return (
     <div className="flex gap-2 px-4 py-2">
-      {timers.map((timer) => {
-        const style = getEventStyle(timer.type);
-        const glow = glowColors[timer.type] ?? "transparent";
+      {cards.map((card) => {
+        const style = getEventStyle(card.type);
+        const glow = glowColors[card.type] ?? "transparent";
 
         return (
           <div
-            key={timer.type}
+            key={card.type}
             className={`relative flex flex-1 flex-col items-center overflow-hidden rounded-xl border px-2 py-3 ${style.bg}`}
           >
-            {/* Gradient glow behind text */}
+            {/* Gradient glow */}
             <div
               className="pointer-events-none absolute inset-0 opacity-40"
               style={{
@@ -158,22 +172,19 @@ export const StatusWidget = () => {
             />
 
             <div className="relative flex flex-col items-center">
-              <EventIcon type={timer.type} />
-              <span className="mt-1 text-xs font-medium text-neutral-600">
-                {timer.label}
-              </span>
+              <EventIcon type={card.type} />
               <span
-                className={`text-sm font-semibold tabular-nums ${style.iconColor}`}
+                className={`mt-1.5 text-base font-semibold tabular-nums ${style.iconColor}`}
               >
-                {timer.summary}
+                {card.total}
               </span>
               <span className="mt-0.5 text-[10px] tabular-nums text-neutral-400">
-                {formatElapsed(timer.minutesAgo)}
-                {timer.duration ? ` (${timer.duration})` : ""}
+                {card.elapsed}
+                {card.duration ? ` (${card.duration})` : ""}
               </span>
-              {timer.isActive && (
+              {card.isActive && (
                 <span
-                  className={`mt-1 text-[10px] font-medium ${style.iconColor}`}
+                  className={`mt-0.5 text-[10px] font-medium ${style.iconColor}`}
                 >
                   in progress
                 </span>
