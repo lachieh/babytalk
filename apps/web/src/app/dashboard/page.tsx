@@ -9,6 +9,7 @@ import { PersistentTimeline } from "@/components/persistent-timeline";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
+import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { getTamboApiKey } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
@@ -86,6 +87,57 @@ const formatAgo = (minutes: number): string => {
   return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 };
 
+function lastSleepDetail(event: BabyEvent, now: number): string {
+  const parts: string[] = [];
+  if (event.endedAt) {
+    const dur = Math.round(
+      (new Date(event.endedAt).getTime() -
+        new Date(event.startedAt).getTime()) /
+        60_000
+    );
+    if (dur > 0) {
+      parts.push(
+        dur < 60 ? `${dur}m` : `${Math.floor(dur / 60)}h ${dur % 60}m`
+      );
+    }
+  }
+  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
+  return parts.join(" \u00B7 ");
+}
+
+function lastFeedDetail(
+  event: BabyEvent,
+  now: number,
+  unit: "ml" | "oz"
+): string {
+  const parts: string[] = [];
+  try {
+    const meta = JSON.parse(event.metadata);
+    if (meta.amountMl) parts.push(formatVolume(meta.amountMl, unit));
+    if (meta.method) {
+      const m = meta.method as string;
+      parts.push(m.charAt(0).toUpperCase() + m.slice(1));
+    }
+  } catch {
+    /* ignore */
+  }
+  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
+  return parts.join(" \u00B7 ");
+}
+
+function lastDiaperDetail(event: BabyEvent, now: number): string {
+  const parts: string[] = [];
+  try {
+    const meta = JSON.parse(event.metadata);
+    if (meta.wet) parts.push("Wet");
+    if (meta.soiled) parts.push("Soiled");
+  } catch {
+    /* ignore */
+  }
+  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
+  return parts.join(" \u00B7 ");
+}
+
 const SummaryCard = () => {
   const { events } = useBabyContext();
   const { unit } = useVolumeUnit();
@@ -95,7 +147,7 @@ const SummaryCard = () => {
   todayStart.setHours(0, 0, 0, 0);
   const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
 
-  // ── Sleep total + last ──
+  // ── Sleep ──
   let sleepMinutes = 0;
   for (const e of todayEvents) {
     if (e.type === "sleep" && e.endedAt) {
@@ -106,11 +158,9 @@ const SummaryCard = () => {
   }
   const sleepHours = Math.floor(sleepMinutes / 60);
   const lastSleep = events.find((e) => e.type === "sleep");
-  const sleepAgo = lastSleep
-    ? formatAgo((now - new Date(lastSleep.startedAt).getTime()) / 60_000)
-    : null;
+  const sleepDetail = lastSleep ? lastSleepDetail(lastSleep, now) : null;
 
-  // ── Feed total + last ──
+  // ── Feed ──
   let totalFedMl = 0;
   for (const e of todayEvents) {
     if (e.type === "feed") {
@@ -124,16 +174,12 @@ const SummaryCard = () => {
   }
   const fedDisplay = formatVolume(totalFedMl, unit);
   const lastFeed = events.find((e) => e.type === "feed");
-  const feedAgo = lastFeed
-    ? formatAgo((now - new Date(lastFeed.startedAt).getTime()) / 60_000)
-    : null;
+  const feedDetail = lastFeed ? lastFeedDetail(lastFeed, now, unit) : null;
 
-  // ── Diaper count + last ──
+  // ── Diaper ──
   const diaperCount = todayEvents.filter((e) => e.type === "diaper").length;
   const lastDiaper = events.find((e) => e.type === "diaper");
-  const diaperAgo = lastDiaper
-    ? formatAgo((now - new Date(lastDiaper.startedAt).getTime()) / 60_000)
-    : null;
+  const diaperDetail = lastDiaper ? lastDiaperDetail(lastDiaper, now) : null;
 
   return (
     <div className="mx-4 rounded-xl bg-primary-600 px-6 py-5">
@@ -146,8 +192,8 @@ const SummaryCard = () => {
             {sleepHours}
             <span className="text-base">h</span>
           </p>
-          {sleepAgo && (
-            <p className="mt-0.5 text-[10px] text-white/50">{sleepAgo}</p>
+          {sleepDetail && (
+            <p className="mt-0.5 text-[10px] text-white/50">{sleepDetail}</p>
           )}
         </div>
         <div className="flex-1">
@@ -157,8 +203,8 @@ const SummaryCard = () => {
           <p className="mt-1 font-serif text-2xl font-normal text-white">
             {fedDisplay}
           </p>
-          {feedAgo && (
-            <p className="mt-0.5 text-[10px] text-white/50">{feedAgo}</p>
+          {feedDetail && (
+            <p className="mt-0.5 text-[10px] text-white/50">{feedDetail}</p>
           )}
         </div>
         <div className="flex-1">
@@ -168,8 +214,8 @@ const SummaryCard = () => {
           <p className="mt-1 font-serif text-2xl font-normal text-white">
             {diaperCount}
           </p>
-          {diaperAgo && (
-            <p className="mt-0.5 text-[10px] text-white/50">{diaperAgo}</p>
+          {diaperDetail && (
+            <p className="mt-0.5 text-[10px] text-white/50">{diaperDetail}</p>
           )}
         </div>
       </div>
