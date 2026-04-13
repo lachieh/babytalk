@@ -216,18 +216,18 @@ const SummaryCard = () => {
     ago: string | null;
   }[] = [
     {
-      type: "sleep",
-      label: "Sleep",
-      value: `${sleepHours}h`,
-      detail: sleepDetail?.detail ?? null,
-      ago: sleepDetail?.ago ?? null,
-    },
-    {
       type: "feed",
       label: "Fed",
       value: fedDisplay,
       detail: feedDetail?.detail ?? null,
       ago: feedDetail?.ago ?? null,
+    },
+    {
+      type: "sleep",
+      label: "Sleep",
+      value: `${sleepHours}h`,
+      detail: sleepDetail?.detail ?? null,
+      ago: sleepDetail?.ago ?? null,
     },
     {
       type: "diaper",
