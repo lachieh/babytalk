@@ -11,7 +11,7 @@ import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import { EventIcon, getEventStyle } from "@/lib/event-styles";
+import { EventIcon } from "@/lib/event-styles";
 import { getTamboApiKey } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useVolumeUnit, formatVolume } from "@/lib/use-volume-unit";
@@ -195,6 +195,12 @@ const SummaryCard = () => {
   const lastDiaper = events.find((e) => e.type === "diaper");
   const diaperDetail = lastDiaper ? lastDiaperDetail(lastDiaper, now) : null;
 
+  const cardBg: Record<string, string> = {
+    sleep: "bg-sleep-100",
+    feed: "bg-feed-100",
+    diaper: "bg-diaper-100",
+  };
+
   /* Each blob gets a unique organic border-radius (h1 h2 h3 h4 / v1 v2 v3 v4) */
   const blobShapes = [
     "60% 40% 45% 55% / 55% 60% 40% 45%",
@@ -234,30 +240,27 @@ const SummaryCard = () => {
 
   return (
     <div className="flex gap-2 px-4">
-      {columns.map((col, i) => {
-        const style = getEventStyle(col.type);
-        return (
-          <div
-            key={col.type}
-            className={`flex flex-1 flex-col items-center border-0 px-3 py-5 text-center ${style.bg}`}
-            style={{ borderRadius: blobShapes[i % blobShapes.length] }}
-          >
-            <EventIcon type={col.type} />
-            <p className="mt-1 font-serif text-2xl font-normal text-neutral-800">
-              {col.value}
-            </p>
-            <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
-              {col.label}
-            </p>
-            {col.detail && (
-              <p className="mt-1 text-[10px] text-neutral-400">{col.detail}</p>
-            )}
-            {col.ago && (
-              <p className="mt-0.5 text-[10px] text-neutral-400">{col.ago}</p>
-            )}
-          </div>
-        );
-      })}
+      {columns.map((col, i) => (
+        <div
+          key={col.type}
+          className={`flex flex-1 flex-col items-center border-0 px-3 py-5 text-center ${cardBg[col.type]}`}
+          style={{ borderRadius: blobShapes[i % blobShapes.length] }}
+        >
+          <EventIcon type={col.type} />
+          <p className="mt-1 font-serif text-2xl font-normal text-neutral-800">
+            {col.value}
+          </p>
+          <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
+            {col.label}
+          </p>
+          {col.detail && (
+            <p className="mt-1 text-[10px] text-neutral-400">{col.detail}</p>
+          )}
+          {col.ago && (
+            <p className="mt-0.5 text-[10px] text-neutral-400">{col.ago}</p>
+          )}
+        </div>
+      ))}
     </div>
   );
 };
