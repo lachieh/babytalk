@@ -1,5 +1,7 @@
 "use client";
 
+import { EventIcon } from "@/lib/event-styles";
+
 interface TimelineEvent {
   endedAt?: string | null;
   id: string;
@@ -11,13 +13,6 @@ interface TimelineEvent {
 interface TimelineProps {
   events: TimelineEvent[];
 }
-
-const typeEmoji: Record<string, string> = {
-  diaper: "\u{1F6BC}",
-  feed: "\u{1F37C}",
-  note: "\u{1F4DD}",
-  sleep: "\u{1F634}",
-};
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -75,7 +70,7 @@ export const Timeline = ({ events }: TimelineProps) => {
           key={event.id}
           style={{ animationDelay: `${i * 50}ms` }}
         >
-          <span className="text-base">{typeEmoji[event.type] ?? ""}</span>
+          <EventIcon type={event.type} />
           <span className="text-xs text-neutral-400 tabular-nums">
             {formatTime(event.startedAt)}
           </span>

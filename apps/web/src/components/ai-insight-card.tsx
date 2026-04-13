@@ -4,9 +4,11 @@ import { useMemo } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon } from "@/lib/event-styles";
 
 interface Insight {
-  icon: string;
+  /** Event type name (renders colored icon) or null (renders no icon) */
+  eventType: string | null;
   message: string;
   tone: "calm" | "gentle-nudge" | "encouragement";
 }
@@ -26,7 +28,7 @@ function lateNightInsight(
 ): Insight | null {
   if (hour >= 0 && hour < 6 && todayEvents.length > 0) {
     return {
-      icon: "\u{1F31F}",
+      eventType: null,
       message: "You're doing amazing. Hang in there.",
       tone: "encouragement",
     };
@@ -39,7 +41,7 @@ function overdueFeedInsight(feedMinutes: number): Insight | null {
     const h = Math.floor(feedMinutes / 60);
     const m = Math.floor(feedMinutes % 60);
     return {
-      icon: "\u{1F37C}",
+      eventType: "feed",
       message: `Last feed was ${h}h ${m}m ago \u2014 might be getting hungry`,
       tone: "gentle-nudge",
     };
@@ -50,7 +52,7 @@ function overdueFeedInsight(feedMinutes: number): Insight | null {
 function feedingDayInsight(feedsToday: number): Insight | null {
   if (feedsToday >= 6) {
     return {
-      icon: "\u2728",
+      eventType: "feed",
       message: `${feedsToday} feeds today \u2014 great rhythm`,
       tone: "encouragement",
     };
@@ -66,7 +68,7 @@ function napWindowInsight(sleepMinutes: number, hour: number): Insight | null {
     hour <= 16
   ) {
     return {
-      icon: "\u{1F634}",
+      eventType: "sleep",
       message: "Afternoon nap window \u2014 she usually sleeps around now",
       tone: "calm",
     };
@@ -88,7 +90,7 @@ function dailySummaryInsight(
     parts.push(`${diapersToday} diaper${diapersToday > 1 ? "s" : ""}`);
   if (parts.length > 0) {
     return {
-      icon: "\u{1F4CB}",
+      eventType: null,
       message: `Today so far: ${parts.join(", ")}`,
       tone: "calm",
     };
@@ -136,7 +138,7 @@ export const AIInsightCard = () => {
       <div
         className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${toneStyles[insight.tone]}`}
       >
-        <span className="text-base">{insight.icon}</span>
+        {insight.eventType && <EventIcon type={insight.eventType} />}
         <p className="flex-1 text-sm leading-snug">{insight.message}</p>
       </div>
     </div>

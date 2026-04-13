@@ -3,6 +3,8 @@
 import { useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback } from "react";
 
+import { EventIcon, EVENT_STYLES } from "@/lib/event-styles";
+import type { EventType } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
 
 interface QuickAction {
@@ -14,32 +16,15 @@ interface QuickActionsProps {
   actions: QuickAction[];
 }
 
-const actionStyles: Record<string, { bg: string; icon: string }> = {
-  diaper: {
-    bg: "bg-diaper-50 border-diaper-200 hover:bg-diaper-100 text-diaper-600 active:bg-diaper-200",
-    icon: "\u{1F6BC}",
-  },
-  feed: {
-    bg: "bg-feed-50 border-feed-200 hover:bg-feed-100 text-feed-600 active:bg-feed-200",
-    icon: "\u{1F37C}",
-  },
-  note: {
-    bg: "bg-note-50 border-note-200 hover:bg-note-100 text-neutral-600 active:bg-note-200",
-    icon: "\u{1F4DD}",
-  },
-  sleep: {
-    bg: "bg-sleep-50 border-sleep-200 hover:bg-sleep-100 text-sleep-600 active:bg-sleep-200",
-    icon: "\u{1F634}",
-  },
-};
+const EVENT_KEYS: EventType[] = ["feed", "pump", "sleep", "diaper", "note"];
 
-const getStyle = (label: string) => {
+function getEventType(label: string): EventType {
   const lower = label.toLowerCase();
-  for (const [key, value] of Object.entries(actionStyles)) {
-    if (lower.includes(key)) return value;
+  for (const key of EVENT_KEYS) {
+    if (lower.includes(key)) return key;
   }
-  return actionStyles.note;
-};
+  return "note";
+}
 
 const QuickActionButton = ({
   action,
@@ -55,17 +40,18 @@ const QuickActionButton = ({
     handleAction(action.prompt);
   }, [handleAction, action.prompt]);
 
-  const style = getStyle(action.label);
+  const eventType = getEventType(action.label);
+  const style = EVENT_STYLES[eventType];
 
   return (
     <button
-      className={`flex items-center gap-2 rounded-lg border px-4 text-left text-sm)] font-medium transition-[background-color,transform] duration-[var(--duration-fast active:scale-[0.97] ${style.bg} ${
+      className={`flex items-center gap-2 rounded-lg border px-4 text-left text-sm font-medium transition-[background-color,transform] active:scale-[0.97] ${style.buttonBg} ${
         isPrimary ? "min-h-[56px] py-3" : "min-h-[44px] py-2"
       }`}
       onClick={onClick}
       type="button"
     >
-      <span className={isPrimary ? "text-lg" : "text-base"}>{style.icon}</span>
+      <EventIcon type={eventType} />
       <span className="flex-1">{action.label}</span>
     </button>
   );

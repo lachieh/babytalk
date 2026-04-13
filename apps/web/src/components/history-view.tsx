@@ -4,19 +4,12 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon } from "@/lib/event-styles";
 
 import { EventEditSheet } from "./event-edit-sheet";
 import { DayView, WeekView } from "./timeline-charts";
 
 /* ── Helpers ───────────────────────────────────────────────── */
-
-const typeEmoji: Record<string, string> = {
-  feed: "🍼",
-  pump: "🤱",
-  sleep: "😴",
-  diaper: "🚼",
-  note: "📝",
-};
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
@@ -141,25 +134,26 @@ const EventRow = ({
 
   return (
     <button
-      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+      className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors active:bg-neutral-50"
       onClick={handleClick}
       type="button"
     >
-      <span className="text-lg">{typeEmoji[event.type] ?? "📋"}</span>
-      <span className="w-14 text-xs tabular-nums text-neutral-400">
+      <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-400">
         {formatTime(event.startedAt)}
       </span>
+      <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
-        <span className="text-sm font-medium capitalize text-neutral-700">
+        <p className="text-sm font-medium capitalize text-neutral-700">
           {event.type}
-        </span>
-        {meta && (
-          <span className="ml-1.5 text-xs text-neutral-400">{meta}</span>
+        </p>
+        {(meta || duration) && (
+          <p className="mt-0.5 text-xs text-neutral-400">
+            {[meta, duration].filter(Boolean).join(" · ")}
+          </p>
         )}
       </div>
-      {duration && <span className="text-xs text-neutral-400">{duration}</span>}
       <svg
-        className="h-4 w-4 text-neutral-300"
+        className="h-3.5 w-3.5 shrink-0 text-neutral-300"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

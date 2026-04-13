@@ -3,6 +3,8 @@
 import { useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback } from "react";
 
+import { EventIcon, getEventStyle } from "@/lib/event-styles";
+
 interface EventConfirmationProps {
   endedAt?: string | null;
   eventId: string;
@@ -50,20 +52,6 @@ const formatMetadata = (type: string, raw: string) => {
   }
 };
 
-const typeEmoji: Record<string, string> = {
-  diaper: "\u{1F6BC}",
-  feed: "\u{1F37C}",
-  note: "\u{1F4DD}",
-  sleep: "\u{1F634}",
-};
-
-const typeColors: Record<string, string> = {
-  diaper: "border-diaper-200 bg-diaper-50",
-  feed: "border-feed-200 bg-feed-50",
-  note: "border-neutral-200 bg-neutral-50",
-  sleep: "border-sleep-200 bg-sleep-50",
-};
-
 export const EventConfirmation = ({
   endedAt,
   eventId,
@@ -82,13 +70,13 @@ export const EventConfirmation = ({
     setValue(`edit the event ${eventId}: `);
   }, [setValue, eventId]);
 
-  const colorClass = typeColors[type] ?? "border-success-200 bg-success-50";
+  const style = getEventStyle(type);
 
   return (
-    <div className={`animate-fade-up rounded-md border p-3 ${colorClass}`}>
+    <div className={`animate-fade-up rounded-md border p-3 ${style.bg}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">{typeEmoji[type] ?? "\u2705"}</span>
+          <EventIcon type={type} />
           <span className="text-sm font-medium capitalize text-neutral-700">
             {type}
           </span>

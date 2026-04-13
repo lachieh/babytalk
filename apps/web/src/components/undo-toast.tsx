@@ -3,14 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
-
-const typeEmoji: Record<string, string> = {
-  feed: "\u{1F37C}",
-  sleep: "\u{1F634}",
-  diaper: "\u{1F6BC}",
-  note: "\u{1F4DD}",
-};
 
 export const UndoToast = () => {
   const { undoableAction, dismissUndo, deleteEvent } = useBabyContext();
@@ -51,9 +45,7 @@ export const UndoToast = () => {
     <div className="animate-fade-up fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-sm">
       <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg">
         <div className="flex items-center gap-3 px-4 py-3">
-          <span className="text-base">
-            {typeEmoji[undoableAction.label] ?? "\u2705"}
-          </span>
+          <EventIcon type={undoableAction.label} />
           <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
             {undoableAction.label} logged
           </span>

@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon } from "@/lib/event-styles";
 
 import { EventEditSheet } from "./event-edit-sheet";
 
@@ -104,23 +105,24 @@ const TimelineRow = ({
 
   return (
     <button
-      className="flex w-full items-start gap-4 border-b border-neutral-200 px-4 py-4 text-left transition-colors active:bg-neutral-50"
+      className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors active:bg-neutral-50"
       onClick={handleClick}
       type="button"
     >
-      <span className="w-16 pt-0.5 text-xs tabular-nums text-neutral-500">
+      <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-400">
         {formatTime(event.startedAt)}
       </span>
-      <div className="flex-1">
-        <p className="text-xs font-medium uppercase tracking-wider text-neutral-700">
-          {typeLabel}
-        </p>
-        <p className="mt-0.5 text-xs text-neutral-400">
-          {[duration, meta].filter(Boolean).join(" · ")}
-        </p>
+      <EventIcon type={event.type} />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-neutral-700">{typeLabel}</p>
+        {(duration || meta) && (
+          <p className="mt-0.5 text-xs text-neutral-400">
+            {[duration, meta].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </div>
       <svg
-        className="mt-1 h-3.5 w-3.5 text-neutral-300"
+        className="h-3.5 w-3.5 shrink-0 text-neutral-300"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

@@ -11,7 +11,7 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const typeColors: Record<string, { bg: string; border: string }> = {
   feed: { bg: "bg-feed-200", border: "border-feed-500" },
-  pump: { bg: "bg-feed-100", border: "border-feed-500" },
+  pump: { bg: "bg-pump-200", border: "border-pump-500" },
   sleep: { bg: "bg-sleep-200", border: "border-sleep-500" },
   diaper: { bg: "bg-diaper-200", border: "border-diaper-500" },
   note: { bg: "bg-neutral-200", border: "border-neutral-400" },

@@ -3,18 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useBabyContext } from "@/lib/baby-context";
+import { EventIcon } from "@/lib/event-styles";
 
 /* Thresholds in minutes: feed/sleep 2h→3h, diaper 1.5h→2.5h */
 const thresholds: Record<string, { overdue: number; soon: number }> = {
   diaper: { overdue: 150, soon: 90 },
   feed: { overdue: 180, soon: 120 },
   sleep: { overdue: 180, soon: 120 },
-};
-
-const icons: Record<string, string> = {
-  diaper: "🚼",
-  feed: "🍼",
-  sleep: "😴",
 };
 
 const labels: Record<string, string> = {
@@ -69,7 +64,6 @@ export const StatusWidget = () => {
     const states: {
       type: string;
       label: string;
-      icon: string;
       minutesAgo: number;
       urgency: "ok" | "soon" | "overdue";
     }[] = [];
@@ -90,7 +84,6 @@ export const StatusWidget = () => {
         const elapsed =
           (now - new Date(referenceEvent.startedAt).getTime()) / 60_000;
         states.push({
-          icon: icons[eventType],
           label: labels[eventType],
           minutesAgo: elapsed,
           type: eventType,
@@ -98,7 +91,6 @@ export const StatusWidget = () => {
         });
       } else {
         states.push({
-          icon: icons[eventType],
           label: labels[eventType],
           minutesAgo: -1,
           type: eventType,
@@ -120,7 +112,7 @@ export const StatusWidget = () => {
           key={timer.type}
           className={`flex flex-1 flex-col items-center rounded-md border px-2 py-2 ${urgencyBg[timer.urgency]}`}
         >
-          <span className="text-base">{timer.icon}</span>
+          <EventIcon type={timer.type} />
           <span
             className={`text-sm font-semibold tabular-nums ${urgencyColors[timer.urgency]}`}
           >

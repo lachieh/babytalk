@@ -3,6 +3,8 @@
 import { useTamboComponentState, useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback, useEffect, useState } from "react";
 
+import { getEventStyle } from "@/lib/event-styles";
+
 interface TimerProps {
   eventId?: string;
   startTime: string;
@@ -12,24 +14,6 @@ interface TimerProps {
 const typeLabels: Record<string, string> = {
   feed: "Feed",
   sleep: "Nap",
-};
-
-const typeColors: Record<
-  string,
-  { border: string; bg: string; text: string; btn: string }
-> = {
-  feed: {
-    bg: "bg-feed-50",
-    border: "border-feed-200",
-    btn: "bg-feed-500 hover:bg-feed-600",
-    text: "text-feed-600",
-  },
-  sleep: {
-    bg: "bg-sleep-50",
-    border: "border-sleep-200",
-    btn: "bg-sleep-500 hover:bg-sleep-600",
-    text: "text-sleep-600",
-  },
 };
 
 const formatElapsed = (ms: number) => {
@@ -67,15 +51,13 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
     }
   }, [setRunning, setValue, submit, eventId, type]);
 
-  const colors = typeColors[type] ?? typeColors.feed;
+  const style = getEventStyle(type);
 
   return (
-    <div
-      className={`animate-fade-up rounded-lg border-2 p-4 ${colors.border} ${colors.bg}`}
-    >
+    <div className={`animate-fade-up rounded-lg border-2 p-4 ${style.bg}`}>
       <div className="flex items-center justify-between">
         <div>
-          <p className={`text-sm font-medium ${colors.text}`}>
+          <p className={`text-sm font-medium ${style.iconColor}`}>
             {typeLabels[type] ?? type} Timer
           </p>
           <p className="mt-1 font-mono text-2xl font-bold tabular-nums text-neutral-800">
@@ -84,7 +66,7 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
         </div>
         {running ? (
           <button
-            className={`min-h-[44px] rounded-md px-6 py-2 text-sm)] font-medium text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out active:scale-[0.96] ${colors.btn}`}
+            className="min-h-[44px] rounded-md bg-primary-500 px-6 py-2 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.96]"
             onClick={handleStop}
             type="button"
           >
