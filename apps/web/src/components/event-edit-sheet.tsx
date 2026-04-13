@@ -127,8 +127,9 @@ const FeedFields = ({
           Amount ({unit})
           <input
             className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-            inputMode="numeric"
+            inputMode="decimal"
             onChange={handleAmount}
+            step="0.01"
             type="number"
             value={displayAmount}
           />

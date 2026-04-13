@@ -314,6 +314,7 @@ const AmountInput = ({
           inputMode="decimal"
           onChange={handleChange}
           placeholder={unit}
+          step="0.01"
           type="number"
           value={amount}
         />
