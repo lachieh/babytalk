@@ -61,9 +61,12 @@ export function useVolumeUnit() {
 
 /* ── Conversion helpers ───────────────────────────────────── */
 
-/** Convert ml to the display unit, rounded */
+/** Convert ml to the display unit, rounded to 2 decimal places */
 export function mlToDisplay(ml: number, unit: VolumeUnit): number {
-  return unit === "oz" ? Math.round(ml / ML_PER_OZ) : Math.round(ml);
+  if (unit === "oz") {
+    return Math.round((ml / ML_PER_OZ) * 100) / 100;
+  }
+  return Math.round(ml * 100) / 100;
 }
 
 /** Convert a display-unit value back to ml */
@@ -74,5 +77,8 @@ export function displayToMl(value: number, unit: VolumeUnit): number {
 /** Format a ml value for display with unit label */
 export function formatVolume(ml: number, unit: VolumeUnit): string {
   const val = mlToDisplay(ml, unit);
-  return `${val}${unit}`;
+  // Drop trailing zeros: 2.50 → 2.5, 3.00 → 3
+  const display =
+    val % 1 === 0 ? String(val) : val.toFixed(2).replace(/0+$/, "");
+  return `${display}${unit}`;
 }
