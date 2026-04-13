@@ -244,10 +244,11 @@ const BottomNav = ({
   onSwitch,
 }: {
   tab: string;
-  onSwitch: (tab: "home" | "trends" | "settings") => void;
+  onSwitch: (tab: "home" | "history" | "growth" | "settings") => void;
 }) => {
   const handleHome = useCallback(() => onSwitch("home"), [onSwitch]);
-  const handleTrends = useCallback(() => onSwitch("trends"), [onSwitch]);
+  const handleHistory = useCallback(() => onSwitch("history"), [onSwitch]);
+  const handleGrowth = useCallback(() => onSwitch("growth"), [onSwitch]);
   const handleSettings = useCallback(() => onSwitch("settings"), [onSwitch]);
 
   const activeClass = "text-neutral-800";
@@ -276,8 +277,8 @@ const BottomNav = ({
         Home
       </button>
       <button
-        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "trends" ? activeClass : inactiveClass}`}
-        onClick={handleTrends}
+        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "history" ? activeClass : inactiveClass}`}
+        onClick={handleHistory}
         type="button"
       >
         <svg
@@ -290,10 +291,30 @@ const BottomNav = ({
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
-            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"
+            d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
           />
         </svg>
-        Trends
+        History
+      </button>
+      <button
+        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "growth" ? activeClass : inactiveClass}`}
+        onClick={handleGrowth}
+        type="button"
+      >
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"
+          />
+        </svg>
+        Growth
       </button>
       <button
         className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "settings" ? activeClass : inactiveClass}`}
@@ -329,14 +350,16 @@ const BottomNav = ({
 export default function DashboardPage() {
   useAutoDarkMode();
   const { baby } = useBabyContext();
-  const [tab, setTab] = useState<"home" | "trends" | "settings">("home");
+  const [tab, setTab] = useState<"home" | "history" | "growth" | "settings">(
+    "home"
+  );
   const [profileOpen, setProfileOpen] = useState(false);
   const tamboEnabled = Boolean(getTamboApiKey());
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
 
   const handleTabSwitch = useCallback(
-    (newTab: "home" | "trends" | "settings") => {
+    (newTab: "home" | "history" | "growth" | "settings") => {
       if (newTab === "settings") {
         openProfile();
       } else {
@@ -396,14 +419,8 @@ export default function DashboardPage() {
             </div>
           </>
         )}
-        {tab === "trends" && (
-          <>
-            <HistoryView />
-            <div className="border-t border-neutral-200 mt-4">
-              <GrowthView />
-            </div>
-          </>
-        )}
+        {tab === "history" && <HistoryView />}
+        {tab === "growth" && <GrowthView />}
       </div>
 
       {/* Bottom navigation */}
