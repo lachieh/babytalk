@@ -1,7 +1,7 @@
 "use client";
 
 import { TamboProvider } from "@tambo-ai/react";
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { getTamboApiKey, getTamboUrl } from "@/lib/runtime-config";
 
@@ -10,6 +10,17 @@ import { gqlRequest } from "./graphql";
 import { tamboTools } from "./tools";
 
 const ME_QUERY = `query { me { id } }`;
+
+/**
+ * Context that reports whether the TamboProvider is actually mounted above —
+ * i.e. both an API key and a resolved userId are available. Components that
+ * call `useTambo()` / `useTamboThreadInput()` / etc. must only render when
+ * this is `true`; otherwise those hooks throw
+ * "useTamboClient must be used within a TamboClientProvider".
+ */
+const TamboReadyContext = createContext(false);
+
+export const useTamboReady = (): boolean => useContext(TamboReadyContext);
 
 const SYSTEM_PROMPT = `You are BabyTalk — a calm, warm, and concise baby tracking companion. You help tired parents log feeds, sleep, diapers, and notes. You feel like a co-parent who never sleeps, never forgets, and never judges.
 
@@ -207,9 +218,16 @@ export const BabyTamboProvider = ({
 
   // Skip TamboProvider if no API key or we haven't resolved the user yet —
   // the dashboard still works for logging, timeline, etc. Chat features
-  // just aren't available until both are present.
+  // just aren't available until both are present. Children that call Tambo
+  // hooks must gate on `useTamboReady()` so they don't render while the
+  // provider is absent (which would throw "useTamboClient must be used
+  // within a TamboClientProvider").
   if (!apiKey || !userId) {
-    return children;
+    return (
+      <TamboReadyContext.Provider value={false}>
+        {children}
+      </TamboReadyContext.Provider>
+    );
   }
 
   return (
@@ -227,7 +245,9 @@ export const BabyTamboProvider = ({
       tools={tamboTools}
       userKey={userId}
     >
-      {children}
+      <TamboReadyContext.Provider value={true}>
+        {children}
+      </TamboReadyContext.Provider>
     </TamboProvider>
   );
 };
