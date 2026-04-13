@@ -2,9 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+
+const CHECK_HOUSEHOLD = `
+  query { myHousehold { id } }
+`;
 
 const CREATE_HOUSEHOLD = `
   mutation { createHousehold { id } }
@@ -26,7 +30,9 @@ const INVITE_PARTNER = `
 
 export default function SetupPage() {
   const router = useRouter();
-  const [step, setStep] = useState<"welcome" | "baby">("welcome");
+  const [step, setStep] = useState<"welcome" | "baby" | "already-joined">(
+    "welcome"
+  );
   const [babyName, setBabyName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthWeightLbs, setBirthWeightLbs] = useState("");
@@ -37,6 +43,24 @@ export default function SetupPage() {
   const [partnerEmail, setPartnerEmail] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Check if user already belongs to a household
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const data = await gqlRequest<{
+          myHousehold: { id: string } | null;
+        }>(CHECK_HOUSEHOLD);
+        if (data.myHousehold) {
+          setStep("already-joined");
+        }
+      } catch {
+        // Not authenticated or network error — the welcome step
+        // will surface its own error when the user taps "Get started"
+      }
+    };
+    check();
+  }, []);
 
   const handleCreateHousehold = useCallback(async () => {
     setLoading(true);
@@ -144,6 +168,41 @@ export default function SetupPage() {
     (e: React.ChangeEvent<HTMLInputElement>) => setPartnerEmail(e.target.value),
     []
   );
+
+  if (step === "already-joined") {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-surface px-6">
+        <div className="animate-fade-up max-w-sm text-center">
+          <p className="text-lg leading-relaxed text-neutral-500">
+            Looks like you&apos;re already home.
+          </p>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-neutral-900">
+            You&apos;re all set.
+          </h1>
+          <p className="mt-6 text-base leading-relaxed text-neutral-400">
+            You already belong to a family. We don&apos;t support multiple
+            households yet, but we&apos;d love to hear from you if that&apos;s
+            something you need.
+          </p>
+
+          <div className="mt-12 flex flex-col gap-3">
+            <Link
+              className="flex min-h-[56px] items-center justify-center rounded-lg bg-primary-500 px-6 py-4 text-base font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.98]"
+              href="/dashboard"
+            >
+              Go to dashboard
+            </Link>
+            <a
+              className="min-h-[44px] flex items-center justify-center text-sm font-medium text-primary-500 transition-colors hover:text-primary-600"
+              href="mailto:support@babytalk.app"
+            >
+              Get in touch
+            </a>
+          </div>
+        </div>
+      </main>
+    );
+  }
 
   if (step === "welcome") {
     return (
