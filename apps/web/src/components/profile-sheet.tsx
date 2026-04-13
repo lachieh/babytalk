@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { EditBabySheet } from "./edit-baby-sheet";
@@ -272,6 +273,8 @@ const ProfileContent = ({
 }) => {
   const partner = members.find((m) => m.id !== me?.id);
   const { unit, toggle: toggleUnit } = useVolumeUnit();
+  const { unit: measurementUnit, toggle: toggleMeasurementUnit } =
+    useMeasurementUnit();
 
   return (
     <div className="space-y-5 px-5 pb-6">
@@ -365,6 +368,27 @@ const ProfileContent = ({
               className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
             >
               ml
+            </span>
+          </button>
+        </div>
+        <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
+          <span className="text-sm text-neutral-700">
+            Height &amp; weight unit
+          </span>
+          <button
+            className="flex rounded-lg border border-neutral-200 text-xs"
+            onClick={toggleMeasurementUnit}
+            type="button"
+          >
+            <span
+              className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${measurementUnit === "imperial" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+            >
+              lb / in
+            </span>
+            <span
+              className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${measurementUnit === "metric" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+            >
+              kg / cm
             </span>
           </button>
         </div>
