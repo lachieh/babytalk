@@ -12,7 +12,7 @@ function localeDefault(): MeasurementUnit {
 let listeners: (() => void)[] = [];
 
 function subscribe(listener: () => void) {
-  listeners = [...listeners, listener];
+  listeners.push(listener);
   return () => {
     listeners = listeners.filter((l) => l !== listener);
   };

@@ -312,7 +312,7 @@ const SimpleLineChart = ({
       ? (m: Measurement) => m.lengthMm
       : (m: Measurement) => m.headMm;
 
-  const withData = [...measurements]
+  const withData = measurements
     .filter((m) => getValue(m) !== null && getValue(m) !== undefined)
     .toReversed();
 
