@@ -426,6 +426,10 @@ export default function DashboardPage() {
             {/* Summary card */}
             <SummaryCard />
 
+            <div className="mt-4">
+              <AIInsightCard />
+            </div>
+
             {/* Log Activity */}
             <div className="mt-8 px-4">
               <h2 className="text-center font-serif text-lg italic text-neutral-600">
@@ -435,10 +439,6 @@ export default function DashboardPage() {
 
             <div className="mt-4">
               <SuggestionZone />
-            </div>
-
-            <div className="mt-4">
-              <AIInsightCard />
             </div>
 
             {tamboEnabled && <LastResponse />}
