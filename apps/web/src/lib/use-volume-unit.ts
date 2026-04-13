@@ -61,12 +61,14 @@ export function useVolumeUnit() {
 
 /* ── Conversion helpers ───────────────────────────────────── */
 
-/** Convert ml to the display unit, rounded to 2 decimal places */
+/** Convert ml to the display unit, rounded to 1 decimal place.
+ *  1 decimal avoids round-trip precision noise (e.g. 3oz → 89ml → 3.01oz).
+ */
 export function mlToDisplay(ml: number, unit: VolumeUnit): number {
   if (unit === "oz") {
-    return Math.round((ml / ML_PER_OZ) * 100) / 100;
+    return Math.round((ml / ML_PER_OZ) * 10) / 10;
   }
-  return Math.round(ml * 100) / 100;
+  return Math.round(ml * 10) / 10;
 }
 
 /** Convert a display-unit value back to ml */
@@ -77,8 +79,5 @@ export function displayToMl(value: number, unit: VolumeUnit): number {
 /** Format a ml value for display with unit label */
 export function formatVolume(ml: number, unit: VolumeUnit): string {
   const val = mlToDisplay(ml, unit);
-  // Drop trailing zeros: 2.50 → 2.5, 3.00 → 3
-  const display =
-    val % 1 === 0 ? String(val) : val.toFixed(2).replace(/0+$/, "");
-  return `${display}${unit}`;
+  return `${val}${unit}`;
 }
