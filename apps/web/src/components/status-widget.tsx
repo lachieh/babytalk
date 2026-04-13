@@ -16,21 +16,6 @@ const formatElapsed = (minutes: number): string => {
   return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 };
 
-const formatDuration = (
-  startedAt: string,
-  endedAt: string | null
-): string | null => {
-  if (!endedAt) return null;
-  if (startedAt === endedAt) return null;
-  const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
-  const mins = Math.round(ms / 60_000);
-  if (mins <= 0) return null;
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-};
-
 /* ── CSS variable glow colors per event type ─────────────── */
 
 const glowColors: Record<string, string> = {
@@ -43,21 +28,40 @@ const glowColors: Record<string, string> = {
 
 interface CardState {
   type: string;
-  label: string;
-  /** Big value — today's total */
+  /** Today's total (e.g. "54m", "4oz", "3x") */
   total: string;
+  /** Detail from last event (e.g. "Bottle", "Wet") */
+  detail: string | null;
   /** Elapsed since last event */
   elapsed: string;
-  /** Duration of last event (parenthesised) */
-  duration: string | null;
   isActive: boolean;
 }
 
-const labels: Record<string, string> = {
-  diaper: "Diaper",
-  feed: "Feed",
-  sleep: "Sleep",
-};
+function getLastEventDetail(type: string, metadata: string): string | null {
+  try {
+    const meta = JSON.parse(metadata);
+    switch (type) {
+      case "feed": {
+        if (meta.method === "breast") return "Breast";
+        if (meta.method === "bottle") return "Bottle";
+        if (meta.method === "formula") return "Formula";
+        if (meta.method === "solid") return "Solid";
+        return null;
+      }
+      case "diaper": {
+        const parts: string[] = [];
+        if (meta.wet) parts.push("Wet");
+        if (meta.soiled) parts.push("Soiled");
+        return parts.join(" + ") || null;
+      }
+      default: {
+        return null;
+      }
+    }
+  } catch {
+    return null;
+  }
+}
 
 /* ── Component ────────────────────────────────────────────── */
 
@@ -113,7 +117,7 @@ export const StatusWidget = () => {
         total = `${count}x`;
       }
 
-      // ── Last event timing ──
+      // ── Last event timing + detail ──
       const lastEvent = events.find(
         (e) => e.type === eventType && e.endedAt !== null
       );
@@ -123,25 +127,22 @@ export const StatusWidget = () => {
       const referenceEvent = activeEvent ?? lastEvent;
 
       let elapsed = "—";
-      let duration: string | null = null;
+      let detail: string | null = null;
       let isActive = false;
 
       if (referenceEvent) {
         const minutesAgo =
           (now - new Date(referenceEvent.startedAt).getTime()) / 60_000;
         elapsed = formatElapsed(minutesAgo);
-        duration = activeEvent
-          ? formatDuration(activeEvent.startedAt, new Date(now).toISOString())
-          : formatDuration(referenceEvent.startedAt, referenceEvent.endedAt);
+        detail = getLastEventDetail(eventType, referenceEvent.metadata);
         isActive = activeEvent !== undefined;
       }
 
       states.push({
         type: eventType,
-        label: labels[eventType],
         total,
+        detail,
         elapsed,
-        duration,
         isActive,
       });
     }
@@ -180,7 +181,6 @@ export const StatusWidget = () => {
               </span>
               <span className="mt-0.5 text-[10px] tabular-nums text-neutral-400">
                 {card.elapsed}
-                {card.duration ? ` (${card.duration})` : ""}
               </span>
               {card.isActive && (
                 <span

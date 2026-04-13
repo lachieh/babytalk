@@ -78,14 +78,24 @@ const LastResponse = () => {
 
 /* ── Summary Card (replaces urgency status widget) ───────── */
 
+const formatAgo = (minutes: number): string => {
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${Math.floor(minutes)}m ago`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.floor(minutes % 60);
+  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
+};
+
 const SummaryCard = () => {
   const { events } = useBabyContext();
   const { unit } = useVolumeUnit();
 
-  const todayStart = new Date();
+  const now = Date.now();
+  const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
   const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
 
+  // ── Sleep total + last ──
   let sleepMinutes = 0;
   for (const e of todayEvents) {
     if (e.type === "sleep" && e.endedAt) {
@@ -95,7 +105,12 @@ const SummaryCard = () => {
     }
   }
   const sleepHours = Math.floor(sleepMinutes / 60);
+  const lastSleep = events.find((e) => e.type === "sleep");
+  const sleepAgo = lastSleep
+    ? formatAgo((now - new Date(lastSleep.startedAt).getTime()) / 60_000)
+    : null;
 
+  // ── Feed total + last ──
   let totalFedMl = 0;
   for (const e of todayEvents) {
     if (e.type === "feed") {
@@ -108,36 +123,54 @@ const SummaryCard = () => {
     }
   }
   const fedDisplay = formatVolume(totalFedMl, unit);
+  const lastFeed = events.find((e) => e.type === "feed");
+  const feedAgo = lastFeed
+    ? formatAgo((now - new Date(lastFeed.startedAt).getTime()) / 60_000)
+    : null;
 
+  // ── Diaper count + last ──
   const diaperCount = todayEvents.filter((e) => e.type === "diaper").length;
+  const lastDiaper = events.find((e) => e.type === "diaper");
+  const diaperAgo = lastDiaper
+    ? formatAgo((now - new Date(lastDiaper.startedAt).getTime()) / 60_000)
+    : null;
 
   return (
     <div className="mx-4 rounded-xl bg-primary-600 px-6 py-5">
       <div className="flex justify-between text-center">
-        <div>
-          <p className="font-serif text-2xl font-normal text-white">
+        <div className="flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
+            Sleep
+          </p>
+          <p className="mt-1 font-serif text-2xl font-normal text-white">
             {sleepHours}
             <span className="text-base">h</span>
           </p>
-          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-white/70">
-            Total sleep
-          </p>
+          {sleepAgo && (
+            <p className="mt-0.5 text-[10px] text-white/50">{sleepAgo}</p>
+          )}
         </div>
-        <div>
-          <p className="font-serif text-2xl font-normal text-white">
+        <div className="flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
+            Fed
+          </p>
+          <p className="mt-1 font-serif text-2xl font-normal text-white">
             {fedDisplay}
           </p>
-          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-white/70">
-            Total fed
-          </p>
+          {feedAgo && (
+            <p className="mt-0.5 text-[10px] text-white/50">{feedAgo}</p>
+          )}
         </div>
-        <div>
-          <p className="font-serif text-2xl font-normal text-white">
-            {diaperCount}
-          </p>
-          <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-white/70">
+        <div className="flex-1">
+          <p className="text-[10px] font-medium uppercase tracking-widest text-white/70">
             Diapers
           </p>
+          <p className="mt-1 font-serif text-2xl font-normal text-white">
+            {diaperCount}
+          </p>
+          {diaperAgo && (
+            <p className="mt-0.5 text-[10px] text-white/50">{diaperAgo}</p>
+          )}
         </div>
       </div>
     </div>
