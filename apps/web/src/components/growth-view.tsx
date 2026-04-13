@@ -62,6 +62,28 @@ const DELETE_MEASUREMENT = `
   }
 `;
 
+const UPDATE_MEASUREMENT = `
+  mutation UpdateMeasurement(
+    $id: String!
+    $measuredAt: String
+    $weightG: Int
+    $lengthMm: Int
+    $headMm: Int
+    $notes: String
+  ) {
+    updateMeasurement(
+      id: $id
+      measuredAt: $measuredAt
+      weightG: $weightG
+      lengthMm: $lengthMm
+      headMm: $headMm
+      notes: $notes
+    ) {
+      id babyId measuredAt weightG lengthMm headMm notes
+    }
+  }
+`;
+
 /* ── Unit Helpers ──────────────────────────────────────────── */
 
 function formatWeight(grams: number, imperial: boolean): string {
@@ -325,20 +347,24 @@ const SummaryCard = ({
 const MeasurementRow = ({
   measurement,
   imperial,
-  onDelete,
+  onEdit,
 }: {
   measurement: Measurement;
   imperial: boolean;
-  onDelete: (id: string) => void;
+  onEdit: (m: Measurement) => void;
 }) => {
-  const handleDelete = useCallback(
-    () => onDelete(measurement.id),
-    [onDelete, measurement.id]
+  const handleClick = useCallback(
+    () => onEdit(measurement),
+    [onEdit, measurement]
   );
 
   return (
-    <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-neutral-50">
-      <span className="w-20 text-xs text-neutral-400">
+    <button
+      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors active:bg-neutral-50"
+      onClick={handleClick}
+      type="button"
+    >
+      <span className="w-20 shrink-0 text-xs text-neutral-400">
         {formatDate(measurement.measuredAt)}
       </span>
       <div className="min-w-0 flex-1">
@@ -365,52 +391,66 @@ const MeasurementRow = ({
           <p className="mt-0.5 text-xs text-neutral-400">{measurement.notes}</p>
         )}
       </div>
-      <button
-        className="min-h-[36px] min-w-[36px] rounded-lg px-1 text-neutral-300 transition-colors hover:bg-neutral-100 hover:text-neutral-500"
-        onClick={handleDelete}
-        type="button"
-        aria-label="Delete measurement"
+      <svg
+        className="h-3.5 w-3.5 shrink-0 text-neutral-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
       >
-        <svg
-          className="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M6 18L18 6M6 6l12 12"
-          />
-        </svg>
-      </button>
-    </div>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   );
 };
 
-/* ── Add Measurement Sheet ─────────────────────────────────── */
+/* ── Measurement Edit Sheet ────────────────────────────────── */
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 
-function todayDate(): string {
-  const d = new Date();
+function toDateString(iso: string): string {
+  const d = new Date(iso);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-const AddMeasurementSheet = ({
+function todayDate(): string {
+  return toDateString(new Date().toISOString());
+}
+
+function gramsToLbs(g: number): string {
+  return String(Math.floor(g / 453.592));
+}
+
+function gramsToOz(g: number): string {
+  return String(Math.round((g % 453.592) / 28.3495));
+}
+
+function gramsToKg(g: number): string {
+  return (g / 1000).toFixed(2);
+}
+
+function mmToDisplay(mm: number, imperial: boolean): string {
+  return imperial ? (mm / 25.4).toFixed(1) : (mm / 10).toFixed(1);
+}
+
+const MeasurementEditSheet = ({
   open,
   imperial,
   babyId,
+  measurement,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   open: boolean;
   imperial: boolean;
   babyId: string;
+  measurement: Measurement | null;
   onClose: () => void;
   onSaved: () => void;
+  onDeleted: (id: string) => void;
 }) => {
+  const isEdit = measurement !== null;
   const [date, setDate] = useState(todayDate);
   const [weightLbs, setWeightLbs] = useState("");
   const [weightOz, setWeightOz] = useState("");
@@ -419,9 +459,40 @@ const AddMeasurementSheet = ({
   const [head, setHead] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (!open) return;
+    setConfirmDelete(false);
+    if (measurement) {
+      setDate(toDateString(measurement.measuredAt));
+      if (measurement.weightG !== null && measurement.weightG !== undefined) {
+        if (imperial) {
+          setWeightLbs(gramsToLbs(measurement.weightG));
+          setWeightOz(gramsToOz(measurement.weightG));
+          setWeightKg("");
+        } else {
+          setWeightKg(gramsToKg(measurement.weightG));
+          setWeightLbs("");
+          setWeightOz("");
+        }
+      } else {
+        setWeightLbs("");
+        setWeightOz("");
+        setWeightKg("");
+      }
+      setLength(
+        measurement.lengthMm !== null && measurement.lengthMm !== undefined
+          ? mmToDisplay(measurement.lengthMm, imperial)
+          : ""
+      );
+      setHead(
+        measurement.headMm !== null && measurement.headMm !== undefined
+          ? mmToDisplay(measurement.headMm, imperial)
+          : ""
+      );
+      setNotes(measurement.notes ?? "");
+    } else {
       setDate(todayDate());
       setWeightLbs("");
       setWeightOz("");
@@ -430,42 +501,48 @@ const AddMeasurementSheet = ({
       setHead("");
       setNotes("");
     }
-  }, [open]);
+  }, [open, measurement, imperial]);
+
+  const buildPayload = useCallback(() => {
+    let weightG: number | null = null;
+    if (imperial && (weightLbs || weightOz)) {
+      const lbs = Number(weightLbs) || 0;
+      const oz = Number(weightOz) || 0;
+      weightG = Math.round(lbs * 453.592 + oz * 28.3495);
+    } else if (!imperial && weightKg) {
+      weightG = Math.round(Number(weightKg) * 1000);
+    }
+
+    let lengthMm: number | null = null;
+    if (length) {
+      lengthMm = imperial
+        ? Math.round(Number(length) * 25.4)
+        : Math.round(Number(length) * 10);
+    }
+
+    let headMm: number | null = null;
+    if (head) {
+      headMm = imperial
+        ? Math.round(Number(head) * 25.4)
+        : Math.round(Number(head) * 10);
+    }
+
+    return {
+      headMm,
+      lengthMm,
+      measuredAt: new Date(date).toISOString(),
+      notes: notes || null,
+      weightG,
+    };
+  }, [imperial, weightLbs, weightOz, weightKg, length, head, date, notes]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
-      let weightG: number | null = null;
-      if (imperial && (weightLbs || weightOz)) {
-        const lbs = Number(weightLbs) || 0;
-        const oz = Number(weightOz) || 0;
-        weightG = Math.round(lbs * 453.592 + oz * 28.3495);
-      } else if (!imperial && weightKg) {
-        weightG = Math.round(Number(weightKg) * 1000);
-      }
-
-      let lengthMm: number | null = null;
-      if (length) {
-        lengthMm = imperial
-          ? Math.round(Number(length) * 25.4)
-          : Math.round(Number(length) * 10);
-      }
-
-      let headMm: number | null = null;
-      if (head) {
-        headMm = imperial
-          ? Math.round(Number(head) * 25.4)
-          : Math.round(Number(head) * 10);
-      }
-
-      await gqlRequest(ADD_MEASUREMENT, {
-        babyId,
-        headMm,
-        lengthMm,
-        measuredAt: new Date(date).toISOString(),
-        notes: notes || null,
-        weightG,
-      });
+      const payload = buildPayload();
+      await (isEdit
+        ? gqlRequest(UPDATE_MEASUREMENT, { id: measurement.id, ...payload })
+        : gqlRequest(ADD_MEASUREMENT, { babyId, ...payload }));
       triggerFeedback("logged");
       onSaved();
       onClose();
@@ -474,19 +551,23 @@ const AddMeasurementSheet = ({
     } finally {
       setSaving(false);
     }
-  }, [
-    babyId,
-    date,
-    weightLbs,
-    weightOz,
-    weightKg,
-    length,
-    head,
-    notes,
-    imperial,
-    onSaved,
-    onClose,
-  ]);
+  }, [isEdit, measurement, babyId, buildPayload, onSaved, onClose]);
+
+  const handleDelete = useCallback(async () => {
+    if (!measurement) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    try {
+      await gqlRequest(DELETE_MEASUREMENT, { id: measurement.id });
+      triggerFeedback("logged");
+      onDeleted(measurement.id);
+      onClose();
+    } catch {
+      // stay open
+    }
+  }, [measurement, confirmDelete, onDeleted, onClose]);
 
   const handleDateChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setDate(e.target.value),
@@ -540,7 +621,7 @@ const AddMeasurementSheet = ({
       onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
-      aria-label="Add measurement"
+      aria-label={isEdit ? "Edit measurement" : "Add measurement"}
     >
       <div className="w-full max-w-lg rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
         <div className="flex justify-center pt-3 pb-1">
@@ -548,7 +629,7 @@ const AddMeasurementSheet = ({
         </div>
         <div className="flex items-center justify-between px-5 pt-2 pb-4">
           <h2 className="text-base font-semibold text-neutral-700">
-            Add measurement
+            {isEdit ? "Edit measurement" : "Add measurement"}
           </h2>
           <button
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100"
@@ -660,14 +741,25 @@ const AddMeasurementSheet = ({
             />
           </label>
 
-          <button
-            className="min-h-[48px] w-full rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
-            disabled={saving}
-            onClick={handleSave}
-            type="button"
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              className="min-h-[48px] w-full rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
+              disabled={saving}
+              onClick={handleSave}
+              type="button"
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            {isEdit && (
+              <button
+                className="min-h-[48px] rounded-xl border border-danger-200 px-4 py-3 text-sm font-medium text-danger-500 transition-colors hover:bg-danger-50"
+                onClick={handleDelete}
+                type="button"
+              >
+                {confirmDelete ? "Tap again to confirm" : "Delete"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -681,6 +773,8 @@ export const GrowthView = () => {
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const [imperial, setImperial] = useState(isImperialLocale);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editingMeasurement, setEditingMeasurement] =
+    useState<Measurement | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
@@ -699,17 +793,25 @@ export const GrowthView = () => {
     load();
   }, [baby, fetchKey]);
 
-  const handleAdd = useCallback(() => setSheetOpen(true), []);
-  const handleClose = useCallback(() => setSheetOpen(false), []);
+  const handleAdd = useCallback(() => {
+    setEditingMeasurement(null);
+    setSheetOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((m: Measurement) => {
+    setEditingMeasurement(m);
+    setSheetOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setSheetOpen(false);
+    setEditingMeasurement(null);
+  }, []);
+
   const handleSaved = useCallback(() => setFetchKey((k) => k + 1), []);
 
-  const handleDelete = useCallback(async (id: string) => {
+  const handleDeleted = useCallback((id: string) => {
     setMeasurements((prev) => prev.filter((m) => m.id !== id));
-    try {
-      await gqlRequest(DELETE_MEASUREMENT, { id });
-    } catch {
-      setFetchKey((k) => k + 1);
-    }
   }, []);
 
   const handleToggleUnits = useCallback(() => setImperial((v) => !v), []);
@@ -776,18 +878,20 @@ export const GrowthView = () => {
                 imperial={imperial}
                 key={m.id}
                 measurement={m}
-                onDelete={handleDelete}
+                onEdit={handleEdit}
               />
             ))}
           </div>
         </div>
       )}
 
-      {/* Add sheet */}
-      <AddMeasurementSheet
+      {/* Edit/Add sheet */}
+      <MeasurementEditSheet
         babyId={baby.id}
         imperial={imperial}
+        measurement={editingMeasurement}
         onClose={handleClose}
+        onDeleted={handleDeleted}
         onSaved={handleSaved}
         open={sheetOpen}
       />
