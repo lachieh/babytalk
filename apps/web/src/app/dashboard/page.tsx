@@ -183,7 +183,10 @@ const SummaryCard = () => {
   todayStart.setHours(0, 0, 0, 0);
   const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
 
-  const sleepHours = Math.floor(totalSleepMinutesToday(todayEvents) / 60);
+  const totalSleepMins = Math.floor(totalSleepMinutesToday(todayEvents));
+  const sleepH = Math.floor(totalSleepMins / 60);
+  const sleepM = totalSleepMins % 60;
+  const sleepDisplay = sleepM > 0 ? `${sleepH}h ${sleepM}m` : `${sleepH}h`;
   const lastSleep = events.find((e) => e.type === "sleep");
   const sleepDetail = lastSleep ? lastSleepDetail(lastSleep, now) : null;
 
@@ -225,7 +228,7 @@ const SummaryCard = () => {
     {
       type: "sleep",
       label: "Sleep",
-      value: `${sleepHours}h`,
+      value: sleepDisplay,
       detail: sleepDetail?.detail ?? null,
       ago: sleepDetail?.ago ?? null,
     },
