@@ -3,6 +3,7 @@
 import { useTambo } from "@tambo-ai/react";
 import { useCallback, useMemo, useState } from "react";
 
+import { AIInsightCard } from "@/components/ai-insight-card";
 import { GrowthView } from "@/components/growth-view";
 import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
@@ -434,6 +435,10 @@ export default function DashboardPage() {
 
             <div className="mt-4">
               <SuggestionZone />
+            </div>
+
+            <div className="mt-4">
+              <AIInsightCard />
             </div>
 
             {tamboEnabled && <LastResponse />}
