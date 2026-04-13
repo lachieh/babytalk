@@ -13,7 +13,7 @@ import { UndoToast } from "@/components/undo-toast";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
-import { getTamboApiKey } from "@/lib/runtime-config";
+import { useTamboReady } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useVolumeUnit, formatVolume } from "@/lib/use-volume-unit";
 
@@ -386,7 +386,7 @@ export default function DashboardPage() {
     "home"
   );
   const [profileOpen, setProfileOpen] = useState(false);
-  const tamboEnabled = Boolean(getTamboApiKey());
+  const tamboEnabled = useTamboReady();
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
 
