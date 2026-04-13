@@ -38,7 +38,7 @@ export const getApiUrl = (): string =>
 export const getTamboUrl = (): string =>
   runtimeConfig?.tamboUrl ||
   process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL ||
-  "http://localhost:8261";
+  "https://api.tambo.co";
 
 /** Get the Tambo API key, preferring runtime config over build-time env vars. */
 export const getTamboApiKey = (): string =>

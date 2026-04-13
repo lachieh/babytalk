@@ -1,12 +1,15 @@
 "use client";
 
 import { TamboProvider } from "@tambo-ai/react";
+import { useEffect, useState } from "react";
 
 import { getTamboApiKey, getTamboUrl } from "@/lib/runtime-config";
 
 import { tamboComponents } from "./components";
 import { gqlRequest } from "./graphql";
 import { tamboTools } from "./tools";
+
+const ME_QUERY = `query { me { id } }`;
 
 const SYSTEM_PROMPT = `You are BabyTalk — a calm, warm, and concise baby tracking companion. You help tired parents log feeds, sleep, diapers, and notes. You feel like a co-parent who never sleeps, never forgets, and never judges.
 
@@ -183,10 +186,29 @@ export const BabyTamboProvider = ({
 }) => {
   const apiKey = getTamboApiKey();
   const tamboUrl = getTamboUrl();
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Skip TamboProvider if no API key — the dashboard still works for
-  // logging, timeline, etc. Chat features just won't be available.
-  if (!apiKey) {
+  useEffect(() => {
+    if (!apiKey) return;
+    let cancelled = false;
+    const loadUser = async () => {
+      try {
+        const data = await gqlRequest<{ me: { id: string } | null }>(ME_QUERY);
+        if (!cancelled && data.me) setUserId(data.me.id);
+      } catch {
+        // Auth not ready yet — Tambo stays disabled until user is known.
+      }
+    };
+    loadUser();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey]);
+
+  // Skip TamboProvider if no API key or we haven't resolved the user yet —
+  // the dashboard still works for logging, timeline, etc. Chat features
+  // just aren't available until both are present.
+  if (!apiKey || !userId) {
     return children;
   }
 
@@ -203,7 +225,7 @@ export const BabyTamboProvider = ({
       ]}
       tamboUrl={tamboUrl}
       tools={tamboTools}
-      userKey="default-user"
+      userKey={userId}
     >
       {children}
     </TamboProvider>

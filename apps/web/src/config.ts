@@ -8,6 +8,6 @@ export default defineConfig({
   schema: z.object({
     apiUrl: z.string().default("http://localhost:4000/graphql"),
     tamboApiKey: z.string().default(""),
-    tamboUrl: z.string().default("http://localhost:8261"),
+    tamboUrl: z.string().default("https://api.tambo.co"),
   }),
 });
