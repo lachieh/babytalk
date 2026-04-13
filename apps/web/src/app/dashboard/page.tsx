@@ -12,6 +12,7 @@ import { UndoToast } from "@/components/undo-toast";
 import { useBabyContext } from "@/lib/baby-context";
 import { getTamboApiKey } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
+import { useVolumeUnit, formatVolume } from "@/lib/use-volume-unit";
 
 /* ── Last Assistant Response ──────────────────────────────── */
 
@@ -79,6 +80,7 @@ const LastResponse = () => {
 
 const SummaryCard = () => {
   const { events } = useBabyContext();
+  const { unit } = useVolumeUnit();
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -105,7 +107,7 @@ const SummaryCard = () => {
       }
     }
   }
-  const totalFedOz = Math.round(totalFedMl / 29.5735);
+  const fedDisplay = formatVolume(totalFedMl, unit);
 
   const diaperCount = todayEvents.filter((e) => e.type === "diaper").length;
 
@@ -123,8 +125,7 @@ const SummaryCard = () => {
         </div>
         <div>
           <p className="font-serif text-2xl font-normal text-white">
-            {totalFedOz}
-            <span className="text-base">oz</span>
+            {fedDisplay}
           </p>
           <p className="mt-0.5 text-[10px] font-medium uppercase tracking-widest text-white/70">
             Total fed

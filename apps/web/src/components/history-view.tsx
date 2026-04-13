@@ -5,6 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
+import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
 
 import { EventEditSheet } from "./event-edit-sheet";
 import { DayView, WeekView } from "./timeline-charts";
@@ -46,13 +47,15 @@ const formatMeta = (type: string, raw: string): string => {
     switch (type) {
       case "feed": {
         const parts = [meta.method];
-        if (meta.amountMl) parts.push(`${meta.amountMl}ml`);
+        if (meta.amountMl)
+          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
         if (meta.side) parts.push(meta.side);
         return parts.join(", ");
       }
       case "pump": {
         const parts = [meta.side];
-        if (meta.amountMl) parts.push(`${meta.amountMl}ml`);
+        if (meta.amountMl)
+          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
         return parts.join(", ");
       }
       case "sleep": {

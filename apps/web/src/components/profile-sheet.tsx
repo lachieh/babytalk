@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { EditBabySheet } from "./edit-baby-sheet";
 
@@ -270,6 +271,7 @@ const ProfileContent = ({
   onSignOut: () => void;
 }) => {
   const partner = members.find((m) => m.id !== me?.id);
+  const { unit, toggle: toggleUnit } = useVolumeUnit();
 
   return (
     <div className="space-y-5 px-5 pb-6">
@@ -340,6 +342,32 @@ const ProfileContent = ({
         {!partner && household?.inviteCode && (
           <PartnerInvite copied={copied} onShare={onShare} />
         )}
+      </section>
+
+      {/* Preferences */}
+      <section>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+          Preferences
+        </h3>
+        <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
+          <span className="text-sm text-neutral-700">Volume unit</span>
+          <button
+            className="flex rounded-lg border border-neutral-200 text-xs"
+            onClick={toggleUnit}
+            type="button"
+          >
+            <span
+              className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+            >
+              oz
+            </span>
+            <span
+              className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+            >
+              ml
+            </span>
+          </button>
+        </div>
       </section>
 
       {/* Sign Out */}

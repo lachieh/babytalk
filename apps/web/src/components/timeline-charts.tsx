@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
+import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
 
 /* ── Constants ─────────────────────────────────────────────── */
 
@@ -101,11 +102,13 @@ function formatMeta(type: string, raw: string): string {
     switch (type) {
       case "feed": {
         if (meta.side) return meta.side[0].toUpperCase();
-        if (meta.amountMl) return `${meta.amountMl}ml`;
+        if (meta.amountMl) return formatVolume(meta.amountMl, getVolumeUnit());
         return meta.method?.[0]?.toUpperCase() ?? "";
       }
       case "pump": {
-        return meta.amountMl ? `${meta.amountMl}ml` : "";
+        return meta.amountMl
+          ? formatVolume(meta.amountMl, getVolumeUnit())
+          : "";
       }
       case "diaper": {
         if (meta.wet && meta.soiled) return "W+S";

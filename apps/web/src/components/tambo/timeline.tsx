@@ -1,6 +1,7 @@
 "use client";
 
 import { EventIcon } from "@/lib/event-styles";
+import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
 
 interface TimelineEvent {
   endedAt?: string | null;
@@ -23,7 +24,8 @@ const formatMeta = (type: string, raw: string) => {
     switch (type) {
       case "feed": {
         const parts = [meta.method];
-        if (meta.amountMl) parts.push(`${meta.amountMl}ml`);
+        if (meta.amountMl)
+          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
         if (meta.side) parts.push(meta.side);
         return parts.join(", ");
       }

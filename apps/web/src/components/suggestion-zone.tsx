@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
+import { useVolumeUnit, displayToMl } from "@/lib/use-volume-unit";
+import type { VolumeUnit } from "@/lib/use-volume-unit";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -284,14 +286,14 @@ const AmountInput = ({
   onConfirm: (amountMl: number) => void;
   onCancel: () => void;
 }) => {
+  const { unit: preferredUnit } = useVolumeUnit();
   const [amount, setAmount] = useState("");
-  const [unit, setUnit] = useState<"ml" | "oz">("oz");
+  const [unit, setUnit] = useState<VolumeUnit>(preferredUnit);
 
   const handleConfirm = useCallback(() => {
     const val = Number(amount);
     if (val <= 0) return;
-    const ml = unit === "oz" ? Math.round(val * 29.5735) : val;
-    onConfirm(ml);
+    onConfirm(displayToMl(val, unit));
   }, [amount, unit, onConfirm]);
 
   const handleChange = useCallback(

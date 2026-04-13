@@ -4,6 +4,7 @@ import { useTamboThreadInput } from "@tambo-ai/react";
 import { useCallback } from "react";
 
 import { EventIcon, getEventStyle } from "@/lib/event-styles";
+import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
 
 interface EventConfirmationProps {
   endedAt?: string | null;
@@ -22,7 +23,8 @@ const formatMetadata = (type: string, raw: string) => {
     switch (type) {
       case "feed": {
         const parts = [meta.method];
-        if (meta.amountMl) parts.push(`${meta.amountMl}ml`);
+        if (meta.amountMl)
+          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
         if (meta.side) parts.push(meta.side);
         if (meta.foodDesc) parts.push(meta.foodDesc);
         return parts.join(", ");

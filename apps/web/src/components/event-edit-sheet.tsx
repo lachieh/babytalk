@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
+import { useVolumeUnit, mlToDisplay, displayToMl } from "@/lib/use-volume-unit";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -66,6 +67,7 @@ const FeedFields = ({
   meta: Record<string, unknown>;
   onChange: (m: Record<string, unknown>) => void;
 }) => {
+  const { unit } = useVolumeUnit();
   const handleMethod = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) =>
       onChange({ ...meta, method: e.target.value }),
@@ -80,10 +82,16 @@ const FeedFields = ({
     (e: React.ChangeEvent<HTMLInputElement>) =>
       onChange({
         ...meta,
-        amountMl: e.target.value ? Number(e.target.value) : undefined,
+        amountMl: e.target.value
+          ? displayToMl(Number(e.target.value), unit)
+          : undefined,
       }),
-    [meta, onChange]
+    [meta, onChange, unit]
   );
+
+  const displayAmount = (meta.amountMl as number)
+    ? mlToDisplay(meta.amountMl as number, unit)
+    : "";
 
   return (
     <>
@@ -116,13 +124,13 @@ const FeedFields = ({
       )}
       {(meta.method === "bottle" || meta.method === "formula") && (
         <label className="block text-xs font-medium text-neutral-500">
-          Amount (ml)
+          Amount ({unit})
           <input
             className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
             inputMode="numeric"
             onChange={handleAmount}
             type="number"
-            value={(meta.amountMl as number) || ""}
+            value={displayAmount}
           />
         </label>
       )}
@@ -209,6 +217,7 @@ const PumpFields = ({
   meta: Record<string, unknown>;
   onChange: (m: Record<string, unknown>) => void;
 }) => {
+  const { unit } = useVolumeUnit();
   const handleSide = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) =>
       onChange({ ...meta, side: e.target.value }),
@@ -218,10 +227,16 @@ const PumpFields = ({
     (e: React.ChangeEvent<HTMLInputElement>) =>
       onChange({
         ...meta,
-        amountMl: e.target.value ? Number(e.target.value) : undefined,
+        amountMl: e.target.value
+          ? displayToMl(Number(e.target.value), unit)
+          : undefined,
       }),
-    [meta, onChange]
+    [meta, onChange, unit]
   );
+
+  const displayAmount = (meta.amountMl as number)
+    ? mlToDisplay(meta.amountMl as number, unit)
+    : "";
 
   return (
     <>
@@ -238,13 +253,13 @@ const PumpFields = ({
         </select>
       </label>
       <label className="block text-xs font-medium text-neutral-500">
-        Amount (ml)
+        Amount ({unit})
         <input
           className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
           inputMode="numeric"
           onChange={handleAmount}
           type="number"
-          value={(meta.amountMl as number) || ""}
+          value={displayAmount}
         />
       </label>
     </>
