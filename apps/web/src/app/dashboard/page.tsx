@@ -88,8 +88,11 @@ const formatAgo = (minutes: number): string => {
   return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 };
 
-function lastSleepDetail(event: BabyEvent, now: number): string {
-  const parts: string[] = [];
+function lastSleepDetail(
+  event: BabyEvent,
+  now: number
+): { detail: string | null; ago: string } {
+  let detail: string | null = null;
   if (event.endedAt) {
     const dur = Math.round(
       (new Date(event.endedAt).getTime() -
@@ -97,20 +100,20 @@ function lastSleepDetail(event: BabyEvent, now: number): string {
         60_000
     );
     if (dur > 0) {
-      parts.push(
-        dur < 60 ? `${dur}m` : `${Math.floor(dur / 60)}h ${dur % 60}m`
-      );
+      detail = dur < 60 ? `${dur}m` : `${Math.floor(dur / 60)}h ${dur % 60}m`;
     }
   }
-  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
-  return parts.join(" \u00B7 ");
+  return {
+    detail,
+    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+  };
 }
 
 function lastFeedDetail(
   event: BabyEvent,
   now: number,
   unit: "ml" | "oz"
-): string {
+): { detail: string | null; ago: string } {
   const parts: string[] = [];
   try {
     const meta = JSON.parse(event.metadata);
@@ -122,11 +125,16 @@ function lastFeedDetail(
   } catch {
     /* ignore */
   }
-  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
-  return parts.join(" \u00B7 ");
+  return {
+    detail: parts.length > 0 ? parts.join(" \u00B7 ") : null,
+    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+  };
 }
 
-function lastDiaperDetail(event: BabyEvent, now: number): string {
+function lastDiaperDetail(
+  event: BabyEvent,
+  now: number
+): { detail: string | null; ago: string } {
   const parts: string[] = [];
   try {
     const meta = JSON.parse(event.metadata);
@@ -135,8 +143,35 @@ function lastDiaperDetail(event: BabyEvent, now: number): string {
   } catch {
     /* ignore */
   }
-  parts.push(formatAgo((now - new Date(event.startedAt).getTime()) / 60_000));
-  return parts.join(" \u00B7 ");
+  return {
+    detail: parts.length > 0 ? parts.join(" + ") : null,
+    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+  };
+}
+
+function totalFedMlToday(todayEvents: BabyEvent[]): number {
+  let total = 0;
+  for (const e of todayEvents) {
+    if (e.type !== "feed") continue;
+    try {
+      const meta = JSON.parse(e.metadata);
+      total += meta.amountMl || 0;
+    } catch {
+      /* ignore */
+    }
+  }
+  return total;
+}
+
+function totalSleepMinutesToday(todayEvents: BabyEvent[]): number {
+  let total = 0;
+  for (const e of todayEvents) {
+    if (e.type !== "sleep" || !e.endedAt) continue;
+    total +=
+      (new Date(e.endedAt).getTime() - new Date(e.startedAt).getTime()) /
+      60_000;
+  }
+  return total;
 }
 
 const SummaryCard = () => {
@@ -148,36 +183,14 @@ const SummaryCard = () => {
   todayStart.setHours(0, 0, 0, 0);
   const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
 
-  // ── Sleep ──
-  let sleepMinutes = 0;
-  for (const e of todayEvents) {
-    if (e.type === "sleep" && e.endedAt) {
-      const ms =
-        new Date(e.endedAt).getTime() - new Date(e.startedAt).getTime();
-      sleepMinutes += ms / 60_000;
-    }
-  }
-  const sleepHours = Math.floor(sleepMinutes / 60);
+  const sleepHours = Math.floor(totalSleepMinutesToday(todayEvents) / 60);
   const lastSleep = events.find((e) => e.type === "sleep");
   const sleepDetail = lastSleep ? lastSleepDetail(lastSleep, now) : null;
 
-  // ── Feed ──
-  let totalFedMl = 0;
-  for (const e of todayEvents) {
-    if (e.type === "feed") {
-      try {
-        const meta = JSON.parse(e.metadata);
-        totalFedMl += meta.amountMl || 0;
-      } catch {
-        /* ignore */
-      }
-    }
-  }
-  const fedDisplay = formatVolume(totalFedMl, unit);
+  const fedDisplay = formatVolume(totalFedMlToday(todayEvents), unit);
   const lastFeed = events.find((e) => e.type === "feed");
   const feedDetail = lastFeed ? lastFeedDetail(lastFeed, now, unit) : null;
 
-  // ── Diaper ──
   const diaperCount = todayEvents.filter((e) => e.type === "diaper").length;
   const lastDiaper = events.find((e) => e.type === "diaper");
   const diaperDetail = lastDiaper ? lastDiaperDetail(lastDiaper, now) : null;
@@ -194,19 +207,28 @@ const SummaryCard = () => {
     label: string;
     value: string;
     detail: string | null;
+    ago: string | null;
   }[] = [
     {
       type: "sleep",
       label: "Sleep",
       value: `${sleepHours}h`,
-      detail: sleepDetail,
+      detail: sleepDetail?.detail ?? null,
+      ago: sleepDetail?.ago ?? null,
     },
-    { type: "feed", label: "Fed", value: fedDisplay, detail: feedDetail },
+    {
+      type: "feed",
+      label: "Fed",
+      value: fedDisplay,
+      detail: feedDetail?.detail ?? null,
+      ago: feedDetail?.ago ?? null,
+    },
     {
       type: "diaper",
       label: "Diapers",
       value: String(diaperCount),
-      detail: diaperDetail,
+      detail: diaperDetail?.detail ?? null,
+      ago: diaperDetail?.ago ?? null,
     },
   ];
 
@@ -229,6 +251,9 @@ const SummaryCard = () => {
             </p>
             {col.detail && (
               <p className="mt-1 text-[10px] text-neutral-400">{col.detail}</p>
+            )}
+            {col.ago && (
+              <p className="mt-0.5 text-[10px] text-neutral-400">{col.ago}</p>
             )}
           </div>
         );
