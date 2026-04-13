@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import {
   getPercentileData,
   interpolatePercentile,
@@ -109,11 +110,6 @@ function formatDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
-}
-
-function isImperialLocale(): boolean {
-  if (typeof navigator === "undefined") return true;
-  return navigator.language.startsWith("en-US");
 }
 
 /* ── SVG Weight Chart with WHO Percentiles ─────────────────── */
@@ -294,9 +290,126 @@ const WeightChart = ({
   );
 };
 
+/* ── Tab type ──────────────────────────────────────────────── */
+
+type Tab = "weight" | "height" | "head";
+
+/* ── Simple Line Chart (Length / Head) ─────────────────────── */
+
+const SimpleLineChart = ({
+  measurements,
+  chartType,
+  imperial,
+  emptyLabel,
+}: {
+  measurements: Measurement[];
+  chartType: "height" | "head";
+  imperial: boolean;
+  emptyLabel: string;
+}) => {
+  const getValue =
+    chartType === "height"
+      ? (m: Measurement) => m.lengthMm
+      : (m: Measurement) => m.headMm;
+
+  const withData = [...measurements]
+    .filter((m) => getValue(m) !== null && getValue(m) !== undefined)
+    .toReversed();
+
+  if (withData.length < 1) {
+    return (
+      <div className="flex h-32 items-center justify-center rounded-2xl bg-neutral-50 text-sm text-neutral-400">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  const padding = 16;
+  const width = 320;
+  const height = 160;
+  const chartW = width - padding * 2;
+  const chartH = height - padding * 2;
+
+  const values = withData.map((m) => getValue(m) as number);
+  const times = withData.map((m) => new Date(m.measuredAt).getTime());
+
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const valuePad = (maxV - minV) * 0.15 || 10;
+  const lo = minV - valuePad;
+  const hi = maxV + valuePad;
+  const rangeV = hi - lo || 1;
+
+  const minT = Math.min(...times);
+  const maxT = Math.max(...times);
+  const rangeT = maxT - minT || 1;
+
+  const toX = (t: number) => padding + ((t - minT) / rangeT) * chartW;
+  const toY = (v: number) => padding + chartH - ((v - lo) / rangeV) * chartH;
+
+  const points = withData.map((m) => ({
+    x: toX(new Date(m.measuredAt).getTime()),
+    y: toY(getValue(m) as number),
+    id: m.id,
+  }));
+  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+  const lastVal = getValue(withData.at(-1) as Measurement) as number;
+
+  return (
+    <div className="rounded-2xl bg-neutral-50 p-3">
+      <svg
+        className="w-full"
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
+      >
+        {points.length > 1 && (
+          <polyline
+            fill="none"
+            points={polyline}
+            stroke="oklch(55% 0.14 30)"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+          />
+        )}
+        {points.map((p) => (
+          <circle
+            cx={p.x}
+            cy={p.y}
+            fill="oklch(55% 0.14 30)"
+            key={p.id}
+            r="4"
+          />
+        ))}
+      </svg>
+
+      <div className="mt-2 flex items-center justify-between">
+        <div className="flex gap-3 text-[10px] text-neutral-400">
+          <span>{formatDate(withData[0].measuredAt)}</span>
+          {withData.length > 1 && (
+            <span>{formatDate(withData.at(-1)?.measuredAt ?? "")}</span>
+          )}
+        </div>
+        <span className="text-[10px] text-neutral-400">
+          {formatLength(lastVal, imperial)}
+        </span>
+      </div>
+    </div>
+  );
+};
+
 /* ── Summary Card ──────────────────────────────────────────── */
 
-const SummaryCard = ({
+const EmptySummary = ({ message }: { message: string }) => (
+  <div className="rounded-2xl bg-neutral-50 px-4 py-5 text-center">
+    <p className="text-sm text-neutral-400">{message}</p>
+    <p className="mt-1 text-xs text-neutral-300">
+      Tap + to record baby&apos;s first measurement
+    </p>
+  </div>
+);
+
+const WeightSummary = ({
   measurements,
   imperial,
 }: {
@@ -304,18 +417,11 @@ const SummaryCard = ({
   imperial: boolean;
 }) => {
   const latest = measurements.find((m) => m.weightG !== null);
-  const withWeightList = measurements.filter((m) => m.weightG !== null);
-  const [, previous] = withWeightList;
+  const withList = measurements.filter((m) => m.weightG !== null);
+  const [, previous] = withList;
 
   if (!latest?.weightG) {
-    return (
-      <div className="rounded-2xl bg-neutral-50 px-4 py-5 text-center">
-        <p className="text-sm text-neutral-400">No measurements yet</p>
-        <p className="mt-1 text-xs text-neutral-300">
-          Tap + to record baby&apos;s first measurement
-        </p>
-      </div>
-    );
+    return <EmptySummary message="No weight measurements yet" />;
   }
 
   const change =
@@ -340,6 +446,102 @@ const SummaryCard = ({
       )}
     </div>
   );
+};
+
+const HeightSummary = ({
+  measurements,
+  imperial,
+}: {
+  measurements: Measurement[];
+  imperial: boolean;
+}) => {
+  const latest = measurements.find((m) => m.lengthMm !== null);
+  const withList = measurements.filter((m) => m.lengthMm !== null);
+  const [, previous] = withList;
+
+  if (!latest?.lengthMm) {
+    return <EmptySummary message="No height measurements yet" />;
+  }
+
+  const change =
+    previous?.lengthMm !== null && previous?.lengthMm !== undefined
+      ? latest.lengthMm - previous.lengthMm
+      : null;
+
+  return (
+    <div className="rounded-2xl bg-neutral-50 px-4 py-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+        Latest height
+      </p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-neutral-800">
+        {formatLength(latest.lengthMm, imperial)}
+      </p>
+      {change !== null && (
+        <p className="mt-0.5 text-sm text-neutral-500">
+          {change >= 0 ? "+" : ""}
+          {formatLength(Math.abs(change), imperial)} since{" "}
+          {formatDate(previous?.measuredAt ?? "")}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const HeadSummary = ({
+  measurements,
+  imperial,
+}: {
+  measurements: Measurement[];
+  imperial: boolean;
+}) => {
+  const latest = measurements.find((m) => m.headMm !== null);
+  const withList = measurements.filter((m) => m.headMm !== null);
+  const [, previous] = withList;
+
+  if (!latest?.headMm) {
+    return <EmptySummary message="No head circumference measurements yet" />;
+  }
+
+  const change =
+    previous?.headMm !== null && previous?.headMm !== undefined
+      ? latest.headMm - previous.headMm
+      : null;
+
+  return (
+    <div className="rounded-2xl bg-neutral-50 px-4 py-4">
+      <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+        Latest head circumference
+      </p>
+      <p className="mt-1 text-2xl font-bold tabular-nums text-neutral-800">
+        {formatLength(latest.headMm, imperial)}
+      </p>
+      {change !== null && (
+        <p className="mt-0.5 text-sm text-neutral-500">
+          {change >= 0 ? "+" : ""}
+          {formatLength(Math.abs(change), imperial)} since{" "}
+          {formatDate(previous?.measuredAt ?? "")}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const SummaryCard = ({
+  measurements,
+  imperial,
+  tab,
+}: {
+  measurements: Measurement[];
+  imperial: boolean;
+  tab: Tab;
+}) => {
+  if (tab === "weight") {
+    return <WeightSummary imperial={imperial} measurements={measurements} />;
+  }
+  if (tab === "height") {
+    return <HeightSummary imperial={imperial} measurements={measurements} />;
+  }
+  return <HeadSummary imperial={imperial} measurements={measurements} />;
 };
 
 /* ── Measurement Row ───────────────────────────────────────── */
@@ -653,7 +855,7 @@ const MeasurementEditSheet = ({
           </button>
         </div>
 
-        <div className="space-y-4 px-5 pb-6">
+        <div className="space-y-4 overflow-y-auto px-5 pb-6">
           {/* Date */}
           <label className="block text-xs font-medium text-neutral-500">
             Date
@@ -669,65 +871,92 @@ const MeasurementEditSheet = ({
           <div>
             <p className="text-xs font-medium text-neutral-500">Weight</p>
             {imperial ? (
-              <div className="mt-1 flex gap-2">
-                <input
-                  className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-                  inputMode="numeric"
-                  onChange={handleWeightLbsChange}
-                  placeholder="lbs"
-                  type="number"
-                  value={weightLbs}
-                />
-                <input
-                  className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-                  inputMode="decimal"
-                  onChange={handleWeightOzChange}
-                  placeholder="oz"
-                  step="0.1"
-                  type="number"
-                  value={weightOz}
-                />
+              <div className="mt-1 grid grid-cols-2 gap-2">
+                <div className="relative">
+                  <input
+                    className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 pr-10 text-sm text-neutral-800"
+                    inputMode="numeric"
+                    onChange={handleWeightLbsChange}
+                    placeholder="0"
+                    type="number"
+                    value={weightLbs}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                    lb
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 pr-10 text-sm text-neutral-800"
+                    inputMode="decimal"
+                    onChange={handleWeightOzChange}
+                    placeholder="0"
+                    step="0.1"
+                    type="number"
+                    value={weightOz}
+                  />
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                    oz
+                  </span>
+                </div>
               </div>
             ) : (
-              <input
-                className="mt-1 min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-                inputMode="decimal"
-                onChange={handleWeightKgChange}
-                placeholder="kg"
-                step="0.01"
-                type="number"
-                value={weightKg}
-              />
+              <div className="relative mt-1">
+                <input
+                  className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 pr-12 text-sm text-neutral-800"
+                  inputMode="decimal"
+                  onChange={handleWeightKgChange}
+                  placeholder="0.00"
+                  step="0.01"
+                  type="number"
+                  value={weightKg}
+                />
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                  kg
+                </span>
+              </div>
             )}
           </div>
 
           {/* Length */}
-          <label className="block text-xs font-medium text-neutral-500">
-            Length
-            <input
-              className="mt-1 min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-              inputMode="decimal"
-              onChange={handleLengthChange}
-              placeholder={imperial ? "inches" : "cm"}
-              step="0.1"
-              type="number"
-              value={length}
-            />
-          </label>
+          <div>
+            <p className="text-xs font-medium text-neutral-500">Length</p>
+            <div className="relative mt-1">
+              <input
+                className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 pr-12 text-sm text-neutral-800"
+                inputMode="decimal"
+                onChange={handleLengthChange}
+                placeholder="0.0"
+                step="0.1"
+                type="number"
+                value={length}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                {imperial ? "in" : "cm"}
+              </span>
+            </div>
+          </div>
 
           {/* Head */}
-          <label className="block text-xs font-medium text-neutral-500">
-            Head circumference
-            <input
-              className="mt-1 min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-              inputMode="decimal"
-              onChange={handleHeadChange}
-              placeholder={imperial ? "inches" : "cm"}
-              step="0.1"
-              type="number"
-              value={head}
-            />
-          </label>
+          <div>
+            <p className="text-xs font-medium text-neutral-500">
+              Head circumference
+            </p>
+            <div className="relative mt-1">
+              <input
+                className="min-h-[44px] w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2 pr-12 text-sm text-neutral-800"
+                inputMode="decimal"
+                onChange={handleHeadChange}
+                placeholder="0.0"
+                step="0.1"
+                type="number"
+                value={head}
+              />
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-neutral-400">
+                {imperial ? "in" : "cm"}
+              </span>
+            </div>
+          </div>
 
           {/* Notes */}
           <label className="block text-xs font-medium text-neutral-500">
@@ -768,10 +997,44 @@ const MeasurementEditSheet = ({
 
 /* ── Growth View ───────────────────────────────────────────── */
 
+const TABS: { label: string; value: Tab }[] = [
+  { label: "Weight", value: "weight" },
+  { label: "Height", value: "height" },
+  { label: "Head", value: "head" },
+];
+
+const TabButton = ({
+  active,
+  label,
+  value,
+  onSelect,
+}: {
+  active: boolean;
+  label: string;
+  value: Tab;
+  onSelect: (tab: Tab) => void;
+}) => {
+  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
+  return (
+    <button
+      className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors ${
+        active
+          ? "bg-neutral-800 text-white shadow-sm"
+          : "text-neutral-500 hover:text-neutral-700"
+      }`}
+      onClick={handleClick}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+};
+
 export const GrowthView = () => {
   const { baby, loading } = useBabyContext();
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
-  const [imperial, setImperial] = useState(isImperialLocale);
+  const { imperial, toggle: handleToggleUnits } = useMeasurementUnit();
+  const [activeTab, setActiveTab] = useState<Tab>("weight");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] =
     useState<Measurement | null>(null);
@@ -814,8 +1077,6 @@ export const GrowthView = () => {
     setMeasurements((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
-  const handleToggleUnits = useCallback(() => setImperial((v) => !v), []);
-
   if (loading || !baby) return null;
 
   return (
@@ -832,16 +1093,51 @@ export const GrowthView = () => {
         </button>
       </div>
 
-      {/* Summary card */}
-      <SummaryCard imperial={imperial} measurements={measurements} />
+      {/* Chart tabs */}
+      <div className="mb-3 flex rounded-xl bg-neutral-100 p-1">
+        {TABS.map((tab) => (
+          <TabButton
+            active={activeTab === tab.value}
+            key={tab.value}
+            label={tab.label}
+            onSelect={setActiveTab}
+            value={tab.value}
+          />
+        ))}
+      </div>
 
-      {/* Weight chart */}
+      {/* Summary card */}
+      <SummaryCard
+        imperial={imperial}
+        measurements={measurements}
+        tab={activeTab}
+      />
+
+      {/* Chart */}
       <div className="mt-3">
-        <WeightChart
-          birthDate={baby.birthDate}
-          gender={baby.gender ?? null}
-          measurements={measurements}
-        />
+        {activeTab === "weight" && (
+          <WeightChart
+            birthDate={baby.birthDate}
+            gender={baby.gender ?? null}
+            measurements={measurements}
+          />
+        )}
+        {activeTab === "height" && (
+          <SimpleLineChart
+            chartType="height"
+            emptyLabel="Add a height to see the chart"
+            imperial={imperial}
+            measurements={measurements}
+          />
+        )}
+        {activeTab === "head" && (
+          <SimpleLineChart
+            chartType="head"
+            emptyLabel="Add a head measurement to see the chart"
+            imperial={imperial}
+            measurements={measurements}
+          />
+        )}
       </div>
 
       {/* Add button */}
