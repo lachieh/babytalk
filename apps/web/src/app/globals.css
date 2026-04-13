@@ -32,28 +32,28 @@
 
   /* --- Event type accents (distinct per-type) --- */
   /* Feed: sage green */
-  --color-feed-50: oklch(96% 0.02 145);
+  --color-feed-50: oklch(92% 0.035 145);
   --color-feed-100: oklch(91% 0.04 145);
   --color-feed-200: oklch(85% 0.06 145);
   --color-feed-500: oklch(52% 0.08 145);
   --color-feed-600: oklch(44% 0.08 145);
 
   /* Sleep: soft blue */
-  --color-sleep-50: oklch(96% 0.015 240);
+  --color-sleep-50: oklch(92% 0.028 240);
   --color-sleep-100: oklch(91% 0.03 240);
   --color-sleep-200: oklch(85% 0.05 240);
   --color-sleep-500: oklch(52% 0.08 240);
   --color-sleep-600: oklch(44% 0.08 240);
 
   /* Diaper: warm yellow */
-  --color-diaper-50: oklch(97% 0.03 90);
+  --color-diaper-50: oklch(93% 0.05 90);
   --color-diaper-100: oklch(92% 0.06 90);
   --color-diaper-200: oklch(86% 0.08 90);
   --color-diaper-500: oklch(55% 0.1 90);
   --color-diaper-600: oklch(47% 0.1 90);
 
   /* Pump: soft pink */
-  --color-pump-50: oklch(96% 0.02 350);
+  --color-pump-50: oklch(92% 0.035 350);
   --color-pump-100: oklch(91% 0.04 350);
   --color-pump-200: oklch(85% 0.06 350);
   --color-pump-500: oklch(55% 0.08 350);
