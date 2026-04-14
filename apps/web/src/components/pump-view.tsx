@@ -6,12 +6,9 @@ import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
-import {
-  formatVolume,
-  useVolumeUnit,
-  displayToMl,
-} from "@/lib/use-volume-unit";
-import type { VolumeUnit } from "@/lib/use-volume-unit";
+import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
+
+import { AmountInput } from "./amount-input";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -228,85 +225,6 @@ const PumpTimer = ({
   );
 };
 
-/* ── Amount Input ─────────────────────────────────────────── */
-
-const PumpAmountInput = ({
-  onConfirm,
-  onCancel,
-}: {
-  onConfirm: (amountMl: number) => void;
-  onCancel: () => void;
-}) => {
-  const { unit: preferredUnit } = useVolumeUnit();
-  const [amount, setAmount] = useState("");
-  const [unit, setUnit] = useState<VolumeUnit>(preferredUnit);
-
-  const handleConfirm = useCallback(() => {
-    const val = Number(amount);
-    if (val <= 0) return;
-    onConfirm(displayToMl(val, unit));
-  }, [amount, unit, onConfirm]);
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value),
-    []
-  );
-
-  const handleSelectOz = useCallback(() => setUnit("oz"), []);
-  const handleSelectMl = useCallback(() => setUnit("ml"), []);
-
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-pump-200 bg-pump-50 px-4 py-6">
-      <p className="text-sm font-medium text-neutral-600">
-        How much did you express?
-      </p>
-      <div className="flex items-center gap-2">
-        <input
-          autoFocus
-          className="min-h-[48px] w-24 rounded-xl border border-neutral-200 bg-surface px-3 py-2 text-center text-lg tabular-nums text-neutral-800 focus-visible:border-pump-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pump-100"
-          inputMode="decimal"
-          onChange={handleChange}
-          placeholder={unit}
-          step="0.01"
-          type="number"
-          value={amount}
-        />
-        <div className="flex rounded-lg border border-neutral-200 text-xs">
-          <button
-            className={`min-h-[36px] px-2.5 py-1.5 font-medium transition-colors ${unit === "oz" ? "rounded-l-lg bg-pump-500 text-white" : "text-neutral-400"}`}
-            onClick={handleSelectOz}
-            type="button"
-          >
-            oz
-          </button>
-          <button
-            className={`min-h-[36px] px-2.5 py-1.5 font-medium transition-colors ${unit === "ml" ? "rounded-r-lg bg-pump-500 text-white" : "text-neutral-400"}`}
-            onClick={handleSelectMl}
-            type="button"
-          >
-            ml
-          </button>
-        </div>
-      </div>
-      <button
-        className="min-h-[48px] w-full rounded-xl bg-pump-500 px-4 py-2 text-sm font-semibold text-white transition-[background-color,transform] active:scale-[0.97] disabled:opacity-40"
-        disabled={!amount || Number(amount) <= 0}
-        onClick={handleConfirm}
-        type="button"
-      >
-        Log
-      </button>
-      <button
-        className="min-h-[36px] px-2 py-1 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
-        onClick={onCancel}
-        type="button"
-      >
-        Skip
-      </button>
-    </div>
-  );
-};
-
 /* ── Session Row ──────────────────────────────────────────── */
 
 const SessionRow = ({ event }: { event: BabyEvent }) => {
@@ -448,10 +366,16 @@ export const PumpView = () => {
         )}
 
         {pumpStoppedEventId && (
-          <PumpAmountInput
-            onConfirm={handleAmountConfirm}
-            onCancel={handleAmountCancel}
-          />
+          <div className="rounded-xl border border-pump-200 bg-pump-50 px-4 py-6">
+            <p className="mb-3 text-center text-sm font-medium text-neutral-600">
+              How much did you express?
+            </p>
+            <AmountInput
+              cancelLabel="Skip"
+              onCancel={handleAmountCancel}
+              onConfirm={handleAmountConfirm}
+            />
+          </div>
         )}
 
         {showActions && (
