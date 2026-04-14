@@ -10,6 +10,7 @@ import { PersistentTimeline } from "@/components/persistent-timeline";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
+import { VoiceButton } from "@/components/voice-button";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
@@ -274,9 +275,11 @@ const SummaryCard = () => {
 const BottomNav = ({
   tab,
   onSwitch,
+  tamboEnabled,
 }: {
   tab: string;
   onSwitch: (tab: "home" | "history" | "growth" | "settings") => void;
+  tamboEnabled: boolean;
 }) => {
   const handleHome = useCallback(() => onSwitch("home"), [onSwitch]);
   const handleHistory = useCallback(() => onSwitch("history"), [onSwitch]);
@@ -287,7 +290,7 @@ const BottomNav = ({
   const inactiveClass = "text-neutral-400";
 
   return (
-    <nav className="flex border-t border-neutral-200 bg-surface-raised safe-bottom">
+    <nav className="relative flex border-t border-neutral-200 bg-surface-raised safe-bottom">
       <button
         className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "home" ? activeClass : inactiveClass}`}
         onClick={handleHome}
@@ -328,6 +331,16 @@ const BottomNav = ({
         </svg>
         History
       </button>
+
+      {/* Center voice button — raised above nav bar */}
+      {tamboEnabled && (
+        <div className="flex flex-1 items-center justify-center">
+          <div className="-mt-5">
+            <VoiceButton />
+          </div>
+        </div>
+      )}
+
       <button
         className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "growth" ? activeClass : inactiveClass}`}
         onClick={handleGrowth}
@@ -460,7 +473,11 @@ export default function DashboardPage() {
       </div>
 
       {/* Bottom navigation */}
-      <BottomNav tab={tab} onSwitch={handleTabSwitch} />
+      <BottomNav
+        tab={tab}
+        onSwitch={handleTabSwitch}
+        tamboEnabled={tamboEnabled}
+      />
 
       {/* Undo toast — floating */}
       <UndoToast />

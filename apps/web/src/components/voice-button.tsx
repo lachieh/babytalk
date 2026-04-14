@@ -216,10 +216,10 @@ export const VoiceButton = () => {
 
   return (
     <button
-      className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full transition-[background-color,color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] select-none touch-none ${
+      className={`flex h-14 w-14 items-center justify-center rounded-full shadow-md transition-[background-color,color,transform,box-shadow] duration-[var(--duration-normal)] ease-[var(--ease-out)] select-none touch-none ${
         listening
-          ? "animate-gentle-pulse bg-danger-100 text-danger-500"
-          : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200 active:scale-[0.96]"
+          ? "animate-gentle-pulse bg-danger-500 text-white shadow-danger-200"
+          : "bg-primary-500 text-white shadow-primary-200 hover:bg-primary-600 active:scale-[0.93]"
       }`}
       aria-label={getAriaLabel(listening, mode)}
       onPointerDown={handlePointerDown}
@@ -229,7 +229,7 @@ export const VoiceButton = () => {
     >
       <svg
         aria-hidden="true"
-        className="h-5 w-5"
+        className="h-6 w-6"
         fill="none"
         stroke="currentColor"
         strokeWidth={2}
