@@ -55,9 +55,26 @@ function parseAmount(metadata: string): number | null {
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
+/** Suggest the next side: opposite of last single-side pump, or "left" after "both" */
+function suggestNextSide(events: BabyEvent[]): string {
+  const lastPump = events.find((e) => e.type === "pump" && e.endedAt);
+  if (!lastPump) return "left";
+  const side = parseSide(lastPump.metadata);
+  if (side === "left") return "right";
+  if (side === "right") return "left";
+  // After "both", default to left
+  return "left";
+}
+
 /* ── Context Card ─────────────────────────────────────────── */
 
-const ContextCard = ({ events }: { events: BabyEvent[] }) => {
+const ContextCard = ({
+  events,
+  suggestedSide,
+}: {
+  events: BabyEvent[];
+  suggestedSide: string;
+}) => {
   const { unit } = useVolumeUnit();
   const now = Date.now();
 
@@ -111,6 +128,14 @@ const ContextCard = ({ events }: { events: BabyEvent[] }) => {
             <p className="text-[10px] text-neutral-400">{right.ago}</p>
           )}
         </div>
+      </div>
+      <div className="mt-2 border-t border-pump-200 pt-2 text-center">
+        <p className="text-[10px] text-neutral-400">
+          Suggested next:{" "}
+          <span className="font-medium capitalize text-pump-500">
+            {suggestedSide}
+          </span>
+        </p>
       </div>
     </div>
   );
@@ -269,7 +294,13 @@ export const PumpView = () => {
   } = useBabyContext();
   const { unit } = useVolumeUnit();
 
-  const [selectedSide, setSelectedSide] = useState("left");
+  const suggested = useMemo(() => suggestNextSide(events), [events]);
+  const [selectedSide, setSelectedSide] = useState(suggested);
+
+  // Sync the selected side when the suggestion changes (e.g. after logging)
+  useEffect(() => {
+    setSelectedSide(suggested);
+  }, [suggested]);
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
   );
@@ -353,7 +384,7 @@ export const PumpView = () => {
   return (
     <div className="py-2">
       {/* Context card */}
-      <ContextCard events={events} />
+      <ContextCard events={events} suggestedSide={suggested} />
 
       {/* Action zone */}
       <div className="mt-4 px-4">
