@@ -8,6 +8,7 @@ import { GrowthView } from "@/components/growth-view";
 import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
 import { ProfileSheet } from "@/components/profile-sheet";
+import { PumpView } from "@/components/pump-view";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import { UndoToast } from "@/components/undo-toast";
 import { VoiceButton } from "@/components/voice-button";
@@ -272,16 +273,19 @@ const SummaryCard = () => {
 
 /* ── Bottom Navigation ───────────────────────────────────── */
 
+type TabId = "home" | "pump" | "history" | "growth" | "settings";
+
 const BottomNav = ({
   tab,
   onSwitch,
   tamboEnabled,
 }: {
   tab: string;
-  onSwitch: (tab: "home" | "history" | "growth" | "settings") => void;
+  onSwitch: (tab: TabId) => void;
   tamboEnabled: boolean;
 }) => {
   const handleHome = useCallback(() => onSwitch("home"), [onSwitch]);
+  const handlePump = useCallback(() => onSwitch("pump"), [onSwitch]);
   const handleHistory = useCallback(() => onSwitch("history"), [onSwitch]);
   const handleGrowth = useCallback(() => onSwitch("growth"), [onSwitch]);
   const handleSettings = useCallback(() => onSwitch("settings"), [onSwitch]);
@@ -310,6 +314,26 @@ const BottomNav = ({
           />
         </svg>
         Home
+      </button>
+      <button
+        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "pump" ? activeClass : inactiveClass}`}
+        onClick={handlePump}
+        type="button"
+      >
+        <svg
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={1.5}
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            d="M20.42 4.58a5.4 5.4 0 00-7.65 0L12 5.36l-.77-.78a5.4 5.4 0 00-7.65 7.65l1.06 1.06L12 20.64l7.36-7.36 1.06-1.06a5.4 5.4 0 000-7.64z"
+          />
+        </svg>
+        Pump
       </button>
       <button
         className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "history" ? activeClass : inactiveClass}`}
@@ -395,16 +419,14 @@ const BottomNav = ({
 export default function DashboardPage() {
   useAutoDarkMode();
   const { baby } = useBabyContext();
-  const [tab, setTab] = useState<"home" | "history" | "growth" | "settings">(
-    "home"
-  );
+  const [tab, setTab] = useState<TabId>("home");
   const [profileOpen, setProfileOpen] = useState(false);
   const tamboEnabled = useTamboReady();
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
 
   const handleTabSwitch = useCallback(
-    (newTab: "home" | "history" | "growth" | "settings") => {
+    (newTab: TabId) => {
       if (newTab === "settings") {
         openProfile();
       } else {
@@ -468,6 +490,7 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+        {tab === "pump" && <PumpView />}
         {tab === "history" && <HistoryView />}
         {tab === "growth" && <GrowthView />}
       </div>
