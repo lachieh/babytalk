@@ -156,7 +156,9 @@ export const PersistentTimeline = () => {
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
+  const todayEvents = events.filter(
+    (e) => new Date(e.startedAt) >= todayStart && e.type !== "pump"
+  );
 
   if (todayEvents.length === 0) {
     return (

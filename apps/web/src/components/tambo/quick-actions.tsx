@@ -16,7 +16,7 @@ interface QuickActionsProps {
   actions: QuickAction[];
 }
 
-const EVENT_KEYS: EventType[] = ["feed", "pump", "sleep", "diaper", "note"];
+const EVENT_KEYS: EventType[] = ["feed", "sleep", "diaper", "note"];
 
 function getEventType(label: string): EventType {
   const lower = label.toLowerCase();

@@ -201,7 +201,11 @@ export const HistoryView = () => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
 
-  const grouped = useMemo(() => groupByDay(events), [events]);
+  const nonPumpEvents = useMemo(
+    () => events.filter((e) => e.type !== "pump"),
+    [events]
+  );
+  const grouped = useMemo(() => groupByDay(nonPumpEvents), [nonPumpEvents]);
 
   const handleEdit = useCallback((event: BabyEvent) => {
     setEditingEvent(event);
@@ -245,10 +249,14 @@ export const HistoryView = () => {
       </div>
 
       {/* Day timeline view */}
-      {tab === "day" && <DayView events={events} onTapEvent={handleEdit} />}
+      {tab === "day" && (
+        <DayView events={nonPumpEvents} onTapEvent={handleEdit} />
+      )}
 
       {/* Week timeline view */}
-      {tab === "week" && <WeekView events={events} onTapEvent={handleEdit} />}
+      {tab === "week" && (
+        <WeekView events={nonPumpEvents} onTapEvent={handleEdit} />
+      )}
 
       {/* List view */}
       {tab === "list" && (
@@ -276,7 +284,7 @@ export const HistoryView = () => {
           </button>
 
           {/* Day groups */}
-          {events.length === 0 ? (
+          {nonPumpEvents.length === 0 ? (
             <p className="py-8 text-center text-sm text-neutral-400">
               No events logged yet
             </p>
