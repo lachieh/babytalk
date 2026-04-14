@@ -436,6 +436,8 @@ export default function DashboardPage() {
     [openProfile]
   );
 
+  const navigateToPump = useCallback(() => setTab("pump"), []);
+
   const today = new Date().toLocaleDateString([], {
     weekday: "long",
     month: "short",
@@ -473,7 +475,7 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-4">
-              <SuggestionZone />
+              <SuggestionZone onNavigateToPump={navigateToPump} />
             </div>
 
             {tamboEnabled && <LastResponse />}

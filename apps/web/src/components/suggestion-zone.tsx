@@ -108,12 +108,6 @@ const SLEEP_VARIANTS: Variant[] = [
   { key: "carrier", label: "Carrier", meta: { location: "carrier" } },
 ];
 
-const PUMP_VARIANTS: Variant[] = [
-  { key: "left", label: "Left", meta: { side: "left" } },
-  { key: "right", label: "Right", meta: { side: "right" } },
-  { key: "both", label: "Both", meta: { side: "both" } },
-];
-
 /* ── Styles ────────────────────────────────────────────────── */
 
 /* ── Dropdown Popover ─────────────────────────────────────── */
@@ -414,7 +408,11 @@ const ActionSection = ({
 
 /* ── SuggestionZone ────────────────────────────────────────── */
 
-export const SuggestionZone = () => {
+export const SuggestionZone = ({
+  onNavigateToPump,
+}: {
+  onNavigateToPump?: () => void;
+}) => {
   const {
     events,
     activeEvents,
@@ -432,7 +430,6 @@ export const SuggestionZone = () => {
   // Find active (in-progress) events for each type
   const activeFeed = activeEvents.find((e) => e.type === "feed") ?? null;
   const activeSleep = activeEvents.find((e) => e.type === "sleep") ?? null;
-  const activePump = activeEvents.find((e) => e.type === "pump") ?? null;
 
   const handleLog = useCallback(
     (type: string, meta: Record<string, unknown>) => {
@@ -483,16 +480,20 @@ export const SuggestionZone = () => {
         type="feed"
         variants={FEED_VARIANTS}
       />
-      <ActionSection
-        activeEvent={activePump}
-        defaultVariant="left"
-        onCancel={handleCancel}
-        onLog={handleLog}
-        onStop={handleStop}
-        onUpdateMeta={handleUpdateMeta}
-        type="pump"
-        variants={PUMP_VARIANTS}
-      />
+      {onNavigateToPump && (
+        <div className="flex-1">
+          <button
+            className="flex w-full flex-col items-center gap-2 rounded-lg border border-pump-200 bg-pump-50 px-3 py-4 text-center text-pump-600 transition-[background-color,transform] active:scale-[0.97] active:bg-pump-100"
+            onClick={onNavigateToPump}
+            type="button"
+          >
+            <EventIcon type="pump" />
+            <span className="text-[10px] font-medium uppercase tracking-[0.15em]">
+              Pump
+            </span>
+          </button>
+        </div>
+      )}
       <ActionSection
         activeEvent={activeSleep}
         defaultVariant={sleepDefault}
