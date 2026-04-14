@@ -400,11 +400,13 @@ export const EventEditSheet = ({
   const handleSave = useCallback(async () => {
     setSaving(true);
     try {
+      const showDuration = hasDuration(form);
       if (isNew) {
         const startedAt = new Date(form.startedAt).toISOString();
-        const endedAt = form.endedAt
-          ? new Date(form.endedAt).toISOString()
-          : undefined;
+        const endedAt =
+          showDuration && form.endedAt
+            ? new Date(form.endedAt).toISOString()
+            : undefined;
         await logEventDirect(form.type, {
           ...form.meta,
           _startedAt: startedAt,
@@ -412,9 +414,14 @@ export const EventEditSheet = ({
         });
       } else if (event) {
         const startedAt = new Date(form.startedAt).toISOString();
-        const endedAt = form.endedAt
-          ? new Date(form.endedAt).toISOString()
-          : null;
+        // For instant event types (diaper, note, non-breast feeds) the
+        // endedAt field is hidden, but the form may still hold a stale
+        // value from the original event. Force it to null so the saved
+        // event doesn't gain a spurious end time.
+        const endedAt =
+          showDuration && form.endedAt
+            ? new Date(form.endedAt).toISOString()
+            : null;
         await updateEventMeta(
           event.id,
           form.type,

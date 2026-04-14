@@ -9,6 +9,7 @@ import { triggerFeedback } from "@/lib/haptics";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { AmountInput } from "./amount-input";
+import { EventEditSheet } from "./event-edit-sheet";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -252,23 +253,45 @@ const PumpTimer = ({
 
 /* ── Session Row ──────────────────────────────────────────── */
 
-const SessionRow = ({ event }: { event: BabyEvent }) => {
+function parseMethod(metadata: string): string | null {
+  try {
+    return (JSON.parse(metadata) as { method?: string }).method ?? null;
+  } catch {
+    return null;
+  }
+}
+
+const SessionRow = ({
+  event,
+  onEdit,
+}: {
+  event: BabyEvent;
+  onEdit: (event: BabyEvent) => void;
+}) => {
   const { unit } = useVolumeUnit();
+  const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
   const side = parseSide(event.metadata);
   const amount = parseAmount(event.metadata);
   const duration = event.endedAt
     ? formatDuration(event.startedAt, event.endedAt)
     : null;
 
+  const isBreast = event.type === "feed";
+  const label = isBreast ? `Breast ${side ?? ""}` : (side ?? "Pump");
+
   return (
-    <div className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3">
+    <button
+      className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors active:bg-neutral-50"
+      onClick={handleClick}
+      type="button"
+    >
       <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-400">
         {formatTime(event.startedAt)}
       </span>
-      <EventIcon type="pump" />
+      <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium capitalize text-neutral-700">
-          {side ?? "Pump"}
+          {label}
         </p>
         <p className="mt-0.5 text-xs text-neutral-400">
           {[amount ? formatVolume(amount, unit) : null, duration]
@@ -276,7 +299,16 @@ const SessionRow = ({ event }: { event: BabyEvent }) => {
             .join(" \u00B7 ")}
         </p>
       </div>
-    </div>
+      <svg
+        className="h-3.5 w-3.5 shrink-0 text-neutral-300"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
   );
 };
 
@@ -313,11 +345,29 @@ export const PumpView = () => {
     return d;
   }, []);
 
+  const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+
+  const handleEdit = useCallback((event: BabyEvent) => {
+    setEditingEvent(event);
+    setEditSheetOpen(true);
+  }, []);
+
+  const handleEditClose = useCallback(() => {
+    setEditSheetOpen(false);
+    setEditingEvent(null);
+  }, []);
+
+  const isBreastFeed = (e: BabyEvent) => {
+    if (e.type !== "feed") return false;
+    return parseMethod(e.metadata) === "breast";
+  };
+
   const todaySessions = useMemo(
     () =>
       events.filter(
         (e) =>
-          e.type === "pump" &&
+          (e.type === "pump" || isBreastFeed(e)) &&
           e.endedAt !== null &&
           new Date(e.startedAt) >= todayStart
       ),
@@ -440,9 +490,17 @@ export const PumpView = () => {
             No pump sessions yet today
           </p>
         ) : (
-          todaySessions.map((e) => <SessionRow event={e} key={e.id} />)
+          todaySessions.map((e) => (
+            <SessionRow event={e} key={e.id} onEdit={handleEdit} />
+          ))
         )}
       </div>
+
+      <EventEditSheet
+        event={editingEvent}
+        onClose={handleEditClose}
+        open={editSheetOpen}
+      />
     </div>
   );
 };
