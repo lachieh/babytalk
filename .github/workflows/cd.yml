@@ -114,6 +114,8 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
       - name: Smoke test
         run: | #shell
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
@@ -180,6 +182,8 @@ jobs:
           files: |
             docker-bake.hcl
             cwd://${{ steps.meta.outputs.bake-file }}
+          secrets: |
+            GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
   # ── Deploy API to staging ───────────────────────────────
   deploy-api-staging:

@@ -13,7 +13,9 @@ ENV MISE_YES=1
 ENV PATH="/root/.local/share/mise/shims:$PATH"
 WORKDIR /app
 COPY .config/mise.toml package.json ./
-RUN mise trust && mise install && mise reshim
+RUN --mount=type=secret,id=GITHUB_TOKEN,required=false \
+    GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true) \
+    mise trust && mise install && mise reshim
 
 # install root dependencies and turbo globally
 COPY turbo.json package.json pnpm-lock.yaml pnpm-workspace.yaml ./
