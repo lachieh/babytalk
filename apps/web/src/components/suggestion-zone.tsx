@@ -406,41 +406,9 @@ const ActionSection = ({
   );
 };
 
-/* ── Pump Shortcut (navigates to Pump tab) ────────────────── */
-
-const PumpShortcut = ({
-  active,
-  onClick,
-}: {
-  active: boolean;
-  onClick: () => void;
-}) => (
-  <div className="flex-1">
-    <button
-      className="flex w-full flex-col items-center gap-2 rounded-lg border border-pump-200 bg-pump-50 px-3 py-4 text-center text-pump-600 transition-[background-color,transform] active:scale-[0.97] active:bg-pump-100"
-      onClick={onClick}
-      type="button"
-    >
-      <EventIcon type="pump" />
-      <span className="text-[10px] font-medium uppercase tracking-[0.15em]">
-        Pump
-      </span>
-      {active && (
-        <span className="animate-pulse text-[9px] font-medium text-pump-500">
-          in progress
-        </span>
-      )}
-    </button>
-  </div>
-);
-
 /* ── SuggestionZone ────────────────────────────────────────── */
 
-export const SuggestionZone = ({
-  onNavigateToPump,
-}: {
-  onNavigateToPump?: () => void;
-}) => {
+export const SuggestionZone = () => {
   const {
     events,
     activeEvents,
@@ -508,12 +476,6 @@ export const SuggestionZone = ({
         type="feed"
         variants={FEED_VARIANTS}
       />
-      {onNavigateToPump && (
-        <PumpShortcut
-          active={activeEvents.some((e) => e.type === "pump")}
-          onClick={onNavigateToPump}
-        />
-      )}
       <ActionSection
         activeEvent={activeSleep}
         defaultVariant={sleepDefault}
