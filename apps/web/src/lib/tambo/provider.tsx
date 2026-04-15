@@ -1,7 +1,7 @@
 "use client";
 
 import { TamboProvider } from "@tambo-ai/react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 import { getTamboApiKey, getTamboUrl } from "@/lib/runtime-config";
 
@@ -12,15 +12,42 @@ import { tamboTools } from "./tools";
 const ME_QUERY = `query { me { id } }`;
 
 /**
- * Context that reports whether the TamboProvider is actually mounted above —
- * i.e. both an API key and a resolved userId are available. Components that
+ * Observable status of the Tambo integration:
+ * - `not_configured`: no API key present (env/runtime config missing `tamboApiKey`)
+ * - `connecting`: API key present, `me { id }` query in flight
+ * - `connected`: TamboProvider is mounted — hooks like `useTambo()` will work
+ * - `error`: the `me { id }` query failed; Tambo is disabled for this session
+ *
+ * Settings UI uses this to show connection status.
+ */
+export type TamboStatus =
+  | "not_configured"
+  | "connecting"
+  | "connected"
+  | "error";
+
+interface TamboStatusContextValue {
+  status: TamboStatus;
+  speechRecognitionSupported: boolean;
+}
+
+const TamboStatusContext = createContext<TamboStatusContextValue>({
+  status: "not_configured",
+  speechRecognitionSupported: false,
+});
+
+export const useTamboStatus = (): TamboStatusContextValue =>
+  useContext(TamboStatusContext);
+
+/**
+ * Returns true when the TamboProvider is actually mounted above — i.e.
+ * both an API key and a resolved userId are available. Components that
  * call `useTambo()` / `useTamboThreadInput()` / etc. must only render when
  * this is `true`; otherwise those hooks throw
  * "useTamboClient must be used within a TamboClientProvider".
  */
-const TamboReadyContext = createContext(false);
-
-export const useTamboReady = (): boolean => useContext(TamboReadyContext);
+export const useTamboReady = (): boolean =>
+  useContext(TamboStatusContext).status === "connected";
 
 const SYSTEM_PROMPT = `You are BabyTalk — a calm, warm, and concise baby tracking companion. You help tired parents log feeds, sleep, diapers, and notes. You feel like a co-parent who never sleeps, never forgets, and never judges.
 
@@ -190,6 +217,12 @@ const buildContextHelpers = () => ({
   },
 });
 
+const hasSpeechRecognition = (): boolean => {
+  if (typeof window === "undefined") return false;
+  const win = window as unknown as Record<string, unknown>;
+  return Boolean(win.SpeechRecognition ?? win.webkitSpeechRecognition);
+};
+
 export const BabyTamboProvider = ({
   children,
 }: {
@@ -198,16 +231,30 @@ export const BabyTamboProvider = ({
   const apiKey = getTamboApiKey();
   const tamboUrl = getTamboUrl();
   const [userId, setUserId] = useState<string | null>(null);
+  const [meError, setMeError] = useState(false);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] =
+    useState(false);
+
+  useEffect(() => {
+    setSpeechRecognitionSupported(hasSpeechRecognition());
+  }, []);
 
   useEffect(() => {
     if (!apiKey) return;
     let cancelled = false;
+    setMeError(false);
     const loadUser = async () => {
       try {
         const data = await gqlRequest<{ me: { id: string } | null }>(ME_QUERY);
-        if (!cancelled && data.me) setUserId(data.me.id);
+        if (cancelled) return;
+        if (data.me) {
+          setUserId(data.me.id);
+        } else {
+          // API reachable but no user — treat as an error so settings can surface it.
+          setMeError(true);
+        }
       } catch {
-        // Auth not ready yet — Tambo stays disabled until user is known.
+        if (!cancelled) setMeError(true);
       }
     };
     loadUser();
@@ -215,6 +262,18 @@ export const BabyTamboProvider = ({
       cancelled = true;
     };
   }, [apiKey]);
+
+  const status: TamboStatus = ((): TamboStatus => {
+    if (!apiKey) return "not_configured";
+    if (userId) return "connected";
+    if (meError) return "error";
+    return "connecting";
+  })();
+
+  const statusContextValue = useMemo(
+    () => ({ status, speechRecognitionSupported }),
+    [status, speechRecognitionSupported]
+  );
 
   // Skip TamboProvider if no API key or we haven't resolved the user yet —
   // the dashboard still works for logging, timeline, etc. Chat features
@@ -224,9 +283,9 @@ export const BabyTamboProvider = ({
   // within a TamboClientProvider").
   if (!apiKey || !userId) {
     return (
-      <TamboReadyContext.Provider value={false}>
+      <TamboStatusContext.Provider value={statusContextValue}>
         {children}
-      </TamboReadyContext.Provider>
+      </TamboStatusContext.Provider>
     );
   }
 
@@ -245,9 +304,9 @@ export const BabyTamboProvider = ({
       tools={tamboTools}
       userKey={userId}
     >
-      <TamboReadyContext.Provider value={true}>
+      <TamboStatusContext.Provider value={statusContextValue}>
         {children}
-      </TamboReadyContext.Provider>
+      </TamboStatusContext.Provider>
     </TamboProvider>
   );
 };

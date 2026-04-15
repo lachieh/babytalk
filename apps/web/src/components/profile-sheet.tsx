@@ -4,10 +4,68 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { useTamboStatus } from "@/lib/tambo/provider";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { EditBabySheet } from "./edit-baby-sheet";
+
+const AI_STATUS_COPY: Record<
+  "not_configured" | "connecting" | "connected" | "error",
+  { dot: string; label: string; note: string }
+> = {
+  not_configured: {
+    dot: "bg-neutral-300",
+    label: "Not configured",
+    note: "No Tambo API key is set for this deploy, so the voice assistant is disabled.",
+  },
+  connecting: {
+    dot: "bg-neutral-400",
+    label: "Connecting",
+    note: "Waking up the assistant — this usually takes a second.",
+  },
+  connected: {
+    dot: "bg-success-500",
+    label: "Connected",
+    note: "The voice button in the bottom nav is ready to use.",
+  },
+  error: {
+    dot: "bg-danger-500",
+    label: "Can't connect",
+    note: "Couldn't verify your account with the assistant. Try signing out and back in.",
+  },
+};
+
+const AIFeaturesSection = () => {
+  const { status, speechRecognitionSupported } = useTamboStatus();
+  const copy = AI_STATUS_COPY[status];
+
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+        AI Features
+      </h3>
+      <div className="rounded-xl bg-neutral-50 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className={`h-2 w-2 rounded-full ${copy.dot}`}
+          />
+          <span className="text-sm font-medium text-neutral-700">
+            {copy.label}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-neutral-500">{copy.note}</p>
+        {status === "connected" && !speechRecognitionSupported && (
+          <p className="mt-2 text-xs text-neutral-400">
+            Voice input isn&apos;t supported by this browser. Try Chrome, Edge,
+            or Safari for the mic button.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+};
 
 interface UserInfo {
   email: string;
@@ -346,6 +404,9 @@ const ProfileContent = ({
           <PartnerInvite copied={copied} onShare={onShare} />
         )}
       </section>
+
+      {/* AI Features */}
+      <AIFeaturesSection />
 
       {/* Preferences */}
       <section>
