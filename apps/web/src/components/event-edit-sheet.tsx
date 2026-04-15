@@ -60,6 +60,34 @@ const EVENT_TYPES: { key: EventType; label: string }[] = [
 
 /* ── Meta Fields by Type ───────────────────────────────────── */
 
+const NotesField = ({
+  meta,
+  onChange,
+}: {
+  meta: Record<string, unknown>;
+  onChange: (m: Record<string, unknown>) => void;
+}) => {
+  const handleNotes = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) =>
+      onChange({ ...meta, notes: e.target.value || undefined }),
+    [meta, onChange]
+  );
+
+  return (
+    <label className="block text-xs font-medium text-neutral-500">
+      Notes
+      <span className="ml-1 text-neutral-300">optional</span>
+      <textarea
+        className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
+        onChange={handleNotes}
+        placeholder="Anything to remember?"
+        rows={2}
+        value={(meta.notes as string) || ""}
+      />
+    </label>
+  );
+};
+
 const FeedFields = ({
   meta,
   onChange,
@@ -573,6 +601,11 @@ export const EventEditSheet = ({
           )}
           {form.type === "note" && (
             <NoteFields meta={form.meta} onChange={handleMetaChange} />
+          )}
+
+          {/* Notes — available on every non-note event */}
+          {form.type !== "note" && (
+            <NotesField meta={form.meta} onChange={handleMetaChange} />
           )}
 
           {/* Actions */}

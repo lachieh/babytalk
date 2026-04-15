@@ -117,6 +117,7 @@ export const FeedMetadataInput = builder.inputType("FeedMetadataInput", {
     amountMl: t.int({ required: false }),
     foodDesc: t.string({ required: false }),
     method: t.field({ required: true, type: FeedMethodEnum }),
+    notes: t.string({ required: false }),
     side: t.field({ required: false, type: FeedSideEnum }),
   }),
 });
@@ -124,6 +125,7 @@ export const FeedMetadataInput = builder.inputType("FeedMetadataInput", {
 export const SleepMetadataInput = builder.inputType("SleepMetadataInput", {
   fields: (t) => ({
     location: t.field({ required: false, type: SleepLocationEnum }),
+    notes: t.string({ required: false }),
     quality: t.field({ required: false, type: SleepQualityEnum }),
   }),
 });
@@ -150,6 +152,7 @@ export const PumpSideEnum = builder.enumType("PumpSide", {
 export const PumpMetadataInput = builder.inputType("PumpMetadataInput", {
   fields: (t) => ({
     amountMl: t.int({ required: false }),
+    notes: t.string({ required: false }),
     side: t.field({ required: true, type: PumpSideEnum }),
   }),
 });
