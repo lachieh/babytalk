@@ -39,7 +39,12 @@ const getSpeechRecognition = ():
 
 /* ── Constants ──────────────────────────────────────────────── */
 
-const SILENCE_THRESHOLD = 10;
+/**
+ * Peak frequency value (0-255) below which audio is considered silent.
+ * Uses peak rather than average because speech energy concentrates in
+ * a few frequency bins — averaging all 128 bins dilutes the signal.
+ */
+const SILENCE_THRESHOLD = 25;
 const SILENCE_TIMEOUT = 2500;
 /** How long to show error/empty messages before auto-dismissing */
 const ERROR_DISPLAY_MS = 3000;
@@ -113,6 +118,8 @@ export const VoiceSessionProvider = ({
   const streamRef = useRef<MediaStream | null>(null);
   const transcriptRef = useRef("");
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Tracks whether the error handler already showed an error this session */
+  const errorShownRef = useRef(false);
 
   /* ── Show an error that auto-dismisses ────────────────────── */
 
@@ -173,9 +180,16 @@ export const VoiceSessionProvider = ({
       const check = () => {
         if (!analyserRef.current) return;
         analyserRef.current.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
 
-        if (avg < SILENCE_THRESHOLD) {
+        /* Use peak frequency value instead of average.
+         * Speech energy concentrates in a handful of bins — averaging
+         * across all 128 bins makes even loud speech look like silence. */
+        let peak = 0;
+        for (const val of dataArray) {
+          if (val > peak) peak = val;
+        }
+
+        if (peak < SILENCE_THRESHOLD) {
           if (!silenceStart) silenceStart = Date.now();
           if (Date.now() - silenceStart >= SILENCE_TIMEOUT) {
             recognitionRef.current?.stop();
@@ -211,6 +225,7 @@ export const VoiceSessionProvider = ({
     recognition.interimResults = false;
     recognition.lang = "en-US";
     transcriptRef.current = "";
+    errorShownRef.current = false;
     setTranscript("");
     setPhase("listening");
 
@@ -219,6 +234,10 @@ export const VoiceSessionProvider = ({
     }) as EventListener);
 
     recognition.addEventListener("error", ((e: SpeechRecognitionErrorEvent) => {
+      /* "aborted" fires when we call recognition.stop() — expected, not an error */
+      if (e.error === "aborted") return;
+
+      errorShownRef.current = true;
       cleanup();
       const message =
         SPEECH_ERROR_MESSAGES[e.error] ?? `Voice error: ${e.error}`;
@@ -231,7 +250,7 @@ export const VoiceSessionProvider = ({
       if (text) {
         setTranscript(text);
         setPhase("processing");
-      } else {
+      } else if (!errorShownRef.current) {
         showError("Didn\u2019t catch that \u2014 try again");
       }
     });
