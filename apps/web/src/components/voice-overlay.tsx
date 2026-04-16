@@ -21,20 +21,26 @@ export const VoiceOverlay = () => {
   const { phase, transcript, setPhase, dismiss, errorMessage, showError } =
     useVoiceSession();
   const { messages, isStreaming } = useTambo();
-  const { setValue, submit } = useTamboThreadInput();
+  const { value, setValue, submit } = useTamboThreadInput();
 
   const pendingRef = useRef(false);
   const wasStreamingRef = useRef(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Submit transcript when phase becomes "processing" ────── */
+  /* ── Step 1: set the input value when processing starts ───── */
 
   useEffect(() => {
-    if (phase !== "processing" || !transcript || pendingRef.current) return;
-    pendingRef.current = true;
+    if (phase === "processing" && transcript && !pendingRef.current) {
+      setValue(transcript);
+    }
+  }, [phase, transcript, setValue]);
 
-    setValue(transcript);
+  /* ── Step 2: submit once the value has flushed into state ─── */
+
+  useEffect(() => {
+    if (phase !== "processing" || !value || pendingRef.current) return;
+    pendingRef.current = true;
 
     const doSubmit = async () => {
       try {
@@ -61,7 +67,7 @@ export const VoiceOverlay = () => {
         processingTimerRef.current = null;
       }
     };
-  }, [phase, transcript, setValue, submit, showError]);
+  }, [phase, value, submit, showError]);
 
   /* ── Detect response completion (streaming → not streaming) ── */
 
