@@ -15,6 +15,8 @@ import { AudioWaveform } from "./audio-waveform";
 const THREAD_TIMEOUT = 5 * 60 * 1000;
 const AUTO_DISMISS_MS = 6000;
 const THREAD_KEY = "babytalk_voice_thread";
+/** If no response starts within this window, show an error */
+const PROCESSING_TIMEOUT_MS = 15_000;
 
 /* ── Thread persistence ─────────────────────────────────────── */
 
@@ -38,7 +40,15 @@ function saveThread(id: string) {
 /* ── Component ──────────────────────────────────────────────── */
 
 export const VoiceOverlay = () => {
-  const { phase, transcript, analyser, setPhase, dismiss } = useVoiceSession();
+  const {
+    phase,
+    transcript,
+    analyser,
+    setPhase,
+    dismiss,
+    errorMessage,
+    showError,
+  } = useVoiceSession();
   const {
     messages,
     isStreaming,
@@ -51,6 +61,7 @@ export const VoiceOverlay = () => {
   const pendingRef = useRef(false);
   const wasStreamingRef = useRef(false);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ── Thread lifecycle: reuse within 5 min ─────────────────── */
 
@@ -70,21 +81,53 @@ export const VoiceOverlay = () => {
   useEffect(() => {
     if (phase !== "processing" || !transcript || pendingRef.current) return;
     pendingRef.current = true;
-    ensureThread();
 
-    // Use requestAnimationFrame to let thread switch propagate
+    try {
+      ensureThread();
+    } catch {
+      showError("Couldn\u2019t connect to assistant");
+      pendingRef.current = false;
+      return;
+    }
+
     requestAnimationFrame(() => {
       setValue(transcript);
-      submit();
-      triggerFeedback("logged");
+      const doSubmit = async () => {
+        try {
+          await submit();
+          triggerFeedback("logged");
+        } catch {
+          pendingRef.current = false;
+          showError("Failed to send \u2014 try again");
+        }
+      };
+      doSubmit();
     });
-  }, [phase, transcript, ensureThread, setValue, submit]);
+
+    processingTimerRef.current = setTimeout(() => {
+      if (pendingRef.current) {
+        pendingRef.current = false;
+        showError("No response \u2014 try again");
+      }
+    }, PROCESSING_TIMEOUT_MS);
+
+    return () => {
+      if (processingTimerRef.current) {
+        clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = null;
+      }
+    };
+  }, [phase, transcript, ensureThread, setValue, submit, showError]);
 
   /* ── Detect response completion (streaming → not streaming) ── */
 
   useEffect(() => {
     if (isStreaming) {
       wasStreamingRef.current = true;
+      if (processingTimerRef.current) {
+        clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = null;
+      }
     } else if (wasStreamingRef.current && phase === "processing") {
       wasStreamingRef.current = false;
       pendingRef.current = false;
@@ -133,7 +176,6 @@ export const VoiceOverlay = () => {
   useEffect(() => {
     if (phase !== "response") return;
 
-    // Don't auto-dismiss if there are rendered components (Timer, etc.)
     const hasComponents = lastAssistant?.content.some(
       (b) => b.type === "component" && "renderedComponent" in b
     );
@@ -167,7 +209,9 @@ export const VoiceOverlay = () => {
     >
       <button
         className="w-full rounded-xl border border-neutral-200 bg-surface-raised px-4 py-3 text-left shadow-md"
-        onClick={phase === "response" ? handleDismiss : undefined}
+        onClick={
+          phase === "response" || phase === "error" ? handleDismiss : undefined
+        }
         type="button"
       >
         {/* ── Listening: waveform ─────────────────────────────── */}
@@ -206,6 +250,27 @@ export const VoiceOverlay = () => {
                 {c.renderedComponent}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ── Error: message with warning styling ─────────────── */}
+        {phase === "error" && (
+          <div className="flex items-center gap-2">
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-warning-500"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <p className="text-sm text-neutral-600">{errorMessage}</p>
           </div>
         )}
       </button>

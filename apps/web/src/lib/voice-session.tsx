@@ -41,16 +41,25 @@ const getSpeechRecognition = ():
 
 const SILENCE_THRESHOLD = 10;
 const SILENCE_TIMEOUT = 2500;
+/** How long to show error/empty messages before auto-dismissing */
+const ERROR_DISPLAY_MS = 3000;
 
 /* ── Types ──────────────────────────────────────────────────── */
 
-export type VoicePhase = "idle" | "listening" | "processing" | "response";
+export type VoicePhase =
+  | "idle"
+  | "listening"
+  | "processing"
+  | "response"
+  | "error";
 
 interface VoiceSessionContextValue {
   analyser: AnalyserNode | null;
   dismiss: () => void;
+  errorMessage: string;
   phase: VoicePhase;
   setPhase: (phase: VoicePhase) => void;
+  showError: (message: string) => void;
   startListening: () => void;
   stopListening: () => void;
   transcript: string;
@@ -58,21 +67,32 @@ interface VoiceSessionContextValue {
 
 /* ── Context ────────────────────────────────────────────────── */
 
-/* eslint-disable @typescript-eslint/no-empty-function */
-const noop = () => {};
-/* eslint-enable @typescript-eslint/no-empty-function */
+const noop = () => {
+  /* default context noop */
+};
 
 const VoiceSessionContext = createContext<VoiceSessionContextValue>({
   analyser: null,
   dismiss: noop,
+  errorMessage: "",
   phase: "idle",
   setPhase: noop,
+  showError: noop,
   startListening: noop,
   stopListening: noop,
   transcript: "",
 });
 
 export const useVoiceSession = () => useContext(VoiceSessionContext);
+
+/* ── Error messages ─────────────────────────────────────────── */
+
+const SPEECH_ERROR_MESSAGES: Record<string, string> = {
+  "not-allowed": "Microphone access denied",
+  "no-speech": "Didn\u2019t catch that \u2014 try again",
+  "audio-capture": "No microphone found",
+  network: "Network error \u2014 check your connection",
+};
 
 /* ── Provider ───────────────────────────────────────────────── */
 
@@ -84,6 +104,7 @@ export const VoiceSessionProvider = ({
   const [phase, setPhase] = useState<VoicePhase>("idle");
   const [transcript, setTranscript] = useState("");
   const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -91,6 +112,19 @@ export const VoiceSessionProvider = ({
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const transcriptRef = useRef("");
+  const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* ── Show an error that auto-dismisses ────────────────────── */
+
+  const showError = useCallback((message: string) => {
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    setErrorMessage(message);
+    setPhase("error");
+    errorTimerRef.current = setTimeout(() => {
+      setPhase("idle");
+      setErrorMessage("");
+    }, ERROR_DISPLAY_MS);
+  }, []);
 
   /* ── Cleanup helpers ──────────────────────────────────────── */
 
@@ -154,7 +188,7 @@ export const VoiceSessionProvider = ({
       };
       check();
     } catch {
-      /* Microphone access denied — degrade gracefully */
+      /* Microphone access denied — handled by speech recognition error */
     }
   }, []);
 
@@ -162,9 +196,11 @@ export const VoiceSessionProvider = ({
 
   const startListening = useCallback(() => {
     const SR = getSpeechRecognition();
-    if (!SR) return;
+    if (!SR) {
+      showError("Voice input not supported in this browser");
+      return;
+    }
 
-    // If already listening, restart
     if (recognitionRef.current) {
       recognitionRef.current.stop();
       cleanup();
@@ -183,11 +219,10 @@ export const VoiceSessionProvider = ({
     }) as EventListener);
 
     recognition.addEventListener("error", ((e: SpeechRecognitionErrorEvent) => {
-      if (e.error !== "aborted") {
-        console.error("Speech recognition error:", e.error);
-      }
       cleanup();
-      setPhase("idle");
+      const message =
+        SPEECH_ERROR_MESSAGES[e.error] ?? `Voice error: ${e.error}`;
+      showError(message);
     }) as EventListener);
 
     recognition.addEventListener("end", () => {
@@ -197,14 +232,20 @@ export const VoiceSessionProvider = ({
         setTranscript(text);
         setPhase("processing");
       } else {
-        setPhase("idle");
+        showError("Didn\u2019t catch that \u2014 try again");
       }
     });
 
     recognitionRef.current = recognition;
-    recognition.start();
+
+    try {
+      recognition.start();
+    } catch {
+      showError("Couldn\u2019t start voice input");
+    }
+
     startSilenceDetection();
-  }, [cleanup, startSilenceDetection]);
+  }, [cleanup, startSilenceDetection, showError]);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
@@ -215,14 +256,19 @@ export const VoiceSessionProvider = ({
       recognitionRef.current?.stop();
       cleanup();
     }
+    if (errorTimerRef.current) {
+      clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = null;
+    }
     setPhase("idle");
     setTranscript("");
+    setErrorMessage("");
   }, [phase, cleanup]);
 
-  // Cleanup on unmount
   useEffect(
     () => () => {
       cleanup();
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
     },
     [cleanup]
   );
@@ -231,8 +277,10 @@ export const VoiceSessionProvider = ({
     () => ({
       analyser,
       dismiss,
+      errorMessage,
       phase,
       setPhase,
+      showError,
       startListening,
       stopListening,
       transcript,
@@ -240,8 +288,10 @@ export const VoiceSessionProvider = ({
     [
       analyser,
       dismiss,
+      errorMessage,
       phase,
       setPhase,
+      showError,
       startListening,
       stopListening,
       transcript,
