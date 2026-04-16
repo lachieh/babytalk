@@ -12,8 +12,19 @@ import {
 
 /* ── Speech Recognition types ───────────────────────────────── */
 
+interface SpeechRecognitionResult {
+  [index: number]: { transcript: string };
+  length: number;
+}
+
+interface SpeechRecognitionResultList {
+  [index: number]: SpeechRecognitionResult;
+  length: number;
+  [Symbol.iterator](): IterableIterator<SpeechRecognitionResult>;
+}
+
 type SpeechRecognitionEvent = Event & {
-  results: Record<number, Record<number, { transcript: string }>>;
+  results: SpeechRecognitionResultList;
   resultIndex: number;
 };
 
@@ -147,13 +158,7 @@ export const VoiceSessionProvider = ({
       /* Concatenate transcripts from every result so far. With continuous=true
        * each utterance becomes its own result; we want them all. */
       let text = "";
-      const results = [
-        ...(e.results as unknown as ArrayLike<
-          ArrayLike<{
-            transcript: string;
-          }>
-        >),
-      ];
+      const results = [...e.results];
       for (const result of results) {
         text += result?.[0]?.transcript ?? "";
       }
