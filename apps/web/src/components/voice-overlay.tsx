@@ -40,9 +40,10 @@ export const VoiceOverlay = () => {
       try {
         await submit();
         triggerFeedback("logged");
-      } catch {
+      } catch (error: unknown) {
         pendingRef.current = false;
-        showError("Failed to send \u2014 try again");
+        const msg = error instanceof Error ? error.message : String(error);
+        showError(msg || "Failed to send");
       }
     };
     doSubmit();
