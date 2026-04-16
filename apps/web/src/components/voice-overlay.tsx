@@ -40,15 +40,8 @@ function saveThread(id: string) {
 /* ── Component ──────────────────────────────────────────────── */
 
 export const VoiceOverlay = () => {
-  const {
-    phase,
-    transcript,
-    analyser,
-    setPhase,
-    dismiss,
-    errorMessage,
-    showError,
-  } = useVoiceSession();
+  const { phase, transcript, setPhase, dismiss, errorMessage, showError } =
+    useVoiceSession();
   const {
     messages,
     isStreaming,
@@ -217,7 +210,7 @@ export const VoiceOverlay = () => {
         {/* ── Listening: waveform + live transcript ─────────── */}
         {phase === "listening" && (
           <div className="flex items-center gap-3">
-            <AudioWaveform analyser={analyser} className="shrink-0" />
+            <AudioWaveform className="shrink-0" />
             <span className="min-w-0 flex-1 truncate text-sm text-neutral-500">
               {transcript || "Listening\u2026"}
             </span>
