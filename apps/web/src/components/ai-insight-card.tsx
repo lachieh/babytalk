@@ -7,22 +7,9 @@ import { useInsightThread } from "@/lib/use-insight-thread";
 /** Inner component — only mounted when TamboProvider is active */
 const InsightCardInner = () => {
   const { events, baby, loading } = useBabyContext();
-  const { insight, refreshing } = useInsightThread(events);
+  const { insight } = useInsightThread(events);
 
-  if (loading || !baby) return null;
-
-  if (!insight) {
-    if (refreshing) {
-      return (
-        <div className="px-4">
-          <div className="flex items-center justify-center rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3">
-            <div className="h-2 w-2 animate-breathe rounded-full bg-neutral-300" />
-          </div>
-        </div>
-      );
-    }
-    return null;
-  }
+  if (loading || !baby || !insight) return null;
 
   return (
     <div className="px-4">
