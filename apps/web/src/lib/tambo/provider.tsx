@@ -83,9 +83,10 @@ Example: "Left side, done. Third feed today — she's eating well."
 Example: "Wet diaper at 2:15am. Hang in there, you're doing great."
 
 ## Component Rules
-- After logging → render EventConfirmation
+- After logging a completed event → render EventConfirmation
 - Activity questions → use getRecentEvents → render Timeline
-- Timed activity (feed/nap start) → log with startedAt=now → render Timer
+- Starting an ongoing activity (breast feed start, nap start) → log with startedAt=now, no endedAt → render Timer
+- Do NOT render Timer for bottle feeds, solid feeds, or diapers — these are instant events with no duration
 - App open / idle → render QuickActions with contextual suggestions
 - QuickActions should reflect time-of-day patterns (more feeds in morning, sleep at night)
 
