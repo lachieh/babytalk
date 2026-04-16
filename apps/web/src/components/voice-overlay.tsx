@@ -11,44 +11,16 @@ import { AudioWaveform } from "./audio-waveform";
 
 /* ── Constants ──────────────────────────────────────────────── */
 
-/** 5 minutes */
-const THREAD_TIMEOUT = 5 * 60 * 1000;
 const AUTO_DISMISS_MS = 6000;
-const THREAD_KEY = "babytalk_voice_thread";
 /** If no response starts within this window, show an error */
 const PROCESSING_TIMEOUT_MS = 15_000;
-
-/* ── Thread persistence ─────────────────────────────────────── */
-
-function loadThread(): { id: string; lastUsed: number } | null {
-  try {
-    const raw = localStorage.getItem(THREAD_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function saveThread(id: string) {
-  localStorage.setItem(
-    THREAD_KEY,
-    JSON.stringify({ id, lastUsed: Date.now() })
-  );
-}
 
 /* ── Component ──────────────────────────────────────────────── */
 
 export const VoiceOverlay = () => {
   const { phase, transcript, setPhase, dismiss, errorMessage, showError } =
     useVoiceSession();
-  const {
-    messages,
-    isStreaming,
-    startNewThread,
-    switchThread,
-    currentThreadId,
-  } = useTambo();
+  const { messages, isStreaming } = useTambo();
   const { setValue, submit } = useTamboThreadInput();
 
   const pendingRef = useRef(false);
@@ -56,26 +28,12 @@ export const VoiceOverlay = () => {
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  /* ── Thread lifecycle: reuse within 5 min ─────────────────── */
-
-  const ensureThread = useCallback(() => {
-    const saved = loadThread();
-    if (saved && Date.now() - saved.lastUsed < THREAD_TIMEOUT) {
-      if (saved.id !== currentThreadId) switchThread(saved.id);
-      saveThread(saved.id);
-    } else {
-      const newId = startNewThread();
-      saveThread(newId);
-    }
-  }, [startNewThread, switchThread, currentThreadId]);
-
   /* ── Submit transcript when phase becomes "processing" ────── */
 
   useEffect(() => {
     if (phase !== "processing" || !transcript || pendingRef.current) return;
     pendingRef.current = true;
 
-    ensureThread();
     setValue(transcript);
 
     const doSubmit = async () => {
@@ -102,7 +60,7 @@ export const VoiceOverlay = () => {
         processingTimerRef.current = null;
       }
     };
-  }, [phase, transcript, ensureThread, setValue, submit, showError]);
+  }, [phase, transcript, setValue, submit, showError]);
 
   /* ── Detect response completion (streaming → not streaming) ── */
 
