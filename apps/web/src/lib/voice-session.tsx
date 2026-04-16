@@ -222,7 +222,7 @@ export const VoiceSessionProvider = ({
 
     const recognition = new SR();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = "en-US";
     transcriptRef.current = "";
     errorShownRef.current = false;
