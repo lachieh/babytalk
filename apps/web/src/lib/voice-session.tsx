@@ -220,7 +220,12 @@ export const VoiceSessionProvider = ({
   }, [phase, cleanup]);
 
   // Cleanup on unmount
-  useEffect(() => cleanup, [cleanup]);
+  useEffect(
+    () => () => {
+      cleanup();
+    },
+    [cleanup]
+  );
 
   const value = useMemo<VoiceSessionContextValue>(
     () => ({
