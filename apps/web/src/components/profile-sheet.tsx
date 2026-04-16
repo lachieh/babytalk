@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { useTamboStatus } from "@/lib/tambo/provider";
+import { useInstallPrompt } from "@/lib/use-install-prompt";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
 
@@ -61,6 +62,48 @@ const AIFeaturesSection = () => {
             Voice input isn&apos;t supported by this browser. Try Chrome, Edge,
             or Safari for the mic button.
           </p>
+        )}
+      </div>
+    </section>
+  );
+};
+
+const InstallAppSection = () => {
+  const { canInstall, install, isInstalled } = useInstallPrompt();
+
+  // Nothing to show if already installed and browser hasn't offered a prompt
+  if (!canInstall && !isInstalled) return null;
+
+  return (
+    <section>
+      <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+        Install
+      </h3>
+      <div className="rounded-xl bg-neutral-50 px-4 py-3">
+        {isInstalled ? (
+          <div className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-full bg-success-500"
+            />
+            <span className="text-sm font-medium text-neutral-700">
+              App installed
+            </span>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-neutral-600">
+              Add BabyTalk to your home screen for one-tap access — works
+              offline too.
+            </p>
+            <button
+              className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97]"
+              onClick={install}
+              type="button"
+            >
+              Install BabyTalk
+            </button>
+          </>
         )}
       </div>
     </section>
@@ -407,6 +450,9 @@ const ProfileContent = ({
 
       {/* AI Features */}
       <AIFeaturesSection />
+
+      {/* Install */}
+      <InstallAppSection />
 
       {/* Preferences */}
       <section>
