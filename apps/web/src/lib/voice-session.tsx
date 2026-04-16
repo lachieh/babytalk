@@ -230,7 +230,9 @@ export const VoiceSessionProvider = ({
     setPhase("listening");
 
     recognition.addEventListener("result", ((e: SpeechRecognitionEvent) => {
-      transcriptRef.current = e.results[0]?.[0]?.transcript ?? "";
+      const text = e.results[0]?.[0]?.transcript ?? "";
+      transcriptRef.current = text;
+      setTranscript(text);
     }) as EventListener);
 
     recognition.addEventListener("error", ((e: SpeechRecognitionErrorEvent) => {

@@ -214,11 +214,13 @@ export const VoiceOverlay = () => {
         }
         type="button"
       >
-        {/* ── Listening: waveform ─────────────────────────────── */}
+        {/* ── Listening: waveform + live transcript ─────────── */}
         {phase === "listening" && (
           <div className="flex items-center gap-3">
-            <AudioWaveform analyser={analyser} />
-            <span className="text-xs text-neutral-400">Listening…</span>
+            <AudioWaveform analyser={analyser} className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate text-sm text-neutral-500">
+              {transcript || "Listening\u2026"}
+            </span>
           </div>
         )}
 
