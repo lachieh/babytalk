@@ -75,27 +75,19 @@ export const VoiceOverlay = () => {
     if (phase !== "processing" || !transcript || pendingRef.current) return;
     pendingRef.current = true;
 
-    try {
-      ensureThread();
-    } catch {
-      showError("Couldn\u2019t connect to assistant");
-      pendingRef.current = false;
-      return;
-    }
+    ensureThread();
+    setValue(transcript);
 
-    requestAnimationFrame(() => {
-      setValue(transcript);
-      const doSubmit = async () => {
-        try {
-          await submit();
-          triggerFeedback("logged");
-        } catch {
-          pendingRef.current = false;
-          showError("Failed to send \u2014 try again");
-        }
-      };
-      doSubmit();
-    });
+    const doSubmit = async () => {
+      try {
+        await submit();
+        triggerFeedback("logged");
+      } catch {
+        pendingRef.current = false;
+        showError("Failed to send \u2014 try again");
+      }
+    };
+    doSubmit();
 
     processingTimerRef.current = setTimeout(() => {
       if (pendingRef.current) {

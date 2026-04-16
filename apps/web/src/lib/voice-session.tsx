@@ -144,9 +144,7 @@ export const VoiceSessionProvider = ({
     }
 
     const recognition = new SR();
-    /* Continuous + interim so we capture the running transcript and the
-     * SpeechRecognition API doesn't auto-stop after a single utterance. */
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
     recognition.lang = "en-US";
     transcriptRef.current = "";
@@ -155,13 +153,7 @@ export const VoiceSessionProvider = ({
     setPhase("listening");
 
     recognition.addEventListener("result", ((e: SpeechRecognitionEvent) => {
-      /* Concatenate transcripts from every result so far. With continuous=true
-       * each utterance becomes its own result; we want them all. */
-      let text = "";
-      const results = [...e.results];
-      for (const result of results) {
-        text += result?.[0]?.transcript ?? "";
-      }
+      const text = e.results[0]?.[0]?.transcript ?? "";
       transcriptRef.current = text;
       setTranscript(text);
     }) as EventListener);
