@@ -22,7 +22,7 @@ export function formatDuration(
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-/* ── Per-type summary formatters ────────────────────────────── */
+/* ── Per-type detail formatters ─────────────────────────────── */
 
 interface ParsedMeta {
   amountMl?: number;
@@ -43,49 +43,47 @@ const METHOD_LABELS: Record<string, string> = {
   solid: "Solid",
 };
 
-function formatFeed(meta: ParsedMeta, duration: string | null): string {
+function feedDetail(meta: ParsedMeta, duration: string | null): string {
   const parts: string[] = [];
   if (duration) parts.push(duration);
   if (meta.amountMl) parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
   const label = METHOD_LABELS[meta.method ?? ""] ?? "Feed";
   parts.push(label);
-  if (meta.method === "breast" && meta.side) parts.push(`· ${meta.side}`);
+  if (meta.method === "breast" && meta.side) parts.push(`- ${meta.side}`);
   if (meta.method === "solid" && meta.foodDesc)
-    parts.push(`· ${meta.foodDesc}`);
+    parts.push(`- ${meta.foodDesc}`);
   return parts.join(" ");
 }
 
-function formatSleep(meta: ParsedMeta, duration: string | null): string {
+function sleepDetail(meta: ParsedMeta, duration: string | null): string {
   const parts: string[] = [];
   if (duration) parts.push(duration);
-  parts.push("Sleep");
-  if (meta.location) parts.push(`· ${meta.location}`);
-  return parts.join(" ");
+  if (meta.location) parts.push(`- ${meta.location}`);
+  return parts.length > 0 ? parts.join(" ") : "started";
 }
 
-function formatDiaper(meta: ParsedMeta): string {
+function diaperDetail(meta: ParsedMeta): string {
   const parts: string[] = [];
   if (meta.wet && meta.soiled) parts.push("Wet + Soiled");
   else if (meta.soiled) parts.push("Soiled");
   else parts.push("Wet");
-  parts.push("Diaper");
-  if (meta.color) parts.push(`· ${meta.color}`);
+  if (meta.color) parts.push(`- ${meta.color}`);
   return parts.join(" ");
 }
 
-function formatPump(meta: ParsedMeta, duration: string | null): string {
+function pumpDetail(meta: ParsedMeta, duration: string | null): string {
   const parts: string[] = [];
   if (duration) parts.push(duration);
   if (meta.amountMl) parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
-  parts.push("Pump");
-  if (meta.side) parts.push(`· ${meta.side}`);
+  if (meta.side) parts.push(`- ${meta.side}`);
   return parts.join(" ");
 }
 
 /* ── Summary (first line) ───────────────────────────────────── */
 
 /**
- * One-line summary: "2oz Formula", "3h 5m Sleep · Bassinet", "Wet Diaper", etc.
+ * "Type • detail" format for scanning consistency:
+ * "Feed • 2oz Formula", "Sleep • 45m - bassinet", "Diaper • Wet"
  */
 export function formatEventSummary(event: BabyEvent): string {
   const duration = formatDuration(event.startedAt, event.endedAt, event.type);
@@ -95,19 +93,20 @@ export function formatEventSummary(event: BabyEvent): string {
 
     switch (event.type) {
       case "feed": {
-        return formatFeed(meta, duration);
+        return `Feed • ${feedDetail(meta, duration)}`;
       }
       case "sleep": {
-        return formatSleep(meta, duration);
+        return `Sleep • ${sleepDetail(meta, duration)}`;
       }
       case "diaper": {
-        return formatDiaper(meta);
+        return `Diaper • ${diaperDetail(meta)}`;
       }
       case "pump": {
-        return formatPump(meta, duration);
+        const detail = pumpDetail(meta, duration);
+        return detail ? `Pump • ${detail}` : "Pump";
       }
       case "note": {
-        return meta.text ? `Note: ${meta.text}` : "Note";
+        return meta.text ? `Note • ${meta.text}` : "Note";
       }
       default: {
         return event.type;
