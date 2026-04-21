@@ -1,7 +1,7 @@
 "use client";
 
 import { useTamboThreadInput } from "@tambo-ai/react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 
 import { EventIcon, getEventStyle } from "@/lib/event-styles";
 import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
@@ -62,11 +62,16 @@ export const EventConfirmation = ({
   type,
 }: EventConfirmationProps) => {
   const { setValue, submit } = useTamboThreadInput();
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const handleDelete = useCallback(() => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
     setValue(`delete the event ${eventId}`);
     submit();
-  }, [setValue, submit, eventId]);
+  }, [confirmDelete, setValue, submit, eventId]);
 
   const handleEdit = useCallback(() => {
     setValue(`edit the event ${eventId}: `);
@@ -104,7 +109,7 @@ export const EventConfirmation = ({
             onClick={handleDelete}
             type="button"
           >
-            Delete
+            {confirmDelete ? "Confirm" : "Delete"}
           </button>
         </div>
       </div>

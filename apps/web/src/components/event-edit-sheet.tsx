@@ -334,6 +334,7 @@ export const EventEditSheet = ({
 }) => {
   const { logEventDirect, updateEventMeta, deleteEvent } = useBabyContext();
   const isNew = event === null;
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const [form, setForm] = useState<EventFormData>(() => {
     if (event) {
@@ -370,6 +371,7 @@ export const EventEditSheet = ({
         meta: { method: "breast", side: "left" },
       });
     }
+    setConfirmDelete(false);
   }, [event, open]);
 
   const [saving, setSaving] = useState(false);
@@ -469,10 +471,14 @@ export const EventEditSheet = ({
 
   const handleDelete = useCallback(async () => {
     if (!event) return;
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
     await deleteEvent(event.id);
     triggerFeedback("logged");
     onClose();
-  }, [event, deleteEvent, onClose]);
+  }, [event, confirmDelete, deleteEvent, onClose]);
 
   const handleBackdrop = useCallback(
     (e: React.MouseEvent) => {
@@ -624,7 +630,7 @@ export const EventEditSheet = ({
                 onClick={handleDelete}
                 type="button"
               >
-                Delete
+                {confirmDelete ? "Tap again to confirm" : "Delete"}
               </button>
             )}
           </div>

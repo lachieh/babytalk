@@ -1019,7 +1019,7 @@ const TabButton = ({
     <button
       className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors ${
         active
-          ? "bg-neutral-800 text-white shadow-sm"
+          ? "bg-primary-500 text-white shadow-sm"
           : "text-neutral-500 hover:text-neutral-700"
       }`}
       onClick={handleClick}
