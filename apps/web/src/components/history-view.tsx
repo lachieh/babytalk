@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
-import { formatVolume, getVolumeUnit } from "@/lib/use-volume-unit";
+import { formatEventNotes, formatEventSummary } from "@/lib/format-event";
 
 import { EventEditSheet } from "./event-edit-sheet";
 import { DayView, WeekView } from "./timeline-charts";
@@ -21,63 +21,6 @@ const formatDate = (iso: string) =>
     month: "short",
     day: "numeric",
   });
-
-const INSTANT_TYPES = new Set(["diaper"]);
-
-const formatDuration = (
-  start: string,
-  end: string | null,
-  type: string
-): string | null => {
-  if (INSTANT_TYPES.has(type)) return null;
-  if (!end) return "in progress";
-  if (start === end) return null;
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  const mins = Math.round(ms / 60_000);
-  if (mins <= 0) return null;
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
-};
-
-const formatMeta = (type: string, raw: string): string => {
-  try {
-    const meta = JSON.parse(raw);
-    switch (type) {
-      case "feed": {
-        const parts = [meta.method];
-        if (meta.amountMl)
-          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
-        if (meta.side) parts.push(meta.side);
-        return parts.join(", ");
-      }
-      case "pump": {
-        const parts = [meta.side];
-        if (meta.amountMl)
-          parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
-        return parts.join(", ");
-      }
-      case "sleep": {
-        return meta.location || "sleep";
-      }
-      case "diaper": {
-        const parts: string[] = [];
-        if (meta.wet) parts.push("wet");
-        if (meta.soiled) parts.push("soiled");
-        return parts.join(" + ") || "diaper";
-      }
-      case "note": {
-        return meta.text || "";
-      }
-      default: {
-        return "";
-      }
-    }
-  } catch {
-    return "";
-  }
-};
 
 function isToday(iso: string): boolean {
   const d = new Date(iso);
@@ -132,8 +75,10 @@ const EventRow = ({
   onEdit: (event: BabyEvent) => void;
 }) => {
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
-  const duration = formatDuration(event.startedAt, event.endedAt, event.type);
-  const meta = formatMeta(event.type, event.metadata);
+  const summary = formatEventSummary(event);
+  const notes = formatEventNotes(event);
+  const inProgress =
+    !event.endedAt && event.type !== "diaper" && event.type !== "note";
 
   return (
     <button
@@ -146,13 +91,16 @@ const EventRow = ({
       </span>
       <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium capitalize text-neutral-700">
-          {event.type}
+        <p className="text-sm font-medium text-neutral-700">
+          {summary}
+          {inProgress && (
+            <span className="ml-1.5 text-xs font-normal text-primary-400">
+              in progress
+            </span>
+          )}
         </p>
-        {(meta || duration) && (
-          <p className="mt-0.5 text-xs text-neutral-400">
-            {[meta, duration].filter(Boolean).join(" · ")}
-          </p>
+        {notes && (
+          <p className="mt-0.5 truncate text-xs text-neutral-400">{notes}</p>
         )}
       </div>
       <svg
