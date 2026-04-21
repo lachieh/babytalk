@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
-import { formatEventNotes, formatEventSummary } from "@/lib/format-event";
+import { formatEventNotes, formatEventParts } from "@/lib/format-event";
 
 import { EventEditSheet } from "./event-edit-sheet";
 import { DayView, WeekView } from "./timeline-charts";
@@ -75,7 +75,7 @@ const EventRow = ({
   onEdit: (event: BabyEvent) => void;
 }) => {
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
-  const summary = formatEventSummary(event);
+  const { label, detail } = formatEventParts(event);
   const notes = formatEventNotes(event);
   const inProgress =
     !event.endedAt && event.type !== "diaper" && event.type !== "note";
@@ -91,8 +91,9 @@ const EventRow = ({
       </span>
       <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-neutral-700">
-          {summary}
+        <p className="text-sm text-neutral-700">
+          <span className="font-medium">{label}</span>
+          {detail && <span className="text-neutral-500"> · {detail}</span>}
           {inProgress && (
             <span className="ml-1.5 text-xs font-normal text-primary-400">
               in progress

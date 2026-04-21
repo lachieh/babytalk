@@ -5,7 +5,7 @@ import { useCallback, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
-import { formatEventNotes, formatEventSummary } from "@/lib/format-event";
+import { formatEventNotes, formatEventParts } from "@/lib/format-event";
 
 import { EventEditSheet } from "./event-edit-sheet";
 
@@ -20,7 +20,7 @@ const TimelineRow = ({
   onEdit: (event: BabyEvent) => void;
 }) => {
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
-  const summary = formatEventSummary(event);
+  const { label, detail } = formatEventParts(event);
   const notes = formatEventNotes(event);
 
   return (
@@ -34,7 +34,10 @@ const TimelineRow = ({
       </span>
       <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-neutral-700">{summary}</p>
+        <p className="text-sm text-neutral-700">
+          <span className="font-medium">{label}</span>
+          {detail && <span className="text-neutral-500"> · {detail}</span>}
+        </p>
         {notes && (
           <p className="mt-0.5 truncate text-xs text-neutral-400">{notes}</p>
         )}

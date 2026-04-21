@@ -82,10 +82,13 @@ function pumpDetail(meta: ParsedMeta, duration: string | null): string {
 /* ── Summary (first line) ───────────────────────────────────── */
 
 /**
- * "Type • detail" format for scanning consistency:
- * "Feed • 2oz Formula", "Sleep • 45m - bassinet", "Diaper • Wet"
+ * Structured version — returns label and detail separately so
+ * components can style them at different weights/colors.
  */
-export function formatEventSummary(event: BabyEvent): string {
+export function formatEventParts(event: BabyEvent): {
+  label: string;
+  detail: string | null;
+} {
   const duration = formatDuration(event.startedAt, event.endedAt, event.type);
 
   try {
@@ -93,28 +96,36 @@ export function formatEventSummary(event: BabyEvent): string {
 
     switch (event.type) {
       case "feed": {
-        return `Feed • ${feedDetail(meta, duration)}`;
+        return { label: "Feed", detail: feedDetail(meta, duration) };
       }
       case "sleep": {
-        return `Sleep • ${sleepDetail(meta, duration)}`;
+        return { label: "Sleep", detail: sleepDetail(meta, duration) };
       }
       case "diaper": {
-        return `Diaper • ${diaperDetail(meta)}`;
+        return { label: "Diaper", detail: diaperDetail(meta) };
       }
       case "pump": {
         const detail = pumpDetail(meta, duration);
-        return detail ? `Pump • ${detail}` : "Pump";
+        return { label: "Pump", detail: detail || null };
       }
       case "note": {
-        return meta.text ? `Note • ${meta.text}` : "Note";
+        return { label: "Note", detail: meta.text || null };
       }
       default: {
-        return event.type;
+        return { label: event.type, detail: null };
       }
     }
   } catch {
-    return event.type;
+    return { label: event.type, detail: null };
   }
+}
+
+/**
+ * "Type • detail" as a plain string for contexts that don't need split styling.
+ */
+export function formatEventSummary(event: BabyEvent): string {
+  const { label, detail } = formatEventParts(event);
+  return detail ? `${label} • ${detail}` : label;
 }
 
 /* ── Notes (second line) ────────────────────────────────────── */
