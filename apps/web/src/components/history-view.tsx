@@ -7,8 +7,9 @@ import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
 import { formatEventNotes, formatEventParts } from "@/lib/format-event";
 
+import { DaysRecap } from "./days-recap";
 import { EventEditSheet } from "./event-edit-sheet";
-import { DayView, WeekView } from "./timeline-charts";
+import { WeekChart } from "./week-chart";
 
 /* ── Helpers ───────────────────────────────────────────────── */
 
@@ -107,11 +108,11 @@ const EventRow = ({
       <svg
         className="h-3.5 w-3.5 shrink-0 text-neutral-300"
         fill="none"
-        viewBox="0 0 24 24"
         stroke="currentColor"
         strokeWidth={2}
+        viewBox="0 0 24 24"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+        <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </button>
   );
@@ -119,7 +120,7 @@ const EventRow = ({
 
 /* ── History View ──────────────────────────────────────────── */
 
-type HistoryTab = "list" | "day" | "week";
+type HistoryTab = "days" | "week" | "list";
 
 const TabButton = ({
   active,
@@ -145,7 +146,7 @@ const TabButton = ({
 
 export const HistoryView = () => {
   const { events, loading } = useBabyContext();
-  const [tab, setTab] = useState<HistoryTab>("list");
+  const [tab, setTab] = useState<HistoryTab>("days");
   const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isNew, setIsNew] = useState(false);
@@ -174,17 +175,21 @@ export const HistoryView = () => {
     setIsNew(false);
   }, []);
 
-  const handleSetDay = useCallback(() => setTab("day"), []);
+  const handleSetDays = useCallback(() => setTab("days"), []);
   const handleSetWeek = useCallback(() => setTab("week"), []);
   const handleSetList = useCallback(() => setTab("list"), []);
 
   if (loading) return null;
 
   return (
-    <div className="py-2">
+    <div className="flex h-full flex-col py-2">
       {/* Sub-tab switcher */}
-      <div className="mx-4 mb-3 flex gap-1 rounded-xl bg-neutral-100 p-1">
-        <TabButton active={tab === "day"} label="Day" onClick={handleSetDay} />
+      <div className="mx-4 mb-3 flex shrink-0 gap-1 rounded-xl bg-neutral-100 p-1">
+        <TabButton
+          active={tab === "days"}
+          label="Days"
+          onClick={handleSetDays}
+        />
         <TabButton
           active={tab === "week"}
           label="Week"
@@ -197,36 +202,40 @@ export const HistoryView = () => {
         />
       </div>
 
-      {/* Day timeline view */}
-      {tab === "day" && (
-        <DayView events={nonPumpEvents} onTapEvent={handleEdit} />
+      {/* Days recap — totals per day */}
+      {tab === "days" && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <DaysRecap events={nonPumpEvents} />
+        </div>
       )}
 
-      {/* Week timeline view */}
+      {/* Weekly calendar chart — fills the section without scrolling */}
       {tab === "week" && (
-        <WeekView events={nonPumpEvents} onTapEvent={handleEdit} />
+        <div className="min-h-0 flex-1 overflow-hidden px-2 pb-2">
+          <WeekChart events={nonPumpEvents} onTapEvent={handleEdit} />
+        </div>
       )}
 
       {/* List view */}
       {tab === "list" && (
-        <div className="px-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4">
           {/* Add button */}
           <button
-            className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
+            className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 border-dashed px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
             onClick={handleAdd}
             type="button"
           >
             <svg
               className="h-4 w-4"
               fill="none"
-              viewBox="0 0 24 24"
               stroke="currentColor"
               strokeWidth={2}
+              viewBox="0 0 24 24"
             >
               <path
+                d="M12 4v16m8-8H4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M12 4v16m8-8H4"
               />
             </svg>
             Add past entry
@@ -239,8 +248,8 @@ export const HistoryView = () => {
             </p>
           ) : (
             [...grouped.entries()].map(([dateKey, dayEvents]) => (
-              <div key={dateKey} className="mb-4">
-                <p className="mb-1 text-xs font-medium uppercase tracking-wider text-neutral-400">
+              <div className="mb-4" key={dateKey}>
+                <p className="mb-1 font-medium text-neutral-400 text-xs uppercase tracking-wider">
                   {dayLabel(dayEvents[0].startedAt)}
                 </p>
                 <div className="space-y-0.5">
