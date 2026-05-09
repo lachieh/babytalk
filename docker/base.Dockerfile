@@ -14,7 +14,7 @@ ENV PATH="/root/.local/share/mise/shims:$PATH"
 WORKDIR /app
 COPY .config/mise.toml package.json ./
 RUN --mount=type=secret,id=GITHUB_TOKEN,required=false \
-    GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true) \
+    export GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true) && \
     mise trust && mise install && mise reshim
 
 # install root dependencies and turbo globally
