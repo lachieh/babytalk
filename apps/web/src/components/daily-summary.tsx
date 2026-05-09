@@ -80,6 +80,17 @@ const Blob = ({
   </div>
 );
 
+const StatTile = ({ column }: { column: SummaryColumn }) => (
+  <div
+    className={`flex flex-1 items-center gap-2 rounded-xl px-3 py-2 ${cardBg[column.type]}`}
+  >
+    <EventIcon type={column.type} />
+    <p className="font-serif text-base font-normal text-neutral-800 tabular-nums">
+      {column.value}
+    </p>
+  </div>
+);
+
 function buildColumns(
   events: BabyEvent[],
   unit: "ml" | "oz",
@@ -118,8 +129,16 @@ export const DailySummary = ({
 }: DailySummaryProps) => {
   const { unit } = useVolumeUnit();
   const columns = buildColumns(events, unit, details);
-  const padY = compact ? "py-3" : "py-5";
-  const valueSize = compact ? "text-xl" : "text-2xl";
+
+  if (compact) {
+    return (
+      <div className={`flex gap-1.5 ${className}`}>
+        {columns.map((column) => (
+          <StatTile column={column} key={column.type} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className={`flex gap-2 ${className}`}>
@@ -127,9 +146,9 @@ export const DailySummary = ({
         <Blob
           column={column}
           key={column.type}
-          padY={padY}
+          padY="py-5"
           shape={blobShapes[i % blobShapes.length]}
-          valueSize={valueSize}
+          valueSize="text-2xl"
         />
       ))}
     </div>

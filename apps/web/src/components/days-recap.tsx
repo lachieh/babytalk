@@ -62,10 +62,10 @@ export const DaysRecap = ({ events }: { events: BabyEvent[] }) => {
   }
 
   return (
-    <div className="space-y-5 pb-4">
+    <div className="space-y-3 pb-4">
       {rows.map(({ date, dayEvents }) => (
         <div key={date.toISOString()}>
-          <p className="mx-4 mb-2 text-[10px] font-medium uppercase tracking-widest text-neutral-500">
+          <p className="mx-4 mb-1.5 text-[10px] font-medium uppercase tracking-widest text-neutral-500">
             {formatDayHeading(date, today)}
           </p>
           <DailySummary compact events={dayEvents} />
