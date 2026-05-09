@@ -133,8 +133,10 @@ const EventLayer = ({
   const handleClick = useCallback(
     (e: React.MouseEvent<SVGGElement>) => {
       if (!onTap) return;
-      const target = (e.target as Element).closest("[data-event-id]");
-      const id = target.dataset.eventId;
+      const target = (e.target as Element).closest<HTMLElement>(
+        "[data-event-id]"
+      );
+      const id = target?.dataset.eventId;
       if (!id) return;
       const block = blocks.find((b) => b.event.id === id);
       if (block) onTap(block.event);
