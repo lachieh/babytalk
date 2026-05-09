@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
+import { DailySummary } from "@/components/daily-summary";
 import { GrowthView } from "@/components/growth-view";
 import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
@@ -14,7 +15,7 @@ import { VoiceButton } from "@/components/voice-button";
 import { VoiceOverlay } from "@/components/voice-overlay";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import { EventIcon } from "@/lib/event-styles";
+import { eventsForDay } from "@/lib/daily-totals";
 import { useTamboReady } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -91,122 +92,26 @@ function lastDiaperDetail(
   };
 }
 
-function totalFedMlToday(todayEvents: BabyEvent[]): number {
-  let total = 0;
-  for (const e of todayEvents) {
-    if (e.type !== "feed") continue;
-    try {
-      const meta = JSON.parse(e.metadata);
-      total += meta.amountMl || 0;
-    } catch {
-      /* ignore */
-    }
-  }
-  return total;
-}
-
-function totalSleepMinutesToday(todayEvents: BabyEvent[]): number {
-  let total = 0;
-  for (const e of todayEvents) {
-    if (e.type !== "sleep" || !e.endedAt) continue;
-    total +=
-      (new Date(e.endedAt).getTime() - new Date(e.startedAt).getTime()) /
-      60_000;
-  }
-  return total;
-}
-
 const SummaryCard = () => {
   const { events } = useBabyContext();
   const { unit } = useVolumeUnit();
 
   const now = Date.now();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEvents = events.filter((e) => new Date(e.startedAt) >= todayStart);
+  const todayEvents = eventsForDay(events, new Date(now));
 
-  const totalSleepMins = Math.floor(totalSleepMinutesToday(todayEvents));
-  const sleepH = Math.floor(totalSleepMins / 60);
-  const sleepM = totalSleepMins % 60;
-  const sleepDisplay = sleepM > 0 ? `${sleepH}h ${sleepM}m` : `${sleepH}h`;
   const lastSleep = events.find((e) => e.type === "sleep");
-  const sleepDetail = lastSleep ? lastSleepDetail(lastSleep, now) : null;
-
-  const fedDisplay = formatVolume(totalFedMlToday(todayEvents), unit);
   const lastFeed = events.find((e) => e.type === "feed");
-  const feedDetail = lastFeed ? lastFeedDetail(lastFeed, now, unit) : null;
-
-  const diaperCount = todayEvents.filter((e) => e.type === "diaper").length;
   const lastDiaper = events.find((e) => e.type === "diaper");
-  const diaperDetail = lastDiaper ? lastDiaperDetail(lastDiaper, now) : null;
-
-  const cardBg: Record<string, string> = {
-    sleep: "bg-sleep-100",
-    feed: "bg-feed-100",
-    diaper: "bg-diaper-100",
-  };
-
-  /* Each blob gets a unique organic border-radius (h1 h2 h3 h4 / v1 v2 v3 v4) */
-  const blobShapes = [
-    "60% 40% 45% 55% / 55% 60% 40% 45%",
-    "50% 50% 45% 55% / 45% 55% 50% 50%",
-    "45% 55% 60% 40% / 50% 45% 55% 50%",
-  ];
-
-  const columns: {
-    type: string;
-    label: string;
-    value: string;
-    detail: string | null;
-    ago: string | null;
-  }[] = [
-    {
-      type: "feed",
-      label: "Fed",
-      value: fedDisplay,
-      detail: feedDetail?.detail ?? null,
-      ago: feedDetail?.ago ?? null,
-    },
-    {
-      type: "sleep",
-      label: "Sleep",
-      value: sleepDisplay,
-      detail: sleepDetail?.detail ?? null,
-      ago: sleepDetail?.ago ?? null,
-    },
-    {
-      type: "diaper",
-      label: "Diapers",
-      value: String(diaperCount),
-      detail: diaperDetail?.detail ?? null,
-      ago: diaperDetail?.ago ?? null,
-    },
-  ];
 
   return (
-    <div className="flex gap-2 px-4">
-      {columns.map((col, i) => (
-        <div
-          key={col.type}
-          className={`flex flex-1 flex-col items-center border-0 px-3 py-5 text-center ${cardBg[col.type]}`}
-          style={{ borderRadius: blobShapes[i % blobShapes.length] }}
-        >
-          <EventIcon type={col.type} />
-          <p className="mt-1 font-serif text-2xl font-normal text-neutral-800">
-            {col.value}
-          </p>
-          <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
-            {col.label}
-          </p>
-          {col.detail && (
-            <p className="mt-1 text-[10px] text-neutral-400">{col.detail}</p>
-          )}
-          {col.ago && (
-            <p className="mt-0.5 text-[10px] text-neutral-400">{col.ago}</p>
-          )}
-        </div>
-      ))}
-    </div>
+    <DailySummary
+      details={{
+        feed: lastFeed ? lastFeedDetail(lastFeed, now, unit) : null,
+        sleep: lastSleep ? lastSleepDetail(lastSleep, now) : null,
+        diaper: lastDiaper ? lastDiaperDetail(lastDiaper, now) : null,
+      }}
+      events={todayEvents}
+    />
   );
 };
 
