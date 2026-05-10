@@ -6,10 +6,16 @@ import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
+import { signalPumpIntent, subscribePumpHint } from "@/lib/pump-hint-bus";
+import type { PumpHint } from "@/lib/pump-hint-bus";
+import { useTamboReady } from "@/lib/tambo/provider";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { AmountInput } from "./amount-input";
 import { EventEditSheet } from "./event-edit-sheet";
+import { PumpAiBridge } from "./pump-ai-bridge";
+import { PumpHintCard } from "./pump-hint-card";
+import { PumpStartSegments } from "./pump-start-segments";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -142,54 +148,6 @@ const ContextCard = ({
   );
 };
 
-/* ── Side Pills ───────────────────────────────────────────── */
-
-const SIDES = ["left", "right", "both"] as const;
-
-const SidePill = ({
-  side,
-  active,
-  onSelect,
-}: {
-  side: string;
-  active: boolean;
-  onSelect: (side: string) => void;
-}) => {
-  const handleClick = useCallback(() => onSelect(side), [onSelect, side]);
-  return (
-    <button
-      className={`min-h-[44px] flex-1 rounded-lg border text-sm font-medium capitalize transition-colors ${
-        active
-          ? "border-pump-500 bg-pump-100 text-pump-600"
-          : "border-neutral-200 text-neutral-400"
-      }`}
-      onClick={handleClick}
-      type="button"
-    >
-      {side}
-    </button>
-  );
-};
-
-const SidePills = ({
-  selected,
-  onSelect,
-}: {
-  selected: string;
-  onSelect: (side: string) => void;
-}) => (
-  <div className="flex gap-2">
-    {SIDES.map((side) => (
-      <SidePill
-        active={selected === side}
-        key={side}
-        onSelect={onSelect}
-        side={side}
-      />
-    ))}
-  </div>
-);
-
 /* ── Active Timer ─────────────────────────────────────────── */
 
 const PumpTimer = ({
@@ -316,6 +274,7 @@ const SessionRow = ({
 
 export const PumpView = () => {
   const {
+    baby,
     events,
     activeEvents,
     logEventDirect,
@@ -325,17 +284,22 @@ export const PumpView = () => {
     loading,
   } = useBabyContext();
   const { unit } = useVolumeUnit();
+  const tamboReady = useTamboReady();
 
   const suggested = useMemo(() => suggestNextSide(events), [events]);
-  const [selectedSide, setSelectedSide] = useState(suggested);
-
-  // Sync the selected side when the suggestion changes (e.g. after logging)
-  useEffect(() => {
-    setSelectedSide(suggested);
-  }, [suggested]);
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
   );
+
+  // Subscribe to the pump-hint bus so the card updates when the agent calls
+  // updatePumpHint. The PumpAiBridge owns the thread + hydration.
+  const [pumpHint, setPumpHint] = useState<PumpHint | null>(null);
+  useEffect(() => subscribePumpHint(setPumpHint), []);
+
+  // Signal page-open on mount so the bridge can refresh a stale hint.
+  useEffect(() => {
+    signalPumpIntent({ kind: "page-open" });
+  }, []);
 
   const activePump = activeEvents.find((e) => e.type === "pump") ?? null;
 
@@ -383,10 +347,14 @@ export const PumpView = () => {
     return total;
   }, [todaySessions]);
 
-  const handleStart = useCallback(() => {
-    triggerFeedback("logged");
-    logEventDirect("pump", { side: selectedSide });
-  }, [selectedSide, logEventDirect]);
+  const handleStart = useCallback(
+    (side: "left" | "right" | "both") => {
+      triggerFeedback("logged");
+      logEventDirect("pump", { side });
+      signalPumpIntent({ kind: "pump-start", side });
+    },
+    [logEventDirect]
+  );
 
   const handleStop = useCallback(
     (id: string) => {
@@ -437,13 +405,16 @@ export const PumpView = () => {
       <ContextCard events={events} suggestedSide={suggested} />
 
       {/* Action zone */}
-      <div className="mt-4 px-4">
+      <div className="mt-4 flex flex-col gap-3 px-4">
         {activePump && (
-          <PumpTimer
-            event={activePump}
-            onStop={handleStop}
-            onCancel={handleCancel}
-          />
+          <>
+            <PumpTimer
+              event={activePump}
+              onStop={handleStop}
+              onCancel={handleCancel}
+            />
+            <PumpHintCard hint={pumpHint} />
+          </>
         )}
 
         {pumpStoppedEventId && (
@@ -460,18 +431,17 @@ export const PumpView = () => {
         )}
 
         {showActions && (
-          <div className="flex flex-col gap-3">
-            <SidePills selected={selectedSide} onSelect={setSelectedSide} />
-            <button
-              className="min-h-[56px] w-full rounded-xl bg-pump-500 px-6 py-4 text-base font-semibold text-white transition-[background-color,transform] hover:bg-pump-600 active:scale-[0.98]"
-              onClick={handleStart}
-              type="button"
-            >
-              Start Pumping
-            </button>
-          </div>
+          <>
+            <PumpStartSegments
+              highlightSide={pumpHint?.suggestedSide ?? null}
+              onStart={handleStart}
+            />
+            <PumpHintCard hint={pumpHint} />
+          </>
         )}
       </div>
+
+      {tamboReady && <PumpAiBridge babyId={baby?.id ?? null} events={events} />}
 
       {/* Today's sessions */}
       <div className="mt-6">
