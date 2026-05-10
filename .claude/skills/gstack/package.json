@@ -44,7 +44,7 @@
     "analytics": "bun run scripts/analytics.ts"
   },
   "dependencies": {
-    "diff": "^7.0.0",
+    "diff": "^8.0.4",
     "playwright": "^1.58.2"
   },
   "devDependencies": {

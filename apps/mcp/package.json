@@ -15,13 +15,13 @@
   "dependencies": {
     "@babytalk/standard-config": "workspace:*",
     "@babytalk/vite-config": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
     "@babytalk/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
     "typescript": "^5",
-    "vite": "^8.0.1"
+    "vite": "^8.0.10"
   }
 }
