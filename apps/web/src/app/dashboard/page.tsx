@@ -1,27 +1,21 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
+import { AppShell } from "@/components/app-shell";
 import { DailySummary } from "@/components/daily-summary";
 import { GrowthView } from "@/components/growth-view";
-import { HistoryView } from "@/components/history-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
-import { ProfileSheet } from "@/components/profile-sheet";
 import { PumpView } from "@/components/pump-view";
 import { SuggestionZone } from "@/components/suggestion-zone";
-import { UndoToast } from "@/components/undo-toast";
-import { VoiceButton } from "@/components/voice-button";
-import { VoiceOverlay } from "@/components/voice-overlay";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { eventsForDay } from "@/lib/daily-totals";
-import { useTamboReady } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
-import { VoiceSessionProvider } from "@/lib/voice-session";
 
-/* ── Summary Card (replaces urgency status widget) ───────── */
+/* ── Summary Card ─────────────────────────────────────────── */
 
 const formatAgo = (minutes: number): string => {
   if (minutes < 1) return "just now";
@@ -69,7 +63,7 @@ function lastFeedDetail(
     /* ignore */
   }
   return {
-    detail: parts.length > 0 ? parts.join(" \u00B7 ") : null,
+    detail: parts.length > 0 ? parts.join(" · ") : null,
     ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
   };
 }
@@ -115,235 +109,48 @@ const SummaryCard = () => {
   );
 };
 
-/* ── Bottom Navigation ───────────────────────────────────── */
-
-type TabId = "home" | "pump" | "history" | "growth";
-
-const BottomNav = ({
-  tab,
-  onSwitch,
-  tamboEnabled,
-}: {
-  tab: string;
-  onSwitch: (tab: TabId) => void;
-  tamboEnabled: boolean;
-}) => {
-  const handleHome = useCallback(() => onSwitch("home"), [onSwitch]);
-  const handleHistory = useCallback(() => onSwitch("history"), [onSwitch]);
-  const handleGrowth = useCallback(() => onSwitch("growth"), [onSwitch]);
-  const handlePump = useCallback(() => onSwitch("pump"), [onSwitch]);
-
-  const activeClass = "text-neutral-800";
-  const inactiveClass = "text-neutral-400";
-
-  return (
-    <nav className="relative flex border-t border-neutral-200 bg-surface-raised safe-bottom">
-      <button
-        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "home" ? activeClass : inactiveClass}`}
-        onClick={handleHome}
-        type="button"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.25 12l8.954-8.955a1.126 1.126 0 011.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"
-          />
-        </svg>
-        Home
-      </button>
-      <button
-        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "history" ? activeClass : inactiveClass}`}
-        onClick={handleHistory}
-        type="button"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-          />
-        </svg>
-        History
-      </button>
-
-      {/* Center voice button — raised above nav bar */}
-      {tamboEnabled && (
-        <div className="flex flex-1 items-center justify-center">
-          <div className="-mt-5">
-            <VoiceButton />
-          </div>
-        </div>
-      )}
-
-      <button
-        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "growth" ? activeClass : inactiveClass}`}
-        onClick={handleGrowth}
-        type="button"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"
-          />
-        </svg>
-        Growth
-      </button>
-      <button
-        className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[10px] font-medium uppercase tracking-wider transition-colors ${tab === "pump" ? activeClass : inactiveClass}`}
-        onClick={handlePump}
-        type="button"
-      >
-        <svg
-          className="h-5 w-5"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={1.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M20.42 4.58a5.4 5.4 0 00-7.65 0L12 5.36l-.77-.78a5.4 5.4 0 00-7.65 7.65l1.06 1.06L12 20.64l7.36-7.36 1.06-1.06a5.4 5.4 0 000-7.64z"
-          />
-        </svg>
-        Pump
-      </button>
-    </nav>
-  );
-};
-
 /* ── Main Dashboard ──────────────────────────────────────── */
 
 export default function DashboardPage() {
   useAutoDarkMode();
-  const { baby } = useBabyContext();
-  const [tab, setTab] = useState<TabId>("home");
-  const [profileOpen, setProfileOpen] = useState(false);
-  const tamboEnabled = useTamboReady();
-  const openProfile = useCallback(() => setProfileOpen(true), []);
-  const closeProfile = useCallback(() => setProfileOpen(false), []);
-
-  const handleTabSwitch = useCallback((newTab: TabId) => setTab(newTab), []);
-
-  const today = new Date().toLocaleDateString([], {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  const searchParams = useSearchParams();
+  const tab = searchParams?.get("tab") ?? "home";
 
   return (
-    <VoiceSessionProvider>
-      <div className="flex h-screen flex-col bg-surface">
-        {/* Header — baby name + date + settings gear */}
-        <header className="relative px-4 pt-6 pb-4 text-center">
-          <h1 className="font-serif text-2xl text-neutral-800">
-            {baby?.name ?? "Little One"}
-          </h1>
-          <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.2em] text-neutral-400">
-            {today}
-          </p>
-          <button
-            className="absolute right-4 top-6 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-            onClick={openProfile}
-            type="button"
-            aria-label="Settings"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={1.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
-              />
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-              />
-            </svg>
-          </button>
-        </header>
+    <AppShell>
+      <div className="flex-1 overflow-y-auto">
+        {tab === "home" && (
+          <>
+            <SummaryCard />
 
-        {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto">
-          {tab === "home" && (
-            <>
-              {/* Summary card */}
-              <SummaryCard />
+            <div className="mt-4">
+              <AIInsightCard />
+            </div>
 
-              <div className="mt-4">
-                <AIInsightCard />
-              </div>
+            <div className="mt-8 px-4">
+              <h2 className="text-center font-serif text-lg text-neutral-600 italic">
+                Log Activity
+              </h2>
+            </div>
 
-              {/* Log Activity */}
-              <div className="mt-8 px-4">
-                <h2 className="text-center font-serif text-lg italic text-neutral-600">
-                  Log Activity
-                </h2>
-              </div>
+            <div className="mt-4">
+              <SuggestionZone />
+            </div>
 
-              <div className="mt-4">
-                <SuggestionZone />
-              </div>
+            <div className="mt-6 px-4">
+              <h2 className="text-center font-serif text-lg text-neutral-600 italic">
+                Recent Logs
+              </h2>
+            </div>
 
-              {/* Recent Logs */}
-              <div className="mt-6 px-4">
-                <h2 className="text-center font-serif text-lg italic text-neutral-600">
-                  Recent Logs
-                </h2>
-              </div>
-
-              <div className="mt-3">
-                <PersistentTimeline />
-              </div>
-            </>
-          )}
-          {tab === "pump" && <PumpView />}
-          {tab === "history" && <HistoryView />}
-          {tab === "growth" && <GrowthView />}
-        </div>
-
-        {/* Voice overlay — compact card above nav */}
-        {tamboEnabled && <VoiceOverlay />}
-
-        {/* Bottom navigation */}
-        <BottomNav
-          tab={tab}
-          onSwitch={handleTabSwitch}
-          tamboEnabled={tamboEnabled}
-        />
-
-        {/* Undo toast — floating */}
-        <UndoToast />
-
-        {/* Profile sheet — bottom slide-up (opened via Settings tab) */}
-        <ProfileSheet open={profileOpen} onClose={closeProfile} />
+            <div className="mt-3">
+              <PersistentTimeline />
+            </div>
+          </>
+        )}
+        {tab === "pump" && <PumpView />}
+        {tab === "growth" && <GrowthView />}
       </div>
-    </VoiceSessionProvider>
+    </AppShell>
   );
 }
