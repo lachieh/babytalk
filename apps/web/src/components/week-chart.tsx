@@ -45,7 +45,7 @@ const COLORS: Record<string, { fill: string; stroke: string; dot: string }> = {
 
 const INSTANT_TYPES = new Set(["diaper"]);
 
-function getWeekStart(reference: Date): Date {
+export function getWeekStart(reference: Date): Date {
   const d = new Date(reference);
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() - d.getDay());
@@ -242,11 +242,17 @@ const NowMarker = ({
 export const WeekChart = ({
   events,
   onTapEvent,
+  weekStart: weekStartProp,
 }: {
   events: BabyEvent[];
   onTapEvent?: (e: BabyEvent) => void;
+  weekStart?: Date;
 }) => {
-  const weekStart = useMemo(() => getWeekStart(new Date()), []);
+  const weekStart = useMemo(
+    () =>
+      weekStartProp ? getWeekStart(weekStartProp) : getWeekStart(new Date()),
+    [weekStartProp]
+  );
   const blocks = useMemo(
     () => buildBlocks(events, weekStart),
     [events, weekStart]
