@@ -7,5 +7,6 @@ import "./household-queries.js";
 import "./household-mutations.js";
 import "./measurement-types.js";
 import "./measurement-mutations.js";
+import "./agent-thread.js";
 
 export const schema = builder.toSchema();
