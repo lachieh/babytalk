@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Curl">
+  <title>BabyTalk — Curl</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbf5e4"/>
+      <stop offset="100%" stop-color="#ede4cb"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Spiral: alternating left/right semicircles of growing radius (fiddlehead) -->
+  <path d="
+    M 256 256
+    A 20 20 0 0 1 256 296
+    A 40 40 0 0 1 256 216
+    A 60 60 0 0 1 256 336
+    A 80 80 0 0 1 256 176
+    A 100 100 0 0 1 256 376"
+    stroke="#7e8b54" stroke-width="22" stroke-linecap="round" fill="none"/>
+
+  <!-- A small dot at the spiral's center (new beginning) -->
+  <circle cx="256" cy="256" r="9" fill="#b88532"/>
+</svg>
