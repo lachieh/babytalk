@@ -1,13 +1,9 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
-
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { AppShell } from "@/components/app-shell";
 import { DailySummary } from "@/components/daily-summary";
-import { GrowthView } from "@/components/growth-view";
 import { PersistentTimeline } from "@/components/persistent-timeline";
-import { PumpView } from "@/components/pump-view";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
@@ -113,43 +109,35 @@ const SummaryCard = () => {
 
 export default function DashboardPage() {
   useAutoDarkMode();
-  const searchParams = useSearchParams();
-  const tab = searchParams?.get("tab") ?? "home";
 
   return (
     <AppShell>
       <div className="flex-1 overflow-y-auto">
-        {tab === "home" && (
-          <>
-            <SummaryCard />
+        <SummaryCard />
 
-            <div className="mt-4">
-              <AIInsightCard />
-            </div>
+        <div className="mt-4">
+          <AIInsightCard />
+        </div>
 
-            <div className="mt-8 px-4">
-              <h2 className="text-center font-serif text-lg text-neutral-600 italic">
-                Log Activity
-              </h2>
-            </div>
+        <div className="mt-8 px-4">
+          <h2 className="text-center font-serif text-lg text-neutral-600 italic">
+            Log Activity
+          </h2>
+        </div>
 
-            <div className="mt-4">
-              <SuggestionZone />
-            </div>
+        <div className="mt-4">
+          <SuggestionZone />
+        </div>
 
-            <div className="mt-6 px-4">
-              <h2 className="text-center font-serif text-lg text-neutral-600 italic">
-                Recent Logs
-              </h2>
-            </div>
+        <div className="mt-6 px-4">
+          <h2 className="text-center font-serif text-lg text-neutral-600 italic">
+            Recent Logs
+          </h2>
+        </div>
 
-            <div className="mt-3">
-              <PersistentTimeline />
-            </div>
-          </>
-        )}
-        {tab === "pump" && <PumpView />}
-        {tab === "growth" && <GrowthView />}
+        <div className="mt-3">
+          <PersistentTimeline />
+        </div>
       </div>
     </AppShell>
   );

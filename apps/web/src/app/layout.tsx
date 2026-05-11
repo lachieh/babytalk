@@ -1,12 +1,14 @@
 import type { Metadata, Viewport } from "next";
 
+import { ThemeColorSync } from "@/components/theme-color-sync";
+
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "./sw-registrar";
 
 export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "BabyTalk",
   },
   applicationName: "BabyTalk",
@@ -27,7 +29,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#ede8df",
+  themeColor: [
+    { color: "#ede8df", media: "(prefers-color-scheme: light)" },
+    { color: "#262420", media: "(prefers-color-scheme: dark)" },
+  ],
   userScalable: false,
   viewportFit: "cover",
   width: "device-width",
@@ -53,6 +58,7 @@ export default function RootLayout({
         />
       </head>
       <body className="overscroll-none">
+        <ThemeColorSync />
         {children}
         <ServiceWorkerRegistrar />
       </body>

@@ -295,5 +295,22 @@ export function usePumpThread(babyId: string | null, events: BabyEvent[]) {
     [babyId, events, sendContext]
   );
 
-  return { hint, notifyPumpStart, refreshIfStale, refreshing } as const;
+  const forceRefresh = useCallback(async () => {
+    if (!babyId) return;
+    lastRefreshRef.current = Date.now();
+    setRefreshing(true);
+    const summary = buildPumpSummary(events);
+    await sendContext(
+      `Refresh requested by user (babyId: ${babyId}). ${summary} Always call updatePumpHint with a fresh hint based on current context, even if similar to the previous one.`
+    );
+    setRefreshing(false);
+  }, [babyId, events, sendContext]);
+
+  return {
+    forceRefresh,
+    hint,
+    notifyPumpStart,
+    refreshIfStale,
+    refreshing,
+  } as const;
 }

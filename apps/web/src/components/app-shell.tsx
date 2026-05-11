@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 import { ProfileSheet } from "@/components/profile-sheet";
@@ -14,15 +14,14 @@ import { VoiceSessionProvider } from "@/lib/voice-session";
 export type AppTab = "home" | "pump" | "history" | "growth";
 
 const HOME_HREF = "/dashboard";
-const PUMP_HREF = "/dashboard?tab=pump";
-const GROWTH_HREF = "/dashboard?tab=growth";
+const PUMP_HREF = "/dashboard/pump";
+const GROWTH_HREF = "/dashboard/growth";
 const HISTORY_HREF = "/history/days";
 
-function activeTabFor(pathname: string, search: URLSearchParams): AppTab {
+function activeTabFor(pathname: string): AppTab {
   if (pathname.startsWith("/history")) return "history";
-  const tab = search.get("tab");
-  if (tab === "pump") return "pump";
-  if (tab === "growth") return "growth";
+  if (pathname.startsWith("/dashboard/pump")) return "pump";
+  if (pathname.startsWith("/dashboard/growth")) return "growth";
   return "home";
 }
 
@@ -140,16 +139,12 @@ const BottomNav = ({
 export const AppShell = ({ children }: { children: React.ReactNode }) => {
   const { baby } = useBabyContext();
   const pathname = usePathname() ?? "";
-  const searchParams = useSearchParams();
   const tamboEnabled = useTamboReady();
   const [profileOpen, setProfileOpen] = useState(false);
   const openProfile = useCallback(() => setProfileOpen(true), []);
   const closeProfile = useCallback(() => setProfileOpen(false), []);
 
-  const active = activeTabFor(
-    pathname,
-    new URLSearchParams(searchParams?.toString() ?? "")
-  );
+  const active = activeTabFor(pathname);
 
   const today = new Date().toLocaleDateString([], {
     weekday: "long",
@@ -159,7 +154,7 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <VoiceSessionProvider>
-      <div className="flex h-screen flex-col bg-surface">
+      <div className="flex h-screen flex-col bg-surface pt-[env(safe-area-inset-top)]">
         <header className="relative px-4 pt-6 pb-4 text-center">
           <h1 className="font-serif text-2xl text-neutral-800">
             {baby?.name ?? "Little One"}
