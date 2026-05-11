@@ -42,7 +42,7 @@ const BottomNav = ({
   const inactiveClass = "text-neutral-400";
 
   return (
-    <nav className="relative flex border-neutral-200 border-t bg-surface-raised safe-bottom">
+    <nav className="relative flex shrink-0 border-neutral-200 border-t bg-surface-raised safe-bottom">
       <button
         className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 font-medium text-[10px] uppercase tracking-wider transition-colors ${active === "home" ? activeClass : inactiveClass}`}
         onClick={goHome}
@@ -154,8 +154,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <VoiceSessionProvider>
-      <div className="flex h-screen flex-col bg-surface pt-[env(safe-area-inset-top)]">
-        <header className="relative px-4 pt-6 pb-4 text-center">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface pt-[env(safe-area-inset-top)]">
+        <header className="relative shrink-0 px-4 pt-6 pb-4 text-center">
           <h1 className="font-serif text-2xl text-neutral-800">
             {baby?.name ?? "Little One"}
           </h1>

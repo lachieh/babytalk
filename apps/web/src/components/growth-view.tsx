@@ -1,17 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useBabyContext } from "@/lib/baby-context";
 import { triggerFeedback } from "@/lib/haptics";
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import {
+  estimatePercentile,
+  formatPercentile,
   getPercentileData,
   interpolatePercentile,
-  PERCENTILE_LABELS,
 } from "@/lib/who-growth-data";
-import type { PercentileKey } from "@/lib/who-growth-data";
+import type { GrowthMetric, PercentileKey } from "@/lib/who-growth-data";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -112,7 +113,39 @@ function formatDate(iso: string): string {
   });
 }
 
-/* ── SVG Weight Chart with WHO Percentiles ─────────────────── */
+/* ── Metric configuration ──────────────────────────────────── */
+
+interface MetricConfig {
+  key: GrowthMetric;
+  label: string;
+  accessor: (m: Measurement) => number | null;
+  color: string;
+  format: (value: number, imperial: boolean) => string;
+}
+
+const METRICS: MetricConfig[] = [
+  {
+    accessor: (m) => m.weightG,
+    color: "var(--color-feed-500)",
+    format: formatWeight,
+    key: "weight",
+    label: "Weight",
+  },
+  {
+    accessor: (m) => m.lengthMm,
+    color: "var(--color-sleep-500)",
+    format: formatLength,
+    key: "length",
+    label: "Height",
+  },
+  {
+    accessor: (m) => m.headMm,
+    color: "var(--color-pump-500)",
+    format: formatLength,
+    key: "head",
+    label: "Head",
+  },
+];
 
 const PERCENTILE_KEYS: PercentileKey[] = ["p3", "p15", "p50", "p85", "p97"];
 const PERCENTILE_COLORS: Record<PercentileKey, string> = {
@@ -123,425 +156,277 @@ const PERCENTILE_COLORS: Record<PercentileKey, string> = {
   p97: "oklch(80% 0.02 60)",
 };
 
-const WeightChart = ({
-  measurements,
-  birthDate,
+interface MetricSeries {
+  config: MetricConfig;
+  points: { ageDays: number; value: number; id: string }[];
+}
+
+function buildSeries(
+  measurements: Measurement[],
+  birthDate: string
+): MetricSeries[] {
+  const birthTime = new Date(birthDate).getTime();
+  const ordered = [...measurements].toReversed();
+
+  return METRICS.map((config) => {
+    const points = ordered
+      .map((m) => {
+        const value = config.accessor(m);
+        if (value === null) return null;
+        return {
+          ageDays: Math.max(
+            0,
+            (new Date(m.measuredAt).getTime() - birthTime) / 86_400_000
+          ),
+          id: m.id,
+          value,
+        };
+      })
+      .filter(
+        (p): p is { ageDays: number; value: number; id: string } => p !== null
+      );
+    return { config, points };
+  });
+}
+
+/* ── Multi-metric Chart ────────────────────────────────────── */
+
+const MultiMetricChart = ({
+  series,
+  active,
   gender,
 }: {
-  measurements: Measurement[];
-  birthDate: string;
+  series: MetricSeries[];
+  active: Set<GrowthMetric>;
   gender: string | null;
 }) => {
-  const filtered = measurements.filter((m: Measurement) => m.weightG !== null);
-  const withWeight = [...filtered].toReversed();
+  const visible = series.filter(
+    (s) => active.has(s.config.key) && s.points.length > 0
+  );
 
-  if (withWeight.length < 1) {
+  if (visible.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl bg-neutral-50 text-sm text-neutral-400">
-        Add a weight to see the chart
+      <div className="flex h-40 items-center justify-center rounded-2xl bg-neutral-50 text-sm text-neutral-400">
+        {series.some((s) => s.points.length > 0)
+          ? "Toggle a metric above to see its trend"
+          : "Add a measurement to see the chart"}
       </div>
     );
   }
 
-  const birthTime = new Date(birthDate).getTime();
-  const percentileData = getPercentileData(gender);
-
-  // Calculate age in days for each measurement
-  const dataPoints = withWeight.map((m) => ({
-    ageDays: Math.max(
-      0,
-      (new Date(m.measuredAt).getTime() - birthTime) / 86_400_000
-    ),
-    weightG: m.weightG as number,
-    id: m.id,
-  }));
-
-  // Determine chart range — use percentile range if available, otherwise data range
-  const allWeights = dataPoints.map((d) => d.weightG);
-  const minAge = Math.min(...dataPoints.map((d) => d.ageDays));
-  const maxAge = Math.max(...dataPoints.map((d) => d.ageDays), 30);
-  const ageRange = maxAge - minAge || 30;
-
-  let minW = Math.min(...allWeights);
-  let maxW = Math.max(...allWeights);
-
-  // Extend range to fit percentile curves if visible
-  if (percentileData) {
-    const p3AtMinAge = interpolatePercentile(percentileData, minAge, "p3");
-    const p97AtMaxAge = interpolatePercentile(percentileData, maxAge, "p97");
-    minW = Math.min(minW, p3AtMinAge);
-    maxW = Math.max(maxW, p97AtMaxAge);
-  }
-
-  const weightPadding = (maxW - minW) * 0.1;
-  minW -= weightPadding;
-  maxW += weightPadding;
-  const rangeW = maxW - minW || 1;
-
   const padding = 16;
   const width = 320;
-  const height = 160;
+  const height = 180;
   const chartW = width - padding * 2;
   const chartH = height - padding * 2;
 
+  // Shared X scale (age in days) across all visible series.
+  const allAges = visible.flatMap((s) => s.points.map((p) => p.ageDays));
+  const minAge = Math.min(...allAges);
+  const maxAge = Math.max(...allAges, minAge + 30);
+  const ageRange = maxAge - minAge || 30;
   const toX = (ageDays: number) =>
     padding + ((ageDays - minAge) / ageRange) * chartW;
-  const toY = (weightG: number) =>
-    padding + chartH - ((weightG - minW) / rangeW) * chartH;
 
-  // Build percentile curve paths
-  const percentilePaths: { key: PercentileKey; d: string }[] = [];
-  if (percentileData) {
-    const steps = 20;
-    for (const key of PERCENTILE_KEYS) {
-      const pathPoints: string[] = [];
-      for (let i = 0; i <= steps; i += 1) {
-        const age = minAge + (i / steps) * ageRange;
-        const w = interpolatePercentile(percentileData, age, key);
-        const x = toX(age);
-        const y = toY(w);
-        pathPoints.push(`${i === 0 ? "M" : "L"}${x},${y}`);
-      }
-      percentilePaths.push({ key, d: pathPoints.join(" ") });
+  // When only one metric is visible, show WHO percentile bands.
+  const showCurves = visible.length === 1;
+  const soloMetric = showCurves ? visible[0] : null;
+  const percentileData = soloMetric
+    ? getPercentileData(soloMetric.config.key, gender)
+    : null;
+
+  // Per-series normalization. When a percentile band is drawn the band
+  // extends the value range so the data line stays inside the bands.
+  const seriesScales = visible.map((s) => {
+    const values = s.points.map((p) => p.value);
+    let minV = Math.min(...values);
+    let maxV = Math.max(...values);
+
+    if (s === soloMetric && percentileData) {
+      const p3Min = interpolatePercentile(percentileData, minAge, "p3");
+      const p97Max = interpolatePercentile(percentileData, maxAge, "p97");
+      minV = Math.min(minV, p3Min);
+      maxV = Math.max(maxV, p97Max);
     }
-  }
 
-  // Build data polyline
-  const points = dataPoints.map((d) => ({
-    x: toX(d.ageDays),
-    y: toY(d.weightG),
-    id: d.id,
-  }));
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+    const pad = (maxV - minV) * 0.1 || maxV * 0.05 || 1;
+    minV -= pad;
+    maxV += pad;
+    const range = maxV - minV || 1;
+
+    return {
+      series: s,
+      toY: (v: number) => padding + chartH - ((v - minV) / range) * chartH,
+    };
+  });
 
   return (
     <div className="rounded-2xl bg-neutral-50 p-3">
       <svg
         className="w-full"
-        viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="xMidYMid meet"
+        viewBox={`0 0 ${width} ${height}`}
       >
-        {/* Percentile curves */}
-        {percentilePaths.map((curve) => (
-          <path
-            d={curve.d}
-            fill="none"
-            key={curve.key}
-            stroke={PERCENTILE_COLORS[curve.key]}
-            strokeDasharray={curve.key === "p50" ? "none" : "4 3"}
-            strokeWidth={curve.key === "p50" ? "1.5" : "1"}
-          />
-        ))}
-
-        {/* Percentile labels */}
-        {percentileData &&
+        {/* WHO percentile bands (single-metric view only) */}
+        {soloMetric &&
+          percentileData &&
           PERCENTILE_KEYS.map((key) => {
-            const w = interpolatePercentile(percentileData, maxAge, key);
+            const scale = seriesScales.find((sc) => sc.series === soloMetric);
+            if (!scale) return null;
+            const steps = 20;
+            const pathPoints: string[] = [];
+            for (let i = 0; i <= steps; i += 1) {
+              const age = minAge + (i / steps) * ageRange;
+              const w = interpolatePercentile(percentileData, age, key);
+              pathPoints.push(
+                `${i === 0 ? "M" : "L"}${toX(age)},${scale.toY(w)}`
+              );
+            }
             return (
-              <text
-                fill="oklch(65% 0.02 60)"
-                fontSize="7"
+              <path
+                d={pathPoints.join(" ")}
+                fill="none"
                 key={key}
-                x={width - padding + 2}
-                y={toY(w) + 2}
-              >
-                {PERCENTILE_LABELS[key]}
-              </text>
+                stroke={PERCENTILE_COLORS[key]}
+                strokeDasharray={key === "p50" ? "none" : "4 3"}
+                strokeWidth={key === "p50" ? "1.5" : "1"}
+              />
             );
           })}
 
-        {/* Baby's actual weight line */}
-        {points.length > 1 && (
-          <polyline
-            fill="none"
-            points={polyline}
-            stroke="oklch(55% 0.14 30)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-          />
-        )}
-        {points.map((p) => (
-          <circle
-            cx={p.x}
-            cy={p.y}
-            fill="oklch(55% 0.14 30)"
-            key={p.id}
-            r="4"
-          />
-        ))}
+        {/* Data lines */}
+        {seriesScales.map(({ series: s, toY }) => {
+          const points = s.points.map((p) => ({
+            id: p.id,
+            x: toX(p.ageDays),
+            y: toY(p.value),
+          }));
+          const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
+          return (
+            <g key={s.config.key}>
+              {points.length > 1 && (
+                <polyline
+                  fill="none"
+                  points={polyline}
+                  stroke={s.config.color}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                />
+              )}
+              {points.map((p) => (
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  fill={s.config.color}
+                  key={p.id}
+                  r="3.5"
+                />
+              ))}
+            </g>
+          );
+        })}
       </svg>
-
-      {/* Legend */}
-      <div className="mt-2 flex items-center justify-between">
-        <div className="flex gap-3 text-[10px] text-neutral-400">
-          <span>{formatDate(withWeight[0].measuredAt)}</span>
-          {withWeight.length > 1 && (
-            <span>{formatDate(withWeight.at(-1)?.measuredAt ?? "")}</span>
-          )}
-        </div>
-        {percentileData && (
-          <span className="text-[10px] text-neutral-300">
-            WHO {gender === "male" ? "boys" : "girls"}
-          </span>
-        )}
-      </div>
     </div>
   );
 };
 
-/* ── Tab type ──────────────────────────────────────────────── */
+/* ── Metric Toggle (chip with value + percentile) ──────────── */
 
-type Tab = "weight" | "height" | "head";
+interface ToggleSummary {
+  config: MetricConfig;
+  latest: number | null;
+  percentile: number | null;
+}
 
-/* ── Simple Line Chart (Length / Head) ─────────────────────── */
-
-const SimpleLineChart = ({
-  measurements,
-  chartType,
-  imperial,
-  emptyLabel,
-}: {
-  measurements: Measurement[];
-  chartType: "height" | "head";
-  imperial: boolean;
-  emptyLabel: string;
-}) => {
-  const getValue =
-    chartType === "height"
-      ? (m: Measurement) => m.lengthMm
-      : (m: Measurement) => m.headMm;
-
-  const withData = measurements
-    .filter((m) => getValue(m) !== null && getValue(m) !== undefined)
-    .toReversed();
-
-  if (withData.length < 1) {
-    return (
-      <div className="flex h-32 items-center justify-center rounded-2xl bg-neutral-50 text-sm text-neutral-400">
-        {emptyLabel}
-      </div>
+function summariseMetrics(
+  measurements: Measurement[],
+  birthDate: string,
+  gender: string | null
+): ToggleSummary[] {
+  const birthTime = new Date(birthDate).getTime();
+  return METRICS.map((config) => {
+    const latestMeasurement = measurements.find(
+      (m) => config.accessor(m) !== null
     );
-  }
+    if (!latestMeasurement) {
+      return { config, latest: null, percentile: null };
+    }
+    const value = config.accessor(latestMeasurement) as number;
+    const ageDays = Math.max(
+      0,
+      (new Date(latestMeasurement.measuredAt).getTime() - birthTime) /
+        86_400_000
+    );
+    const data = getPercentileData(config.key, gender);
+    const percentile = data ? estimatePercentile(data, ageDays, value) : null;
+    return { config, latest: value, percentile };
+  });
+}
 
-  const padding = 16;
-  const width = 320;
-  const height = 160;
-  const chartW = width - padding * 2;
-  const chartH = height - padding * 2;
+const MetricToggle = ({
+  summary,
+  active,
+  imperial,
+  onToggle,
+}: {
+  summary: ToggleSummary;
+  active: boolean;
+  imperial: boolean;
+  onToggle: (key: GrowthMetric) => void;
+}) => {
+  const handleClick = useCallback(
+    () => onToggle(summary.config.key),
+    [onToggle, summary.config.key]
+  );
 
-  const values = withData.map((m) => getValue(m) as number);
-  const times = withData.map((m) => new Date(m.measuredAt).getTime());
-
-  const minV = Math.min(...values);
-  const maxV = Math.max(...values);
-  const valuePad = (maxV - minV) * 0.15 || 10;
-  const lo = minV - valuePad;
-  const hi = maxV + valuePad;
-  const rangeV = hi - lo || 1;
-
-  const minT = Math.min(...times);
-  const maxT = Math.max(...times);
-  const rangeT = maxT - minT || 1;
-
-  const toX = (t: number) => padding + ((t - minT) / rangeT) * chartW;
-  const toY = (v: number) => padding + chartH - ((v - lo) / rangeV) * chartH;
-
-  const points = withData.map((m) => ({
-    x: toX(new Date(m.measuredAt).getTime()),
-    y: toY(getValue(m) as number),
-    id: m.id,
-  }));
-  const polyline = points.map((p) => `${p.x},${p.y}`).join(" ");
-  const lastVal = getValue(withData.at(-1) as Measurement) as number;
+  const valueLabel =
+    summary.latest === null
+      ? "—"
+      : summary.config.format(summary.latest, imperial);
+  const percentileLabel =
+    summary.percentile === null ? null : formatPercentile(summary.percentile);
 
   return (
-    <div className="rounded-2xl bg-neutral-50 p-3">
-      <svg
-        className="w-full"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
-      >
-        {points.length > 1 && (
-          <polyline
-            fill="none"
-            points={polyline}
-            stroke="oklch(55% 0.14 30)"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-          />
-        )}
-        {points.map((p) => (
-          <circle
-            cx={p.x}
-            cy={p.y}
-            fill="oklch(55% 0.14 30)"
-            key={p.id}
-            r="4"
-          />
-        ))}
-      </svg>
-
-      <div className="mt-2 flex items-center justify-between">
-        <div className="flex gap-3 text-[10px] text-neutral-400">
-          <span>{formatDate(withData[0].measuredAt)}</span>
-          {withData.length > 1 && (
-            <span>{formatDate(withData.at(-1)?.measuredAt ?? "")}</span>
-          )}
-        </div>
-        <span className="text-[10px] text-neutral-400">
-          {formatLength(lastVal, imperial)}
+    <button
+      aria-pressed={active}
+      className={`flex flex-1 flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-center transition-colors ${
+        active
+          ? "border-transparent bg-neutral-100 shadow-sm"
+          : "border-neutral-200 bg-transparent hover:bg-neutral-50"
+      }`}
+      onClick={handleClick}
+      type="button"
+    >
+      <div className="flex items-center gap-1.5">
+        <span
+          aria-hidden
+          className="block h-2 w-2 rounded-full transition-opacity"
+          style={{
+            backgroundColor: summary.config.color,
+            opacity: active ? 1 : 0.35,
+          }}
+        />
+        <span
+          className={`text-[11px] font-medium uppercase tracking-wider ${
+            active ? "text-neutral-700" : "text-neutral-400"
+          }`}
+        >
+          {summary.config.label}
         </span>
       </div>
-    </div>
+      <span
+        className={`text-sm font-semibold tabular-nums ${
+          active ? "text-neutral-800" : "text-neutral-500"
+        }`}
+      >
+        {valueLabel}
+      </span>
+      <span className="text-[10px] text-neutral-400">
+        {percentileLabel ? `${percentileLabel} pct` : "—"}
+      </span>
+    </button>
   );
-};
-
-/* ── Summary Card ──────────────────────────────────────────── */
-
-const EmptySummary = ({ message }: { message: string }) => (
-  <div className="rounded-2xl bg-neutral-50 px-4 py-5 text-center">
-    <p className="text-sm text-neutral-400">{message}</p>
-    <p className="mt-1 text-xs text-neutral-300">
-      Tap + to record baby&apos;s first measurement
-    </p>
-  </div>
-);
-
-const WeightSummary = ({
-  measurements,
-  imperial,
-}: {
-  measurements: Measurement[];
-  imperial: boolean;
-}) => {
-  const latest = measurements.find((m) => m.weightG !== null);
-  const withList = measurements.filter((m) => m.weightG !== null);
-  const [, previous] = withList;
-
-  if (!latest?.weightG) {
-    return <EmptySummary message="No weight measurements yet" />;
-  }
-
-  const change =
-    previous?.weightG !== null && previous?.weightG !== undefined
-      ? latest.weightG - previous.weightG
-      : null;
-
-  return (
-    <div className="rounded-2xl bg-neutral-50 px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-        Latest weight
-      </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-neutral-800">
-        {formatWeight(latest.weightG, imperial)}
-      </p>
-      {change !== null && (
-        <p className="mt-0.5 text-sm text-neutral-500">
-          {change >= 0 ? "+" : ""}
-          {formatWeight(Math.abs(change), imperial)} since{" "}
-          {formatDate(previous?.measuredAt ?? "")}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const HeightSummary = ({
-  measurements,
-  imperial,
-}: {
-  measurements: Measurement[];
-  imperial: boolean;
-}) => {
-  const latest = measurements.find((m) => m.lengthMm !== null);
-  const withList = measurements.filter((m) => m.lengthMm !== null);
-  const [, previous] = withList;
-
-  if (!latest?.lengthMm) {
-    return <EmptySummary message="No height measurements yet" />;
-  }
-
-  const change =
-    previous?.lengthMm !== null && previous?.lengthMm !== undefined
-      ? latest.lengthMm - previous.lengthMm
-      : null;
-
-  return (
-    <div className="rounded-2xl bg-neutral-50 px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-        Latest height
-      </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-neutral-800">
-        {formatLength(latest.lengthMm, imperial)}
-      </p>
-      {change !== null && (
-        <p className="mt-0.5 text-sm text-neutral-500">
-          {change >= 0 ? "+" : ""}
-          {formatLength(Math.abs(change), imperial)} since{" "}
-          {formatDate(previous?.measuredAt ?? "")}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const HeadSummary = ({
-  measurements,
-  imperial,
-}: {
-  measurements: Measurement[];
-  imperial: boolean;
-}) => {
-  const latest = measurements.find((m) => m.headMm !== null);
-  const withList = measurements.filter((m) => m.headMm !== null);
-  const [, previous] = withList;
-
-  if (!latest?.headMm) {
-    return <EmptySummary message="No head circumference measurements yet" />;
-  }
-
-  const change =
-    previous?.headMm !== null && previous?.headMm !== undefined
-      ? latest.headMm - previous.headMm
-      : null;
-
-  return (
-    <div className="rounded-2xl bg-neutral-50 px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-        Latest head circumference
-      </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums text-neutral-800">
-        {formatLength(latest.headMm, imperial)}
-      </p>
-      {change !== null && (
-        <p className="mt-0.5 text-sm text-neutral-500">
-          {change >= 0 ? "+" : ""}
-          {formatLength(Math.abs(change), imperial)} since{" "}
-          {formatDate(previous?.measuredAt ?? "")}
-        </p>
-      )}
-    </div>
-  );
-};
-
-const SummaryCard = ({
-  measurements,
-  imperial,
-  tab,
-}: {
-  measurements: Measurement[];
-  imperial: boolean;
-  tab: Tab;
-}) => {
-  if (tab === "weight") {
-    return <WeightSummary imperial={imperial} measurements={measurements} />;
-  }
-  if (tab === "height") {
-    return <HeightSummary imperial={imperial} measurements={measurements} />;
-  }
-  return <HeadSummary imperial={imperial} measurements={measurements} />;
 };
 
 /* ── Measurement Row ───────────────────────────────────────── */
@@ -997,48 +882,33 @@ const MeasurementEditSheet = ({
 
 /* ── Growth View ───────────────────────────────────────────── */
 
-const TABS: { label: string; value: Tab }[] = [
-  { label: "Weight", value: "weight" },
-  { label: "Height", value: "height" },
-  { label: "Head", value: "head" },
-];
-
-const TabButton = ({
-  active,
-  label,
-  value,
-  onSelect,
-}: {
-  active: boolean;
-  label: string;
-  value: Tab;
-  onSelect: (tab: Tab) => void;
-}) => {
-  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
-  return (
-    <button
-      className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? "bg-primary-500 text-white shadow-sm"
-          : "text-neutral-500 hover:text-neutral-700"
-      }`}
-      onClick={handleClick}
-      type="button"
-    >
-      {label}
-    </button>
-  );
-};
+const ALL_METRICS: GrowthMetric[] = ["weight", "length", "head"];
 
 export const GrowthView = () => {
   const { baby, loading } = useBabyContext();
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
   const { imperial, toggle: handleToggleUnits } = useMeasurementUnit();
-  const [activeTab, setActiveTab] = useState<Tab>("weight");
+  const [active, setActive] = useState<Set<GrowthMetric>>(
+    () => new Set(ALL_METRICS)
+  );
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingMeasurement, setEditingMeasurement] =
     useState<Measurement | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
+
+  const toggleMetric = useCallback((key: GrowthMetric) => {
+    setActive((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        // Keep at least one metric active so the chart is never empty.
+        if (next.size === 1) return prev;
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (!baby) return;
@@ -1077,6 +947,19 @@ export const GrowthView = () => {
     setMeasurements((prev) => prev.filter((m) => m.id !== id));
   }, []);
 
+  const series = useMemo(
+    () => (baby ? buildSeries(measurements, baby.birthDate) : []),
+    [baby, measurements]
+  );
+
+  const summaries = useMemo(
+    () =>
+      baby
+        ? summariseMetrics(measurements, baby.birthDate, baby.gender ?? null)
+        : [],
+    [baby, measurements]
+  );
+
   if (loading || !baby) return null;
 
   return (
@@ -1093,51 +976,24 @@ export const GrowthView = () => {
         </button>
       </div>
 
-      {/* Chart tabs */}
-      <div className="mb-3 flex rounded-xl bg-neutral-100 p-1">
-        {TABS.map((tab) => (
-          <TabButton
-            active={activeTab === tab.value}
-            key={tab.value}
-            label={tab.label}
-            onSelect={setActiveTab}
-            value={tab.value}
-          />
-        ))}
-      </div>
-
-      {/* Summary card */}
-      <SummaryCard
-        imperial={imperial}
-        measurements={measurements}
-        tab={activeTab}
+      {/* Chart */}
+      <MultiMetricChart
+        active={active}
+        gender={baby.gender ?? null}
+        series={series}
       />
 
-      {/* Chart */}
-      <div className="mt-3">
-        {activeTab === "weight" && (
-          <WeightChart
-            birthDate={baby.birthDate}
-            gender={baby.gender ?? null}
-            measurements={measurements}
-          />
-        )}
-        {activeTab === "height" && (
-          <SimpleLineChart
-            chartType="height"
-            emptyLabel="Add a height to see the chart"
+      {/* Metric toggles with current value + percentile */}
+      <div className="mt-3 flex gap-2">
+        {summaries.map((summary) => (
+          <MetricToggle
+            active={active.has(summary.config.key)}
             imperial={imperial}
-            measurements={measurements}
+            key={summary.config.key}
+            onToggle={toggleMetric}
+            summary={summary}
           />
-        )}
-        {activeTab === "head" && (
-          <SimpleLineChart
-            chartType="head"
-            emptyLabel="Add a head measurement to see the chart"
-            imperial={imperial}
-            measurements={measurements}
-          />
-        )}
+        ))}
       </div>
 
       {/* Add button */}
