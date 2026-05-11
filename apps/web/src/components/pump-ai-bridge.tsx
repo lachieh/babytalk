@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
-import { subscribePumpIntent } from "@/lib/pump-hint-bus";
+import {
+  publishPumpRefreshing,
+  subscribePumpIntent,
+} from "@/lib/pump-hint-bus";
 import { usePumpThread } from "@/lib/use-pump-thread";
 
 /**
@@ -19,7 +22,12 @@ export const PumpAiBridge = ({
   babyId: string | null;
   events: BabyEvent[];
 }) => {
-  const { notifyPumpStart, refreshIfStale } = usePumpThread(babyId, events);
+  const { forceRefresh, notifyPumpStart, refreshIfStale, refreshing } =
+    usePumpThread(babyId, events);
+
+  useEffect(() => {
+    publishPumpRefreshing(refreshing);
+  }, [refreshing]);
 
   useEffect(
     () =>
@@ -28,9 +36,11 @@ export const PumpAiBridge = ({
           void refreshIfStale();
         } else if (intent.kind === "pump-start") {
           void notifyPumpStart(intent.side);
+        } else if (intent.kind === "refresh") {
+          void forceRefresh();
         }
       }),
-    [notifyPumpStart, refreshIfStale]
+    [forceRefresh, notifyPumpStart, refreshIfStale]
   );
 
   return null;

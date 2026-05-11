@@ -6,7 +6,11 @@ import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
-import { signalPumpIntent, subscribePumpHint } from "@/lib/pump-hint-bus";
+import {
+  signalPumpIntent,
+  subscribePumpHint,
+  subscribePumpRefreshing,
+} from "@/lib/pump-hint-bus";
 import type { PumpHint } from "@/lib/pump-hint-bus";
 import { useTamboReady } from "@/lib/tambo/provider";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -24,14 +28,6 @@ function formatTimer(ms: number): string {
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
   return `${min}:${String(sec).padStart(2, "0")}`;
-}
-
-function formatElapsed(minutes: number): string {
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${Math.floor(minutes)}m ago`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
 }
 
 function formatDuration(startedAt: string, endedAt: string): string {
@@ -61,92 +57,6 @@ function parseAmount(metadata: string): number | null {
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-
-/** Suggest the next side: opposite of last single-side pump, or "left" after "both" */
-function suggestNextSide(events: BabyEvent[]): string {
-  const lastPump = events.find((e) => e.type === "pump" && e.endedAt);
-  if (!lastPump) return "left";
-  const side = parseSide(lastPump.metadata);
-  if (side === "left") return "right";
-  if (side === "right") return "left";
-  // After "both", default to left
-  return "left";
-}
-
-/* ── Context Card ─────────────────────────────────────────── */
-
-const ContextCard = ({
-  events,
-  suggestedSide,
-}: {
-  events: BabyEvent[];
-  suggestedSide: string;
-}) => {
-  const { unit } = useVolumeUnit();
-  const now = Date.now();
-
-  const pumpEvents = useMemo(
-    () => events.filter((e) => e.type === "pump" && e.endedAt),
-    [events]
-  );
-
-  const lastLeft = pumpEvents.find((e) => parseSide(e.metadata) === "left");
-  const lastRight = pumpEvents.find((e) => parseSide(e.metadata) === "right");
-
-  const formatSideInfo = (event: BabyEvent | undefined) => {
-    if (!event) return { label: "--", ago: "" };
-    const amount = parseAmount(event.metadata);
-    const mins = (now - new Date(event.startedAt).getTime()) / 60_000;
-    const parts: string[] = [];
-    if (amount) parts.push(formatVolume(amount, unit));
-    parts.push(formatElapsed(mins));
-    return {
-      label: parts[0] ?? "--",
-      ago: parts.length > 1 ? parts[1] : parts[0],
-    };
-  };
-
-  const left = formatSideInfo(lastLeft);
-  const right = formatSideInfo(lastRight);
-
-  return (
-    <div className="mx-4 rounded-xl border border-pump-200 bg-pump-50 px-4 py-3">
-      <div className="flex gap-4">
-        <div className="flex-1 text-center">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400">
-            Left
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-neutral-700">
-            {left.label}
-          </p>
-          {left.ago && (
-            <p className="text-[10px] text-neutral-400">{left.ago}</p>
-          )}
-        </div>
-        <div className="w-px bg-pump-200" />
-        <div className="flex-1 text-center">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-400">
-            Right
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-neutral-700">
-            {right.label}
-          </p>
-          {right.ago && (
-            <p className="text-[10px] text-neutral-400">{right.ago}</p>
-          )}
-        </div>
-      </div>
-      <div className="mt-2 border-t border-pump-200 pt-2 text-center">
-        <p className="text-[10px] text-neutral-400">
-          Suggested next:{" "}
-          <span className="font-medium capitalize text-pump-500">
-            {suggestedSide}
-          </span>
-        </p>
-      </div>
-    </div>
-  );
-};
 
 /* ── Active Timer ─────────────────────────────────────────── */
 
@@ -286,7 +196,6 @@ export const PumpView = () => {
   const { unit } = useVolumeUnit();
   const tamboReady = useTamboReady();
 
-  const suggested = useMemo(() => suggestNextSide(events), [events]);
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
   );
@@ -294,11 +203,17 @@ export const PumpView = () => {
   // Subscribe to the pump-hint bus so the card updates when the agent calls
   // updatePumpHint. The PumpAiBridge owns the thread + hydration.
   const [pumpHint, setPumpHint] = useState<PumpHint | null>(null);
+  const [hintRefreshing, setHintRefreshing] = useState(false);
   useEffect(() => subscribePumpHint(setPumpHint), []);
+  useEffect(() => subscribePumpRefreshing(setHintRefreshing), []);
 
   // Signal page-open on mount so the bridge can refresh a stale hint.
   useEffect(() => {
     signalPumpIntent({ kind: "page-open" });
+  }, []);
+
+  const handleRefreshHint = useCallback(() => {
+    signalPumpIntent({ kind: "refresh" });
   }, []);
 
   const activePump = activeEvents.find((e) => e.type === "pump") ?? null;
@@ -401,20 +316,23 @@ export const PumpView = () => {
 
   return (
     <div className="py-2">
-      {/* Context card */}
-      <ContextCard events={events} suggestedSide={suggested} />
+      {/* Hint card above the actions */}
+      <div className="px-4">
+        <PumpHintCard
+          hint={pumpHint}
+          onRefresh={handleRefreshHint}
+          refreshing={hintRefreshing}
+        />
+      </div>
 
       {/* Action zone */}
       <div className="mt-4 flex flex-col gap-3 px-4">
         {activePump && (
-          <>
-            <PumpTimer
-              event={activePump}
-              onStop={handleStop}
-              onCancel={handleCancel}
-            />
-            <PumpHintCard hint={pumpHint} />
-          </>
+          <PumpTimer
+            event={activePump}
+            onStop={handleStop}
+            onCancel={handleCancel}
+          />
         )}
 
         {pumpStoppedEventId && (
@@ -431,13 +349,10 @@ export const PumpView = () => {
         )}
 
         {showActions && (
-          <>
-            <PumpStartSegments
-              highlightSide={pumpHint?.suggestedSide ?? null}
-              onStart={handleStart}
-            />
-            <PumpHintCard hint={pumpHint} />
-          </>
+          <PumpStartSegments
+            highlightSide={pumpHint?.suggestedSide ?? null}
+            onStart={handleStart}
+          />
         )}
       </div>
 
