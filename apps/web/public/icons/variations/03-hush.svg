@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Hush">
+  <title>BabyTalk — Hush</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#d5cf9f"/>
+      <stop offset="65%" stop-color="#b8b07d"/>
+      <stop offset="100%" stop-color="#9a9466"/>
+    </radialGradient>
+    <linearGradient id="bubble" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdfaf2"/>
+      <stop offset="100%" stop-color="#f0e8d4"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6"/>
+      <feOffset dy="6"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <ellipse cx="256" cy="80" rx="220" ry="60" fill="#ffffff" opacity="0.08"/>
+
+  <!-- Soft, round, slightly-asymmetric speech bubble -->
+  <g filter="url(#shadow)">
+    <!-- Tail (drop), bottom-left -->
+    <path d="
+      M 192 384
+      C 168 408, 148 422, 132 428
+      C 142 412, 158 392, 180 372 Z" fill="url(#bubble)"/>
+    <!-- Main body -->
+    <ellipse cx="270" cy="246" rx="166" ry="148" fill="url(#bubble)"/>
+  </g>
+
+  <!-- Three sleep dots: a soft, falling "z z z" abstraction, scaled down each step -->
+  <g fill="#5a3d12">
+    <circle cx="208" cy="218" r="20"/>
+    <circle cx="270" cy="252" r="14" opacity="0.85"/>
+    <circle cx="320" cy="282" r="9" opacity="0.65"/>
+  </g>
+</svg>
