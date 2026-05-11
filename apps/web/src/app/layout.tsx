@@ -9,7 +9,17 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "BabyTalk",
   },
+  applicationName: "BabyTalk",
   description: "Track feeds, sleep, and diapers with your voice",
+  icons: {
+    apple: "/icons/apple-touch-icon.png",
+    icon: [
+      { url: "/icons/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
   manifest: "/manifest.json",
   title: "BabyTalk",
 };
@@ -41,7 +51,6 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
           rel="stylesheet"
         />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
       </head>
       <body className="overscroll-none">
         {children}

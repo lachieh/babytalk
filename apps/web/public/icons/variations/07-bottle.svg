@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Bottle">
+  <title>BabyTalk — Bottle</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbf5e4"/>
+      <stop offset="100%" stop-color="#ede4cb"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdfaf2"/>
+      <stop offset="100%" stop-color="#e8dfc4"/>
+    </linearGradient>
+    <linearGradient id="nipple" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ecb95e"/>
+      <stop offset="100%" stop-color="#b88532"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dy="5"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <!-- Nipple (rounded top dome) -->
+    <path d="
+      M 220 160
+      Q 256 100, 292 160
+      L 292 188
+      L 220 188 Z" fill="url(#nipple)"/>
+    <!-- Collar (band where nipple meets bottle) -->
+    <rect x="200" y="184" width="112" height="20" rx="6" fill="#7e8b54"/>
+    <!-- Bottle body -->
+    <path d="
+      M 200 210
+      L 200 388
+      Q 200 420, 232 420
+      L 280 420
+      Q 312 420, 312 388
+      L 312 210 Z" fill="url(#body)"/>
+    <!-- Measurement marks -->
+    <g fill="#7e8b54" opacity="0.65">
+      <rect x="215" y="262" width="22" height="5" rx="2"/>
+      <rect x="215" y="302" width="22" height="5" rx="2"/>
+      <rect x="215" y="342" width="22" height="5" rx="2"/>
+    </g>
+  </g>
+</svg>

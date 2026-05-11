@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Pacifier">
+  <title>BabyTalk — Pacifier</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#d5cf9f"/>
+      <stop offset="65%" stop-color="#b8b07d"/>
+      <stop offset="100%" stop-color="#9a9466"/>
+    </radialGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fdfaf2"/>
+      <stop offset="100%" stop-color="#efe6cf"/>
+    </linearGradient>
+    <radialGradient id="nipple" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#ecb95e"/>
+      <stop offset="100%" stop-color="#b88532"/>
+    </radialGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dy="5"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <ellipse cx="256" cy="80" rx="220" ry="60" fill="#ffffff" opacity="0.08"/>
+
+  <g filter="url(#shadow)">
+    <!-- Nipple (soft teardrop) at top -->
+    <path d="
+      M 256 110
+      C 222 110, 210 160, 220 198
+      C 226 224, 286 224, 292 198
+      C 302 160, 290 110, 256 110 Z" fill="url(#nipple)"/>
+    <!-- Shield (rounded rect/oval) -->
+    <ellipse cx="256" cy="278" rx="140" ry="70" fill="url(#shield)"/>
+    <!-- Handle ring at bottom -->
+    <circle cx="256" cy="394" r="38" fill="none" stroke="#7e8b54" stroke-width="20"/>
+  </g>
+</svg>
