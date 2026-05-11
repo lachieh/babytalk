@@ -1,5 +1,5 @@
 import { babies, events, households, users } from "@babytalk/db";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 
 import type { Context } from "../context";
 import { builder } from "./builder";
@@ -97,6 +97,49 @@ builder.queryField("recentEvents", (t) =>
         .where(and(...conditions))
         .orderBy(desc(events.startedAt))
         .limit(args.limit ?? 20);
+    },
+    type: [BabyEventType],
+  })
+);
+
+builder.queryField("eventsInRange", (t) =>
+  t.field({
+    args: {
+      babyId: t.arg.string({ required: true }),
+      // ISO-8601 timestamps. Inclusive lower bound, exclusive upper bound.
+      startedAfter: t.arg.string({ required: true }),
+      startedBefore: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args, ctx) => {
+      const householdId = await getHouseholdId(ctx);
+      if (!householdId) return [];
+
+      const [baby] = await ctx.db
+        .select({ id: babies.id })
+        .from(babies)
+        .where(
+          and(eq(babies.id, args.babyId), eq(babies.householdId, householdId))
+        )
+        .limit(1);
+      if (!baby) return [];
+
+      const after = new Date(args.startedAfter);
+      const before = new Date(args.startedBefore);
+      if (Number.isNaN(after.getTime()) || Number.isNaN(before.getTime())) {
+        return [];
+      }
+
+      return ctx.db
+        .select()
+        .from(events)
+        .where(
+          and(
+            eq(events.babyId, args.babyId),
+            gte(events.startedAt, after),
+            lt(events.startedAt, before)
+          )
+        )
+        .orderBy(asc(events.startedAt));
     },
     type: [BabyEventType],
   })
