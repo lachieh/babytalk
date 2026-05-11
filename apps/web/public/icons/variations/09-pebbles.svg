@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Pebbles">
+  <title>BabyTalk — Pebbles</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbf5e4"/>
+      <stop offset="100%" stop-color="#ede4cb"/>
+    </linearGradient>
+    <linearGradient id="pebbleBig" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7e8b54"/>
+      <stop offset="100%" stop-color="#5d6b3a"/>
+    </linearGradient>
+    <linearGradient id="pebbleMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a4b673"/>
+      <stop offset="100%" stop-color="#7e8b54"/>
+    </linearGradient>
+    <linearGradient id="pebbleTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e0d4a8"/>
+      <stop offset="100%" stop-color="#b8a87a"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dy="5"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <!-- Bottom pebble (largest, flattest) -->
+    <ellipse cx="256" cy="390" rx="140" ry="44" fill="url(#pebbleBig)"/>
+    <!-- Middle pebble -->
+    <ellipse cx="252" cy="296" rx="104" ry="42" fill="url(#pebbleMid)"/>
+    <!-- Top pebble (smallest, roundest) -->
+    <ellipse cx="260" cy="210" rx="70" ry="40" fill="url(#pebbleTop)"/>
+  </g>
+
+  <!-- Soft ground line under pebbles -->
+  <line x1="120" y1="434" x2="392" y2="434" stroke="#a89a72" stroke-width="3" stroke-linecap="round" opacity="0.35"/>
+</svg>

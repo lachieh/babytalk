@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Breath">
+  <title>BabyTalk — Breath</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbf5e4"/>
+      <stop offset="100%" stop-color="#ede4cb"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- A calm breath wave: gentle sine, three peaks, soft thick stroke -->
+  <path d="
+    M 80 256
+    C 130 196, 180 196, 230 256
+    C 280 316, 332 316, 382 256
+    C 410 222, 436 222, 460 256"
+    stroke="#7e8b54" stroke-width="26" stroke-linecap="round" fill="none"/>
+
+  <!-- A second, smaller, lighter wave below for subtle echo -->
+  <path d="
+    M 100 332
+    C 150 296, 200 296, 250 332
+    C 300 368, 350 368, 400 332"
+    stroke="#a4b673" stroke-width="14" stroke-linecap="round" fill="none" opacity="0.55"/>
+
+  <!-- Tiny dot at the start: like a recording cue -->
+  <circle cx="80" cy="256" r="14" fill="#c47a91"/>
+</svg>

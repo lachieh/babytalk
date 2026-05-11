@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="BabyTalk — Wordmark">
+  <title>BabyTalk — Wordmark</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbf5e4"/>
+      <stop offset="100%" stop-color="#ede4cb"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- Custom lowercase 'b' drawn as paths so it renders without a web font.
+       Stem on the left, bowl on the bottom right, hole through the bowl. -->
+  <g fill="#5d6b3a">
+    <!-- Stem (ascender) -->
+    <rect x="138" y="92" width="58" height="328" rx="14"/>
+    <!-- Bowl outer -->
+    <circle cx="284" cy="318" r="116"/>
+    <!-- Bridge: fill the gap between stem and bowl so they read as one glyph -->
+    <rect x="170" y="232" width="118" height="60"/>
+  </g>
+  <!-- Bowl inner hole (cream) -->
+  <circle cx="296" cy="318" r="48" fill="#fbf5e4"/>
+
+  <!-- Sparkle dot accent (whimsy) -->
+  <g fill="#c47a91">
+    <circle cx="404" cy="146" r="11"/>
+    <circle cx="404" cy="146" r="4" fill="#fbf5e4"/>
+  </g>
+</svg>
