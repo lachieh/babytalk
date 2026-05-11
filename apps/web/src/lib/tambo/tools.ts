@@ -1,6 +1,8 @@
 import type { TamboTool } from "@tambo-ai/react";
 import { z } from "zod";
 
+import { publishPumpHint } from "@/lib/pump-hint-bus";
+
 import { gqlRequest } from "./graphql";
 
 const LOG_EVENT = `
@@ -100,6 +102,23 @@ const GET_MY_BABIES = `
       id
       name
       birthDate
+    }
+  }
+`;
+
+const UPDATE_PUMP_HINT = `
+  mutation UpdatePumpHint(
+    $babyId: String!
+    $statePatchJson: String!
+  ) {
+    updateAgentThread(
+      babyId: $babyId
+      activityKey: "pump"
+      statePatchJson: $statePatchJson
+    ) {
+      id
+      state
+      updatedAt
     }
   }
 `;
@@ -283,6 +302,46 @@ export const tamboTools: TamboTool[] = [
     outputSchema: z.object({ success: z.boolean() }),
     tool: async (params) => {
       await gqlRequest(DELETE_EVENT, params);
+      return { success: true };
+    },
+  },
+  {
+    description:
+      "Update the pump hint displayed on the pumping page. Call this ONLY from the pump coach thread. The hint is one short sentence of contextual guidance (max ~18 words) for the pumping parent — e.g. a target duration, suggested side, or supply pattern. If a fresh hint would not change anything useful, you may skip calling this tool.",
+    inputSchema: z.object({
+      babyId: z.string().describe("UUID of the baby this hint is for"),
+      hint: z
+        .string()
+        .min(1)
+        .max(200)
+        .describe(
+          "One short, warm, concrete sentence of guidance. No emoji. Max ~18 words."
+        ),
+      suggestedSide: z
+        .enum(["left", "right", "both"])
+        .optional()
+        .describe(
+          "Optional side to suggest for the next session. Highlights that segment on the start control."
+        ),
+    }),
+    name: "updatePumpHint",
+    outputSchema: z.object({ success: z.boolean() }),
+    tool: async ({ babyId, hint, suggestedSide }) => {
+      const now = Date.now();
+      const patch = {
+        hint,
+        hintUpdatedAt: now,
+        suggestedSide: suggestedSide ?? null,
+      };
+      await gqlRequest(UPDATE_PUMP_HINT, {
+        babyId,
+        statePatchJson: JSON.stringify(patch),
+      });
+      publishPumpHint({
+        hint,
+        suggestedSide: suggestedSide ?? null,
+        updatedAt: now,
+      });
       return { success: true };
     },
   },

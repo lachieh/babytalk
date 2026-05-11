@@ -1,3 +1,4 @@
+export { agentThreads } from "./agent-threads";
 export { babies } from "./babies";
 export { events } from "./events";
 export { households } from "./households";
