@@ -340,6 +340,7 @@ export const WeekChart = ({
         <YAxis
           axisLine={false}
           domain={[0, 24]}
+          reversed
           tick={{ fontSize: 10, fill: "var(--color-neutral-400)" }}
           tickFormatter={formatHour}
           tickLine={false}
