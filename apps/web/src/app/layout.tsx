@@ -57,7 +57,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="overscroll-none">
+      <body className="overflow-hidden overscroll-none">
         <ThemeColorSync />
         {children}
         <ServiceWorkerRegistrar />

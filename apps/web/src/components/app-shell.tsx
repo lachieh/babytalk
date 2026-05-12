@@ -154,8 +154,8 @@ export const AppShell = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <VoiceSessionProvider>
-      <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface pt-[env(safe-area-inset-top)]">
-        <header className="relative shrink-0 px-4 pt-6 pb-4 text-center">
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
+        <header className="relative shrink-0 px-4 pt-[max(env(safe-area-inset-top),1.5rem)] pb-4 text-center">
           <h1 className="font-serif text-2xl text-neutral-800">
             {baby?.name ?? "Little One"}
           </h1>

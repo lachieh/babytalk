@@ -85,24 +85,51 @@ function buildBlocks(events: BabyEvent[], weekStart: Date): EventBlock[] {
   const blocks: EventBlock[] = [];
   for (const event of events) {
     const start = new Date(event.startedAt);
-    if (start < weekStart || start >= weekEnd) continue;
+    if (start >= weekEnd) continue;
 
-    const dIdx = dayIndex(start, weekStart);
-    const startHour = hoursOf(start);
     const isInstant =
       INSTANT_TYPES.has(event.type) ||
       (event.endedAt !== null && event.startedAt === event.endedAt);
 
-    let endHour = startHour;
-    if (!isInstant) {
-      const endTs = event.endedAt ? new Date(event.endedAt).getTime() : now;
-      const endDate = new Date(endTs);
-      const endIdx = dayIndex(endDate, weekStart);
-      // Clip cross-midnight events to end of the start day.
-      endHour = endIdx === dIdx ? hoursOf(endDate) : 24;
+    if (isInstant) {
+      if (start < weekStart) continue;
+      blocks.push({
+        dayIdx: dayIndex(start, weekStart),
+        endHour: hoursOf(start),
+        event,
+        isInstant: true,
+        startHour: hoursOf(start),
+      });
+      continue;
     }
 
-    blocks.push({ event, dayIdx: dIdx, startHour, endHour, isInstant });
+    const endTs = event.endedAt ? new Date(event.endedAt).getTime() : now;
+    const end = new Date(endTs);
+    if (end <= weekStart) continue;
+
+    const clampedStart = start < weekStart ? new Date(weekStart) : start;
+    const clampedEnd = end > weekEnd ? new Date(weekEnd) : end;
+
+    let cursor = clampedStart;
+    while (cursor < clampedEnd) {
+      const dIdx = dayIndex(cursor, weekStart);
+      const dayEnd = new Date(weekStart);
+      dayEnd.setDate(dayEnd.getDate() + dIdx + 1);
+      const segmentEnd = clampedEnd < dayEnd ? clampedEnd : dayEnd;
+      const startHour = hoursOf(cursor);
+      const endHour =
+        segmentEnd.getTime() === dayEnd.getTime() ? 24 : hoursOf(segmentEnd);
+
+      blocks.push({
+        dayIdx: dIdx,
+        endHour,
+        event,
+        isInstant: false,
+        startHour,
+      });
+
+      cursor = dayEnd;
+    }
   }
   return blocks;
 }
@@ -156,6 +183,7 @@ const EventLayer = ({
       {blocks.map((b) => {
         const colors = COLORS[b.event.type] ?? COLORS.note;
         const cx = xScale(b.dayIdx);
+        const blockKey = `${b.event.id}-${b.dayIdx}`;
 
         if (b.isInstant) {
           const cy = yScale(b.startHour);
@@ -165,7 +193,7 @@ const EventLayer = ({
               cy={cy}
               data-event-id={b.event.id}
               fill={colors.dot}
-              key={b.event.id}
+              key={blockKey}
               r={3}
               style={{ cursor }}
             />
@@ -182,7 +210,7 @@ const EventLayer = ({
             data-event-id={b.event.id}
             fill={colors.fill}
             height={height}
-            key={b.event.id}
+            key={blockKey}
             rx={2}
             stroke={colors.stroke}
             strokeWidth={1}
