@@ -148,13 +148,6 @@ const METRICS: MetricConfig[] = [
 ];
 
 const PERCENTILE_KEYS: PercentileKey[] = ["p3", "p15", "p50", "p85", "p97"];
-const PERCENTILE_COLORS: Record<PercentileKey, string> = {
-  p3: "oklch(80% 0.02 60)",
-  p15: "oklch(75% 0.03 60)",
-  p50: "oklch(65% 0.04 60)",
-  p85: "oklch(75% 0.03 60)",
-  p97: "oklch(80% 0.02 60)",
-};
 
 interface MetricSeries {
   config: MetricConfig;
@@ -228,21 +221,16 @@ const MultiMetricChart = ({
   const toX = (ageDays: number) =>
     padding + ((ageDays - minAge) / ageRange) * chartW;
 
-  // When only one metric is visible, show WHO percentile bands.
-  const showCurves = visible.length === 1;
-  const soloMetric = showCurves ? visible[0] : null;
-  const percentileData = soloMetric
-    ? getPercentileData(soloMetric.config.key, gender)
-    : null;
-
-  // Per-series normalization. When a percentile band is drawn the band
-  // extends the value range so the data line stays inside the bands.
+  // Per-series normalization. The value range is widened to include the
+  // WHO p3–p97 band (when available) so the data line stays inside the
+  // reference curves regardless of how many metrics are on the chart.
   const seriesScales = visible.map((s) => {
+    const percentileData = getPercentileData(s.config.key, gender);
     const values = s.points.map((p) => p.value);
     let minV = Math.min(...values);
     let maxV = Math.max(...values);
 
-    if (s === soloMetric && percentileData) {
+    if (percentileData) {
       const p3Min = interpolatePercentile(percentileData, minAge, "p3");
       const p97Max = interpolatePercentile(percentileData, maxAge, "p97");
       minV = Math.min(minV, p3Min);
@@ -255,6 +243,7 @@ const MultiMetricChart = ({
     const range = maxV - minV || 1;
 
     return {
+      percentileData,
       series: s,
       toY: (v: number) => padding + chartH - ((v - minV) / range) * chartH,
     };
@@ -267,32 +256,37 @@ const MultiMetricChart = ({
         preserveAspectRatio="xMidYMid meet"
         viewBox={`0 0 ${width} ${height}`}
       >
-        {/* WHO percentile bands (single-metric view only) */}
-        {soloMetric &&
-          percentileData &&
-          PERCENTILE_KEYS.map((key) => {
-            const scale = seriesScales.find((sc) => sc.series === soloMetric);
-            if (!scale) return null;
-            const steps = 20;
-            const pathPoints: string[] = [];
-            for (let i = 0; i <= steps; i += 1) {
-              const age = minAge + (i / steps) * ageRange;
-              const w = interpolatePercentile(percentileData, age, key);
-              pathPoints.push(
-                `${i === 0 ? "M" : "L"}${toX(age)},${scale.toY(w)}`
-              );
-            }
-            return (
-              <path
-                d={pathPoints.join(" ")}
-                fill="none"
-                key={key}
-                stroke={PERCENTILE_COLORS[key]}
-                strokeDasharray={key === "p50" ? "none" : "4 3"}
-                strokeWidth={key === "p50" ? "1.5" : "1"}
-              />
-            );
-          })}
+        {/* WHO percentile bands per metric, in the metric's own colour */}
+        {seriesScales.map(({ percentileData, series: s, toY }) => {
+          if (!percentileData) return null;
+          return (
+            <g key={`bands-${s.config.key}`}>
+              {PERCENTILE_KEYS.map((key) => {
+                const steps = 20;
+                const pathPoints: string[] = [];
+                for (let i = 0; i <= steps; i += 1) {
+                  const age = minAge + (i / steps) * ageRange;
+                  const w = interpolatePercentile(percentileData, age, key);
+                  pathPoints.push(
+                    `${i === 0 ? "M" : "L"}${toX(age)},${toY(w)}`
+                  );
+                }
+                const isMedian = key === "p50";
+                return (
+                  <path
+                    d={pathPoints.join(" ")}
+                    fill="none"
+                    key={key}
+                    stroke={s.config.color}
+                    strokeDasharray={isMedian ? "none" : "4 3"}
+                    strokeOpacity={isMedian ? 0.45 : 0.25}
+                    strokeWidth={isMedian ? "1.25" : "1"}
+                  />
+                );
+              })}
+            </g>
+          );
+        })}
 
         {/* Data lines */}
         {seriesScales.map(({ series: s, toY }) => {
