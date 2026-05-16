@@ -9,6 +9,7 @@ import { useInstallPrompt } from "@/lib/use-install-prompt";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
 
+import { AddDeviceSheet } from "./add-device-sheet";
 import { EditBabySheet } from "./edit-baby-sheet";
 
 const AI_STATUS_COPY: Record<
@@ -360,6 +361,7 @@ const ProfileContent = ({
   copied,
   onShare,
   onEditBaby,
+  onAddDevice,
   onSignOut,
 }: {
   babies: BabyInfo[];
@@ -368,6 +370,7 @@ const ProfileContent = ({
   latestWeights: Record<string, { weightG: number; measuredAt: string } | null>;
   me: UserInfo | null;
   members: UserInfo[];
+  onAddDevice: () => void;
   onEditBaby: (baby: BabyInfo) => void;
   onShare: () => void;
   onSignOut: () => void;
@@ -451,6 +454,54 @@ const ProfileContent = ({
       {/* AI Features */}
       <AIFeaturesSection />
 
+      {/* Devices */}
+      <section>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+          Devices
+        </h3>
+        <button
+          className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+          onClick={onAddDevice}
+          type="button"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <svg
+              aria-hidden="true"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              viewBox="0 0 24 24"
+            >
+              <rect height="14" rx="2" width="10" x="7" y="3" />
+              <path d="M11 19h2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-neutral-800">
+              Add a station device
+            </span>
+            <span className="mt-0.5 block text-xs text-neutral-500">
+              Sign in another phone or tablet for one-tap logging.
+            </span>
+          </span>
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4 text-neutral-300"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M9 5l7 7-7 7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </section>
+
       {/* Install */}
       <InstallAppSection />
 
@@ -532,6 +583,7 @@ export const ProfileSheet = ({
   const [loading, setLoading] = useState(true);
   const [editingBaby, setEditingBaby] = useState<BabyInfo | null>(null);
   const [editBabyOpen, setEditBabyOpen] = useState(false);
+  const [addDeviceOpen, setAddDeviceOpen] = useState(false);
   const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
@@ -624,6 +676,9 @@ export const ProfileSheet = ({
     setFetchKey((k) => k + 1);
   }, []);
 
+  const handleAddDeviceOpen = useCallback(() => setAddDeviceOpen(true), []);
+  const handleAddDeviceClose = useCallback(() => setAddDeviceOpen(false), []);
+
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
       if (e.target === e.currentTarget) onClose();
@@ -692,6 +747,7 @@ export const ProfileSheet = ({
             members={members}
             latestWeights={latestWeights}
             copied={copied}
+            onAddDevice={handleAddDeviceOpen}
             onEditBaby={handleEditBaby}
             onShare={handleShareLink}
             onSignOut={handleSignOut}
@@ -704,6 +760,7 @@ export const ProfileSheet = ({
           onSaved={handleEditBabySaved}
           open={editBabyOpen}
         />
+        <AddDeviceSheet onClose={handleAddDeviceClose} open={addDeviceOpen} />
       </div>
     </div>
   );

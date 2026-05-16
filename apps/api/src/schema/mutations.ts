@@ -1,6 +1,15 @@
+import {
+  approveDeviceCode,
+  pollDeviceCode,
+  requestDeviceCode,
+} from "../auth/device-code";
 import { requestMagicLink, verifyMagicLink } from "../auth/magic-link";
 import { builder } from "./builder";
-import { AuthPayloadType } from "./types";
+import {
+  AuthPayloadType,
+  DeviceCodePollPayloadType,
+  DeviceCodeRequestType,
+} from "./types";
 
 builder.mutationField("requestMagicLink", (t) =>
   t.field({
@@ -41,5 +50,49 @@ builder.mutationField("verifyMagicLink", (t) =>
       };
     },
     type: AuthPayloadType,
+  })
+);
+
+builder.mutationField("requestDeviceCode", (t) =>
+  t.field({
+    resolve: () => requestDeviceCode(),
+    type: DeviceCodeRequestType,
+  })
+);
+
+builder.mutationField("approveDeviceCode", (t) =>
+  t.field({
+    args: {
+      code: t.arg.string({ required: true }),
+    },
+    resolve: (_root, args, ctx) => {
+      if (!ctx.currentUser) throw new Error("Not authenticated");
+      return approveDeviceCode(args.code, ctx.currentUser.sub);
+    },
+    type: "Boolean",
+  })
+);
+
+builder.mutationField("pollDeviceCode", (t) =>
+  t.field({
+    args: {
+      code: t.arg.string({ required: true }),
+    },
+    resolve: async (_root, args) => {
+      const result = await pollDeviceCode(args.code);
+      return {
+        status: result.status,
+        token: result.token ?? null,
+        user: result.user
+          ? {
+              email: result.user.email,
+              householdId: null,
+              id: result.user.id,
+              name: null,
+            }
+          : null,
+      };
+    },
+    type: DeviceCodePollPayloadType,
   })
 );
