@@ -9,6 +9,8 @@ export interface Config {
   jwtSecret?: string;
   /** HTTP server port */
   port?: number;
+  /** Relying Party display name shown by passkey prompts */
+  rpName?: string;
   /** Sender email address */
   smtpFrom?: string;
   /** SMTP server hostname */

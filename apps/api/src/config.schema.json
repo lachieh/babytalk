@@ -16,6 +16,11 @@
       "description": "HTTP server port",
       "type": "number"
     },
+    "rpName": {
+      "default": "BabyTalk",
+      "description": "Relying Party display name shown by passkey prompts",
+      "type": "string"
+    },
     "smtpFrom": {
       "default": "noreply@babytalk.dev",
       "description": "Sender email address",

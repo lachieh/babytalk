@@ -1,14 +1,28 @@
+import type {
+  AuthenticationResponseJSON,
+  RegistrationResponseJSON,
+} from "@simplewebauthn/server";
+
 import {
   approveDeviceCode,
   pollDeviceCode,
   requestDeviceCode,
 } from "../auth/device-code";
 import { requestMagicLink, verifyMagicLink } from "../auth/magic-link";
+import {
+  finishPasskeyAuthentication,
+  finishPasskeyRegistration,
+  revokePasskey,
+  startPasskeyAuthentication,
+  startPasskeyRegistration,
+} from "../auth/passkey";
 import { builder } from "./builder";
 import {
   AuthPayloadType,
   DeviceCodePollPayloadType,
   DeviceCodeRequestType,
+  PasskeyOptionsType,
+  PasskeyType,
 } from "./types";
 
 builder.mutationField("requestMagicLink", (t) =>
@@ -94,5 +108,85 @@ builder.mutationField("pollDeviceCode", (t) =>
       };
     },
     type: DeviceCodePollPayloadType,
+  })
+);
+
+builder.mutationField("passkeyRegisterStart", (t) =>
+  t.field({
+    resolve: async (_root, _args, ctx) => {
+      if (!ctx.currentUser) throw new Error("Not authenticated");
+      const options = await startPasskeyRegistration(
+        ctx.currentUser.sub,
+        ctx.currentUser.email
+      );
+      return { optionsJSON: JSON.stringify(options) };
+    },
+    type: PasskeyOptionsType,
+  })
+);
+
+builder.mutationField("passkeyRegisterFinish", (t) =>
+  t.field({
+    args: {
+      nickname: t.arg.string({ required: false }),
+      response: t.arg.string({ required: true }),
+    },
+    nullable: true,
+    resolve: (_root, args, ctx) => {
+      if (!ctx.currentUser) throw new Error("Not authenticated");
+      const parsed = JSON.parse(args.response) as RegistrationResponseJSON;
+      return finishPasskeyRegistration(parsed, args.nickname ?? null);
+    },
+    type: PasskeyType,
+  })
+);
+
+builder.mutationField("passkeyAuthStart", (t) =>
+  t.field({
+    args: {
+      email: t.arg.string({ required: false }),
+    },
+    resolve: async (_root, args) => {
+      const options = await startPasskeyAuthentication(args.email ?? null);
+      return { optionsJSON: JSON.stringify(options) };
+    },
+    type: PasskeyOptionsType,
+  })
+);
+
+builder.mutationField("passkeyAuthFinish", (t) =>
+  t.field({
+    args: {
+      response: t.arg.string({ required: true }),
+    },
+    nullable: true,
+    resolve: async (_root, args) => {
+      const parsed = JSON.parse(args.response) as AuthenticationResponseJSON;
+      const result = await finishPasskeyAuthentication(parsed);
+      if (!result) return null;
+      return {
+        token: result.token,
+        user: {
+          email: result.user.email,
+          householdId: null,
+          id: result.user.id,
+          name: null,
+        },
+      };
+    },
+    type: AuthPayloadType,
+  })
+);
+
+builder.mutationField("passkeyRevoke", (t) =>
+  t.field({
+    args: {
+      id: t.arg.string({ required: true }),
+    },
+    resolve: (_root, args, ctx) => {
+      if (!ctx.currentUser) throw new Error("Not authenticated");
+      return revokePasskey(ctx.currentUser.sub, args.id);
+    },
+    type: "Boolean",
   })
 );
