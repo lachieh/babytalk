@@ -35,3 +35,47 @@ AuthPayloadType.implement({
     }),
   }),
 });
+
+export const DeviceCodeRequestType = builder.objectRef<{
+  code: string;
+  expiresAt: Date;
+}>("DeviceCodeRequest");
+
+DeviceCodeRequestType.implement({
+  fields: (t) => ({
+    code: t.exposeString("code"),
+    expiresAt: t.string({
+      resolve: (parent) => parent.expiresAt.toISOString(),
+    }),
+  }),
+});
+
+export const DeviceCodeStatusEnum = builder.enumType("DeviceCodeStatus", {
+  values: ["pending", "expired", "approved"] as const,
+});
+
+export const DeviceCodePollPayloadType = builder.objectRef<{
+  status: "pending" | "expired" | "approved";
+  token: string | null;
+  user: {
+    email: string;
+    householdId: string | null;
+    id: string;
+    name: string | null;
+  } | null;
+}>("DeviceCodePollPayload");
+
+DeviceCodePollPayloadType.implement({
+  fields: (t) => ({
+    status: t.field({
+      resolve: (parent) => parent.status,
+      type: DeviceCodeStatusEnum,
+    }),
+    token: t.exposeString("token", { nullable: true }),
+    user: t.field({
+      nullable: true,
+      resolve: (parent) => parent.user,
+      type: UserType,
+    }),
+  }),
+});
