@@ -79,3 +79,40 @@ DeviceCodePollPayloadType.implement({
     }),
   }),
 });
+
+export const PasskeyOptionsType = builder.objectRef<{ optionsJSON: string }>(
+  "PasskeyOptions"
+);
+
+PasskeyOptionsType.implement({
+  fields: (t) => ({
+    optionsJSON: t.exposeString("optionsJSON"),
+  }),
+});
+
+export const PasskeyType = builder.objectRef<{
+  backedUp: boolean;
+  createdAt: Date;
+  credentialId: string;
+  deviceType: string;
+  id: string;
+  lastUsedAt: Date | null;
+  nickname: string | null;
+}>("Passkey");
+
+PasskeyType.implement({
+  fields: (t) => ({
+    backedUp: t.exposeBoolean("backedUp"),
+    createdAt: t.string({
+      resolve: (parent) => parent.createdAt.toISOString(),
+    }),
+    credentialId: t.exposeString("credentialId"),
+    deviceType: t.exposeString("deviceType"),
+    id: t.exposeString("id"),
+    lastUsedAt: t.string({
+      nullable: true,
+      resolve: (parent) => parent.lastUsedAt?.toISOString() ?? null,
+    }),
+    nickname: t.exposeString("nickname", { nullable: true }),
+  }),
+});

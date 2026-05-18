@@ -10,6 +10,8 @@ declare global {
     BABYTALK_API__JWTSECRET: string;
     /** HTTP server port */
     BABYTALK_API__PORT: string;
+    /** Relying Party display name shown by passkey prompts */
+    BABYTALK_API__RPNAME: string;
     /** Sender email address */
     BABYTALK_API__SMTPFROM: string;
     /** SMTP server hostname */
@@ -31,6 +33,8 @@ declare global {
     readonly BABYTALK_API__JWTSECRET: string;
     /** HTTP server port */
     readonly BABYTALK_API__PORT: string;
+    /** Relying Party display name shown by passkey prompts */
+    readonly BABYTALK_API__RPNAME: string;
     /** Sender email address */
     readonly BABYTALK_API__SMTPFROM: string;
     /** SMTP server hostname */

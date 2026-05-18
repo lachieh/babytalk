@@ -11,6 +11,7 @@ import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { AddDeviceSheet } from "./add-device-sheet";
 import { EditBabySheet } from "./edit-baby-sheet";
+import { PasskeysSheet } from "./passkeys-sheet";
 
 const AI_STATUS_COPY: Record<
   "not_configured" | "connecting" | "connected" | "error",
@@ -362,6 +363,7 @@ const ProfileContent = ({
   onShare,
   onEditBaby,
   onAddDevice,
+  onManagePasskeys,
   onSignOut,
 }: {
   babies: BabyInfo[];
@@ -372,6 +374,7 @@ const ProfileContent = ({
   members: UserInfo[];
   onAddDevice: () => void;
   onEditBaby: (baby: BabyInfo) => void;
+  onManagePasskeys: () => void;
   onShare: () => void;
   onSignOut: () => void;
 }) => {
@@ -502,6 +505,62 @@ const ProfileContent = ({
         </button>
       </section>
 
+      {/* Sign-in */}
+      <section>
+        <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+          Sign-in
+        </h3>
+        <button
+          className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+          onClick={onManagePasskeys}
+          type="button"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <svg
+              aria-hidden="true"
+              className="h-5 w-5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M15 7a4 4 0 11-8 0 4 4 0 018 0z"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M11 13l-4 4v3h3l1-1h2v-2h2v-2l1-1-4-4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-neutral-800">
+              Passkeys
+            </span>
+            <span className="mt-0.5 block text-xs text-neutral-500">
+              Sign in with Face ID, Touch ID, or 1Password.
+            </span>
+          </span>
+          <svg
+            aria-hidden="true"
+            className="h-4 w-4 text-neutral-300"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            viewBox="0 0 24 24"
+          >
+            <path
+              d="M9 5l7 7-7 7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+      </section>
+
       {/* Install */}
       <InstallAppSection />
 
@@ -584,6 +643,7 @@ export const ProfileSheet = ({
   const [editingBaby, setEditingBaby] = useState<BabyInfo | null>(null);
   const [editBabyOpen, setEditBabyOpen] = useState(false);
   const [addDeviceOpen, setAddDeviceOpen] = useState(false);
+  const [passkeysOpen, setPasskeysOpen] = useState(false);
   const [fetchKey, setFetchKey] = useState(0);
 
   useEffect(() => {
@@ -679,6 +739,9 @@ export const ProfileSheet = ({
   const handleAddDeviceOpen = useCallback(() => setAddDeviceOpen(true), []);
   const handleAddDeviceClose = useCallback(() => setAddDeviceOpen(false), []);
 
+  const handlePasskeysOpen = useCallback(() => setPasskeysOpen(true), []);
+  const handlePasskeysClose = useCallback(() => setPasskeysOpen(false), []);
+
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
       if (e.target === e.currentTarget) onClose();
@@ -749,6 +812,7 @@ export const ProfileSheet = ({
             copied={copied}
             onAddDevice={handleAddDeviceOpen}
             onEditBaby={handleEditBaby}
+            onManagePasskeys={handlePasskeysOpen}
             onShare={handleShareLink}
             onSignOut={handleSignOut}
           />
@@ -761,6 +825,7 @@ export const ProfileSheet = ({
           open={editBabyOpen}
         />
         <AddDeviceSheet onClose={handleAddDeviceClose} open={addDeviceOpen} />
+        <PasskeysSheet onClose={handlePasskeysClose} open={passkeysOpen} />
       </div>
     </div>
   );

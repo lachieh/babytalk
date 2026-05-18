@@ -10,6 +10,10 @@ export default defineConfig({
       .default("dev-secret-change-me")
       .describe("Secret key for signing JWTs"),
     port: z.number().default(4000).describe("HTTP server port"),
+    rpName: z
+      .string()
+      .default("BabyTalk")
+      .describe("Relying Party display name shown by passkey prompts"),
     smtpFrom: z
       .string()
       .default("noreply@babytalk.dev")

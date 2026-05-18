@@ -1,7 +1,9 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
+import { isPasskeySupported, signInWithPasskey } from "@/lib/passkey";
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
@@ -13,9 +15,65 @@ const REQUEST_MAGIC_LINK = `
 
 export default function LoginPage() {
   useRedirectIfLoggedIn();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [signingInWithPasskey, setSigningInWithPasskey] = useState(false);
+
+  useEffect(() => {
+    setPasskeySupported(isPasskeySupported());
+  }, []);
+
+  // Try conditional-mediation (autofill) sign in. Browsers that support it
+  // will let the user pick a passkey from their password manager UI.
+  useEffect(() => {
+    if (!passkeySupported) return;
+    let cancelled = false;
+
+    const tryAutofill = async () => {
+      try {
+        const PKC = window.PublicKeyCredential as
+          | (typeof PublicKeyCredential & {
+              isConditionalMediationAvailable?: () => Promise<boolean>;
+            })
+          | undefined;
+        const available = await PKC?.isConditionalMediationAvailable?.();
+        if (!available || cancelled) return;
+        const result = await signInWithPasskey(null, { conditional: true });
+        if (cancelled) return;
+        localStorage.setItem("babytalk_token", result.token);
+        const stored = localStorage.getItem("babytalk_auth_redirect");
+        if (stored) localStorage.removeItem("babytalk_auth_redirect");
+        router.replace(stored ?? "/dashboard");
+      } catch {
+        // Autofill cancelled or unsupported — fall through silently.
+      }
+    };
+    tryAutofill();
+    return () => {
+      cancelled = true;
+    };
+  }, [passkeySupported, router]);
+
+  const handlePasskeyClick = useCallback(async () => {
+    setErrorMsg("");
+    setSigningInWithPasskey(true);
+    try {
+      const result = await signInWithPasskey(email.trim() || null);
+      localStorage.setItem("babytalk_token", result.token);
+      const stored = localStorage.getItem("babytalk_auth_redirect");
+      if (stored) localStorage.removeItem("babytalk_auth_redirect");
+      router.replace(stored ?? "/dashboard");
+    } catch (error) {
+      if (error instanceof Error && error.name !== "NotAllowedError") {
+        setErrorMsg(error.message);
+      }
+    } finally {
+      setSigningInWithPasskey(false);
+    }
+  }, [email, router]);
 
   // Store any redirect param so the verify page can use it after auth
   if (typeof window !== "undefined") {
@@ -105,6 +163,8 @@ export default function LoginPage() {
             onChange={handleEmailChange}
             placeholder="you@example.com"
             required
+            // oxlint-disable-next-line jsx-a11y/autocomplete-valid
+            autoComplete="username webauthn"
             className="min-h-[48px] rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           />
           <button
@@ -113,6 +173,44 @@ export default function LoginPage() {
           >
             Send magic link
           </button>
+          {passkeySupported && (
+            <>
+              <div className="my-1 flex items-center gap-3 text-xs text-neutral-300">
+                <span className="h-px flex-1 bg-neutral-100" />
+                <span>or</span>
+                <span className="h-px flex-1 bg-neutral-100" />
+              </div>
+              <button
+                type="button"
+                onClick={handlePasskeyClick}
+                disabled={signingInWithPasskey}
+                className="flex min-h-[48px] items-center justify-center gap-2 rounded-md border border-neutral-200 bg-surface-raised px-6 py-3 text-base font-semibold text-neutral-700 transition-[background-color,transform] duration-[var(--duration-normal)] hover:bg-neutral-50 active:scale-[0.98] disabled:opacity-50"
+              >
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.8}
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="M15 7a4 4 0 11-8 0 4 4 0 018 0z"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M11 13l-4 4v3h3l1-1h2v-2h2v-2l1-1-4-4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {signingInWithPasskey
+                  ? "Verifying..."
+                  : "Sign in with a passkey"}
+              </button>
+            </>
+          )}
           {errorMsg && (
             <p className="text-center text-sm text-danger-500">{errorMsg}</p>
           )}

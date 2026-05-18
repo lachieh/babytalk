@@ -1,8 +1,9 @@
 import { users } from "@babytalk/db";
 import { eq } from "drizzle-orm";
 
+import { listUserPasskeys } from "../auth/passkey";
 import { builder } from "./builder";
-import { UserType } from "./types";
+import { PasskeyType, UserType } from "./types";
 
 builder.queryField("me", (t) =>
   t.field({
@@ -21,5 +22,15 @@ builder.queryField("me", (t) =>
       return user ?? null;
     },
     type: UserType,
+  })
+);
+
+builder.queryField("myPasskeys", (t) =>
+  t.field({
+    resolve: (_root, _args, ctx) => {
+      if (!ctx.currentUser) throw new Error("Not authenticated");
+      return listUserPasskeys(ctx.currentUser.sub);
+    },
+    type: [PasskeyType],
   })
 );

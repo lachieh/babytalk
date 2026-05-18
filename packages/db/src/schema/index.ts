@@ -5,4 +5,6 @@ export { events } from "./events";
 export { households } from "./households";
 export { magicLinks } from "./magic-links";
 export { measurements } from "./measurements";
+export { userCredentials } from "./user-credentials";
 export { users } from "./users";
+export { webauthnChallenges } from "./webauthn-challenges";
