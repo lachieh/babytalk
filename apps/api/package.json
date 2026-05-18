@@ -19,7 +19,7 @@
     "@pothos/core": "^4.12.0",
     "@pothos/plugin-drizzle": "^0.17.0",
     "@simplewebauthn/server": "^13.3.0",
-    "drizzle-orm": "1.0.0-beta.22",
+    "drizzle-orm": "1.0.0-rc.2",
     "graphql": "^16.13.2",
     "graphql-yoga": "^5.21.0",
     "hono": "^4.12.18",
