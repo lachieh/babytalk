@@ -22,8 +22,8 @@ importers:
         specifier: ^0.43.0
         version: 0.43.0
       oxlint:
-        specifier: 1.56.0
-        version: 1.56.0
+        specifier: 1.64.0
+        version: 1.64.0
       playwright:
         specifier: 1.58.2
         version: 1.58.2
@@ -35,16 +35,16 @@ importers:
         version: 5.9.3
       ultracite:
         specifier: 7.3.2
-        version: 7.3.2(oxlint@1.56.0)
+        version: 7.3.2(oxlint@1.64.0)
 
   apps/api:
     dependencies:
       '@babytalk/db':
         specifier: workspace:*
-        version: link:../../packages/db
+        version: file:packages/db(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/vite-config':
         specifier: workspace:*
         version: link:../../packages/vite-config
@@ -59,13 +59,13 @@ importers:
         version: 4.12.0(graphql@16.14.0)
       '@pothos/plugin-drizzle':
         specifier: ^0.17.0
-        version: 0.17.0(@pothos/core@4.12.0(graphql@16.14.0))(drizzle-orm@1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.14.0)
+        version: 0.17.0(@pothos/core@4.12.0(graphql@16.14.0))(drizzle-orm@1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.14.0)
       '@simplewebauthn/server':
         specifier: ^13.3.0
         version: 13.3.0
       drizzle-orm:
         specifier: 1.0.0-beta.22
-        version: 1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+        version: 1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       graphql:
         specifier: ^16.13.2
         version: 16.14.0
@@ -96,16 +96,16 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.10
-        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       vitest:
         specifier: ^4.1.5
-        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   apps/mcp:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/vite-config':
         specifier: workspace:*
         version: link:../../packages/vite-config
@@ -127,13 +127,13 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.10
-        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
 
   apps/web:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../../packages/standard-config
+        version: file:packages/standard-config
       '@babytalk/zpages':
         specifier: workspace:*
         version: link:../../packages/zpages
@@ -225,13 +225,13 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.10
-        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       vite-plugin-dts:
         specifier: ^4.5.4
-        version: 4.5.4(@types/node@25.5.0)(typescript@5.9.3)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.5.4(@types/node@25.5.0)(typescript@5.9.3)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       vitest:
         specifier: ^4.1.5
-        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/standard-config:
     dependencies:
@@ -285,10 +285,10 @@ importers:
     dependencies:
       '@babytalk/standard-config':
         specifier: workspace:*
-        version: link:../standard-config
+        version: file:packages/standard-config
       vite:
         specifier: ^8.0.10
-        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
     devDependencies:
       '@babytalk/tsconfig':
         specifier: workspace:*
@@ -307,13 +307,13 @@ importers:
         version: 5.9.3
       vite:
         specifier: ^8.0.10
-        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+        version: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       vite-plugin-dts:
         specifier: ^4.5.4
-        version: 4.5.4(@types/node@25.5.0)(typescript@5.9.3)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.5.4(@types/node@25.5.0)(typescript@5.9.3)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
       vitest:
         specifier: ^4.1.5
-        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+        version: 4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
 packages:
 
@@ -332,8 +332,8 @@ packages:
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
     engines: {node: '>=10'}
 
-  '@azure-rest/core-client@2.5.1':
-    resolution: {integrity: sha512-EHaOXW0RYDKS5CFffnixdyRPak5ytiCtU7uXDcP/uiY+A6jFRwNGzzJBiznkCzvi5EYpY+YWinieqHb0oY916A==}
+  '@azure-rest/core-client@2.6.0':
+    resolution: {integrity: sha512-iuFKDm8XPzNxPfRjhyU5/xKZmcRDzSuEghXDHHk4MjBV/wFL34GmYVBZnn9wmuoLBeS1qAw9ceMdaeJBPcB1QQ==}
     engines: {node: '>=20.0.0'}
 
   '@azure/abort-controller@2.1.2':
@@ -348,8 +348,8 @@ packages:
     resolution: {integrity: sha512-Nh5PhEOeY6PrnxNPsEHRr9eimxLwgLlpmguQaHKBinFYA/RU9+kOYVOQqOrTsCL+KSxrLLl1gD8Dk5BFW/7l/w==}
     engines: {node: '>=20.0.0'}
 
-  '@azure/core-http-compat@2.3.2':
-    resolution: {integrity: sha512-Tf6ltdKzOJEgxZeWLCjMxrxbodB/ZeCbzzA1A2qHbhzAjzjHoBVSUeSl/baT/oHAxhc4qdqVaDKnc2+iE932gw==}
+  '@azure/core-http-compat@2.4.0':
+    resolution: {integrity: sha512-f1P96IB399YiN2ARYHP7EpZi3Bf3wH4SN2lGzrw7JVwm7bbsVYtf2iKSBwTywD2P62NOPZGHFSZi+6jjb75JuA==}
     engines: {node: '>=20.0.0'}
     peerDependencies:
       '@azure/core-client': ^1.10.0
@@ -379,9 +379,9 @@ packages:
     resolution: {integrity: sha512-5C/2WD5Vb1lHnZS16dNQRPMjN6oV/Upba+C9nBIs15PmOi6A3ZGs4Lr2u60zw4S04gi+u3cEXiqTVP7M4Pz3kw==}
     engines: {node: '>=20.0.0'}
 
-  '@azure/keyvault-common@2.0.0':
-    resolution: {integrity: sha512-wRLVaroQtOqfg60cxkzUkGKrKMsCP6uYXAOomOIysSMyt1/YM0eUn9LqieAWM8DLcU4+07Fio2YGpPeqUbpP9w==}
-    engines: {node: '>=18.0.0'}
+  '@azure/keyvault-common@2.1.0':
+    resolution: {integrity: sha512-aCDidWuKY06LWQ4x7/8TIXK6iRqTaRWRL3t7T+LC+j1b07HtoIsOxP/tU90G4jCSBn5TAyUTCtA4MS/y5Hudaw==}
+    engines: {node: '>=20.0.0'}
 
   '@azure/keyvault-keys@4.10.0':
     resolution: {integrity: sha512-eDT7iXoBTRZ2n3fLiftuGJFD+yjkiB1GNqzU2KbY1TLYeXeSPVTVgn2eJ5vmRTZ11978jy2Kg2wI7xa9Tyr8ag==}
@@ -391,16 +391,16 @@ packages:
     resolution: {integrity: sha512-fCqPIfOcLE+CGqGPd66c8bZpwAji98tZ4JI9i/mlTNTlsIWslCfpg48s/ypyLxZTump5sypjrKn2/kY7q8oAbA==}
     engines: {node: '>=20.0.0'}
 
-  '@azure/msal-browser@5.6.1':
-    resolution: {integrity: sha512-Ylmp8yngH7YRLV5mA1aF4CNS6WsJTPbVXaA0Tb1x1Gv/J3BM3hE4Q7nDaf7dRfU00FcxDBBudTjqlpH74ZSsgw==}
+  '@azure/msal-browser@5.10.1':
+    resolution: {integrity: sha512-hTbvOi9Ko2Jvn+G/fSmjzHf9WbNcf/o3epMtbeGx/pMwMrVAbi6OgCJVeCfsAb8IybSRpaCSc4EDRlYAhgngUQ==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-common@16.4.0':
-    resolution: {integrity: sha512-twXt09PYtj1PffNNIAzQlrBd0DS91cdA6i1gAfzJ6BnPM4xNk5k9q/5xna7jLIjU3Jnp0slKYtucshGM8OGNAw==}
+  '@azure/msal-common@16.6.1':
+    resolution: {integrity: sha512-VxKdEtUwDuLD0F1hOQP7kye0YadZxFJfv37Em440geEf/w9uggKnHpRrqwZJOdxmPUOdhZ9kyRtKuAJW8wUcRg==}
     engines: {node: '>=0.8.0'}
 
-  '@azure/msal-node@5.1.1':
-    resolution: {integrity: sha512-71grXU6+5hl+3CL3joOxlj/AW6rmhthuTlG0fRqsTrhPArQBpZuUFzCIlKOGdcafLUa/i1hBdV78ZxJdlvRA+g==}
+  '@azure/msal-node@5.2.1':
+    resolution: {integrity: sha512-tmQiQ2HvtzaeLqYGy3BemiPOSGPY4wCy1IW5zDWITKSs/s35WEd7Zij/hCxvUdAOzj6U3qnyaGbYXY91ortFEQ==}
     engines: {node: '>=20'}
 
   '@babel/helper-string-parser@7.27.1':
@@ -427,6 +427,13 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@babytalk/db@file:packages/db':
+    resolution: {directory: packages/db, type: directory}
+
+  '@babytalk/standard-config@file:packages/standard-config':
+    resolution: {directory: packages/standard-config, type: directory}
+    hasBin: true
 
   '@changesets/apply-release-plan@7.1.0':
     resolution: {integrity: sha512-yq8ML3YS7koKQ/9bk1PqO0HMzApIFNwjlwCnwFEXMzNe8NpzeeYYKCmnhWJGkN8g7E51MnWaSbqRcTcdIxUgnQ==}
@@ -1309,124 +1316,124 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@oxlint/binding-android-arm-eabi@1.56.0':
-    resolution: {integrity: sha512-IyfYPthZyiSKwAv/dLjeO18SaK8MxLI9Yss2JrRDyweQAkuL3LhEy7pwIwI7uA3KQc1Vdn20kdmj3q0oUIQL6A==}
+  '@oxlint/binding-android-arm-eabi@1.64.0':
+    resolution: {integrity: sha512-2r6Nq3XXGLHEXKkSj8JtmJ6N4gDw431DPFOg0ZoJHlNjnG6HVMm/ksQ10m0HJ8WBvwgMe1L50UHPaYZutCRPCw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [android]
 
-  '@oxlint/binding-android-arm64@1.56.0':
-    resolution: {integrity: sha512-Ga5zYrzH6vc/VFxhn6MmyUnYEfy9vRpwTIks99mY3j6Nz30yYpIkWryI0QKPCgvGUtDSXVLEaMum5nA+WrNOSg==}
+  '@oxlint/binding-android-arm64@1.64.0':
+    resolution: {integrity: sha512-ePJMpePgg7fBv+L/hVx1xXRU5/5gd5m0obLA6hPEfLXF3GjpR8idIDbY1dhQYhyz1ms2wdTccSboo6KEd2Oxtg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [android]
 
-  '@oxlint/binding-darwin-arm64@1.56.0':
-    resolution: {integrity: sha512-ogmbdJysnw/D4bDcpf1sPLpFThZ48lYp4aKYm10Z/6Nh1SON6NtnNhTNOlhEY296tDFItsZUz+2tgcSYqh8Eyw==}
+  '@oxlint/binding-darwin-arm64@1.64.0':
+    resolution: {integrity: sha512-U4DMLQd10gJLuoSTLSGbfv3bGjTlUNsScm9Dgb8wwBqmCzidf1pE1pXV4doGNxqwH3KtVng1AGTINA0NvkGLvQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [darwin]
 
-  '@oxlint/binding-darwin-x64@1.56.0':
-    resolution: {integrity: sha512-x8QE1h+RAtQ2g+3KPsP6Fk/tdz6zJQUv5c7fTrJxXV3GHOo+Ry5p/PsogU4U+iUZg0rj6hS+E4xi+mnwwlDCWQ==}
+  '@oxlint/binding-darwin-x64@1.64.0':
+    resolution: {integrity: sha512-GoRIL48QWm4/TAvjN8pB1nAG+1/uqc9EdnWT9zqHeb6wsmjZtywj8VRe5aGW47Fdb64YtLOsdLqVxOvQuz98Wg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [darwin]
 
-  '@oxlint/binding-freebsd-x64@1.56.0':
-    resolution: {integrity: sha512-6G+WMZvwJpMvY7my+/SHEjb7BTk/PFbePqLpmVmUJRIsJMy/UlyYqjpuh0RCgYYkPLcnXm1rUM04kbTk8yS1Yg==}
+  '@oxlint/binding-freebsd-x64@1.64.0':
+    resolution: {integrity: sha512-5dFkv4tkg7PxJJGS9/OjrJwjhuHczrd3OQOkRE0wHcLM+ncUnULtzEPWjqGOxTXxZnLWcB91bGiIznx89TVXyQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [freebsd]
 
-  '@oxlint/binding-linux-arm-gnueabihf@1.56.0':
-    resolution: {integrity: sha512-YYHBsk/sl7fYwQOok+6W5lBPeUEvisznV/HZD2IfZmF3Bns6cPC3Z0vCtSEOaAWTjYWN3jVsdu55jMxKlsdlhg==}
+  '@oxlint/binding-linux-arm-gnueabihf@1.64.0':
+    resolution: {integrity: sha512-jsBqMLl/uOL5+Kq/+BtK9FrmiNGUbx8SiyZXv+WlUxA45KuwcLu9BfiSIL3I3DBDgWM3yZizDITnTK9BcqNBQg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [linux]
 
-  '@oxlint/binding-linux-arm-musleabihf@1.56.0':
-    resolution: {integrity: sha512-+AZK8rOUr78y8WT6XkDb04IbMRqauNV+vgT6f8ZLOH8wnpQ9i7Nol0XLxAu+Cq7Sb+J9wC0j6Km5hG8rj47/yQ==}
+  '@oxlint/binding-linux-arm-musleabihf@1.64.0':
+    resolution: {integrity: sha512-1lrj8At/Uuc9GhjrVFBQo0NEjfBrTkzpmtHIGAhNnIXqn1CAyGL+qrztUsXb2GIluJrpl9Q7qRLJOb/NqydacQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [linux]
 
-  '@oxlint/binding-linux-arm64-gnu@1.56.0':
-    resolution: {integrity: sha512-urse2SnugwJRojUkGSSeH2LPMaje5Q50yQtvtL9HFckiyeqXzoFwOAZqD5TR29R2lq7UHidfFDM9EGcchcbb8A==}
+  '@oxlint/binding-linux-arm64-gnu@1.64.0':
+    resolution: {integrity: sha512-HpSQbubwh03mMhAdy2BYtad/fsY8vDFHDAb6bUwuCYg2VD3xCQgn6ArKcO0oZyLCheacKTv4PrF3Mfu5hgoE2g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@oxlint/binding-linux-arm64-musl@1.56.0':
-    resolution: {integrity: sha512-rkTZkBfJ4TYLjansjSzL6mgZOdN5IvUnSq3oNJSLwBcNvy3dlgQtpHPrRxrCEbbcp7oQ6If0tkNaqfOsphYZ9g==}
+  '@oxlint/binding-linux-arm64-musl@1.64.0':
+    resolution: {integrity: sha512-00QQ0h0Y7u0G69BgiH3+ky2aaq/QvkDL6DYok8htIuJHxybiux5aQ8jwmg8qIk9wha6UagUP2BAwAzbemcJbpg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@oxlint/binding-linux-ppc64-gnu@1.56.0':
-    resolution: {integrity: sha512-uqL1kMH3u69/e1CH2EJhP3CP28jw2ExLsku4o8RVAZ7fySo9zOyI2fy9pVlTAp4voBLVgzndXi3SgtdyCTa2aA==}
+  '@oxlint/binding-linux-ppc64-gnu@1.64.0':
+    resolution: {integrity: sha512-2GaimTV6EMW+s5HS0An3oGbQme3BgHswvfVdGk3EB57Xe9+/gyT+Qd7lNVzb3rtir52vbIPzXfaYArzs5b5zcw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
     libc: [glibc]
 
-  '@oxlint/binding-linux-riscv64-gnu@1.56.0':
-    resolution: {integrity: sha512-j0CcMBOgV6KsRaBdsebIeiy7hCjEvq2KdEsiULf2LZqAq0v1M1lWjelhCV57LxsqaIGChXFuFJ0RiFrSRHPhSg==}
+  '@oxlint/binding-linux-riscv64-gnu@1.64.0':
+    resolution: {integrity: sha512-H46AtFb9wypjoVwGdlxrm0DsD809NGmtiK9HiyPKTxkSte2YjhC4S+00rOIrwCaxcyPiGid3Y3OMXp5KMAkGZw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [riscv64]
     os: [linux]
     libc: [glibc]
 
-  '@oxlint/binding-linux-riscv64-musl@1.56.0':
-    resolution: {integrity: sha512-7VDOiL8cDG3DQ/CY3yKjbV1c4YPvc4vH8qW09Vv+5ukq3l/Kcyr6XGCd5NvxUmxqDb2vjMpM+eW/4JrEEsUetA==}
+  '@oxlint/binding-linux-riscv64-musl@1.64.0':
+    resolution: {integrity: sha512-HEgsidjjvvyzdg82icYkuFCf7REDV7B9JFwbIMbVwrKLBY0MrXX+bku3POn/hduZ2yW91IyVDUMq0Bf02KwXQw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [riscv64]
     os: [linux]
     libc: [musl]
 
-  '@oxlint/binding-linux-s390x-gnu@1.56.0':
-    resolution: {integrity: sha512-JGRpX0M+ikD3WpwJ7vKcHKV6Kg0dT52BW2Eu2BupXotYeqGXBrbY+QPkAyKO6MNgKozyTNaRh3r7g+VWgyAQYQ==}
+  '@oxlint/binding-linux-s390x-gnu@1.64.0':
+    resolution: {integrity: sha512-Axvm8qryotmKN00P5w4JapaSjvP2LOSbdbBJiX+2SuHd3QzhW7TUc8skqgw+ahQZ5DmzEYeHCqauvW8f32Ns6Q==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
     libc: [glibc]
 
-  '@oxlint/binding-linux-x64-gnu@1.56.0':
-    resolution: {integrity: sha512-dNaICPvtmuxFP/VbqdofrLqdS3bM/AKJN3LMJD52si44ea7Be1cBk6NpfIahaysG9Uo+L98QKddU9CD5L8UHnQ==}
+  '@oxlint/binding-linux-x64-gnu@1.64.0':
+    resolution: {integrity: sha512-cR60vSd7+m+KRZ3GQGfDxWwahW5RMXg0qlGvAluZr0fTUYvw0H9N9AXAF/M/PMqgytyqvVNmBAkJG9l7U30Y1g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@oxlint/binding-linux-x64-musl@1.56.0':
-    resolution: {integrity: sha512-pF1vOtM+GuXmbklM1hV8WMsn6tCNPvkUzklj/Ej98JhlanbmA2RB1BILgOpwSuCTRTIYx2MXssmEyQQ90QF5aA==}
+  '@oxlint/binding-linux-x64-musl@1.64.0':
+    resolution: {integrity: sha512-2u/aPZ9pEg7HnvZPDsHxUGNnrpr4qaHi+mCgLgpt+LYRzPrS4Px4wPfkIdRdr2GvKnaYyt+XSlto0Vm5sbStTg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@oxlint/binding-openharmony-arm64@1.56.0':
-    resolution: {integrity: sha512-bp8NQ4RE6fDIFLa4bdBiOA+TAvkNkg+rslR+AvvjlLTYXLy9/uKAYLQudaQouWihLD/hgkrXIKKzXi5IXOewwg==}
+  '@oxlint/binding-openharmony-arm64@1.64.0':
+    resolution: {integrity: sha512-kfhkGfCdoXLSxEkrhDlJrvBYajGmq+ma4EMc53dsOWTq+rIBOlI0vTBmpZNnM5oH2LY/K/w1HAK+UQEgjgpVUg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [openharmony]
 
-  '@oxlint/binding-win32-arm64-msvc@1.56.0':
-    resolution: {integrity: sha512-PxT4OJDfMOQBzo3OlzFb9gkoSD+n8qSBxyVq2wQSZIHFQYGEqIRTo9M0ZStvZm5fdhMqaVYpOnJvH2hUMEDk/g==}
+  '@oxlint/binding-win32-arm64-msvc@1.64.0':
+    resolution: {integrity: sha512-r/cNKBFieONoVu2bb1KkVouq9W+edDUgHumXJGphCRRj+U0xaD4nanrw8ZOqo0IsutPkEM4vCcGBpak6x5aXMg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [win32]
 
-  '@oxlint/binding-win32-ia32-msvc@1.56.0':
-    resolution: {integrity: sha512-PTRy6sIEPqy2x8PTP1baBNReN/BNEFmde0L+mYeHmjXE1Vlcc9+I5nsqENsB2yAm5wLkzPoTNCMY/7AnabT4/A==}
+  '@oxlint/binding-win32-ia32-msvc@1.64.0':
+    resolution: {integrity: sha512-tUw0xUUwEFVZbpJoeCblkv8SJA4Xz3CdXCJbAnBsiNLyxDrk2tLcxEAS6M73Q7hHHDg3OtwI8vZVK3t5RJt4Gw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ia32]
     os: [win32]
 
-  '@oxlint/binding-win32-x64-msvc@1.56.0':
-    resolution: {integrity: sha512-ZHa0clocjLmIDr+1LwoWtxRcoYniAvERotvwKUYKhH41NVfl0Y4LNbyQkwMZzwDvKklKGvGZ5+DAG58/Ik47tQ==}
+  '@oxlint/binding-win32-x64-msvc@1.64.0':
+    resolution: {integrity: sha512-9CBR+LO0JVST87fNTzzNxS5I29jIUO5gxT9i9+M3SDHHALElj9sY1Prf12tad3vIRC6OD7Ehtvvh+sn13vSwHw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
@@ -1925,8 +1932,8 @@ packages:
   '@types/readable-stream@4.0.23':
     resolution: {integrity: sha512-wwXrtQvbMHxCbBgjHaMGEmImFTQxxpfMOR/ZoQnXxB1woqkUbdLGFDgauo00Py9IudiaqSeiBiulSV9i6XIPig==}
 
-  '@typespec/ts-http-runtime@0.3.4':
-    resolution: {integrity: sha512-CI0NhTrz4EBaa0U+HaaUZrJhPoso8sG7ZFya8uQoBA57fjzrjRSv87ekCjLZOFExN+gXE/z0xuN2QfH4H2HrLQ==}
+  '@typespec/ts-http-runtime@0.3.5':
+    resolution: {integrity: sha512-yURCknZhvywvQItHMMmFSo+fq5arCUIyz/CVk7jD89MSai7dkaX8ufjCWp3NttLojoTVbcE72ri+be/TnEbMHw==}
     engines: {node: '>=20.0.0'}
 
   '@urql/core@6.0.1':
@@ -2727,6 +2734,9 @@ packages:
   get-tsconfig@4.13.7:
     resolution: {integrity: sha512-7tN6rFgBlMgpBML5j8typ92BKFi2sFQvIdpAqLA2beia5avZDrMs0FLZiM5etShWq5irVyGcGMEA1jcDaK7A/Q==}
 
+  get-tsconfig@4.14.0:
+    resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
+
   glob-parent@5.1.2:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
@@ -3267,12 +3277,12 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-  oxlint@1.56.0:
-    resolution: {integrity: sha512-Q+5Mj5PVaH/R6/fhMMFzw4dT+KPB+kQW4kaL8FOIq7tfhlnEVp6+3lcWqFruuTNlUo9srZUW3qH7Id4pskeR6g==}
+  oxlint@1.64.0:
+    resolution: {integrity: sha512-Star3SNpWPeWFPw7kRXIhXUSn6fdiAl25q15CQzH/9WaOtG6e9CWTc25vNZOCr4PE1yEP1GtKJKIKglhj3OmEQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
-      oxlint-tsgolint: '>=0.15.0'
+      oxlint-tsgolint: '>=0.22.1'
     peerDependenciesMeta:
       oxlint-tsgolint:
         optional: true
@@ -3392,6 +3402,10 @@ packages:
 
   postgres@3.4.8:
     resolution: {integrity: sha512-d+JFcLM17njZaOLkv6SCev7uoLaBtfK86vMUXhW1Z4glPWh4jozno9APvW/XKFJ3CCxVoC7OL38BqRydtu5nGg==}
+    engines: {node: '>=12'}
+
+  postgres@3.4.9:
+    resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
 
   prettier@2.8.8:
@@ -3568,6 +3582,11 @@ packages:
 
   semver@7.7.4:
     resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.8.0:
+    resolution: {integrity: sha512-AcM7dV/5ul4EekoQ29Agm5vri8JNqRyj39o0qpX6vDF2GZrtutZl5RwgD1XnZjiTAfncsJhMI48QQH3sN87YNA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -3858,11 +3877,6 @@ packages:
     peerDependencies:
       react: '*'
 
-  uuid@8.3.2:
-    resolution: {integrity: sha512-+NYs2QeMWy+GWFOEm9xnn6HCDp0l7QBD7ml8zLUmJ+93Q5NF0NocErnwkTkXVFNiX3/fpC6afS8Dhb/gz7R7eg==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
-
   v8-compile-cache-lib@3.0.1:
     resolution: {integrity: sha512-wa7YjyUGfNZngI/vtK0UHAN+lgDCxBPCylVXGp0zu59Fz5aiGtNXaq3DhIov063MorB+VfufLh3JlF2KdTK3xg==}
 
@@ -4029,6 +4043,11 @@ packages:
     engines: {node: '>= 14.6'}
     hasBin: true
 
+  yaml@2.9.0:
+    resolution: {integrity: sha512-2AvhNX3mb8zd6Zy7INTtSpl1F15HW6Wnqj0srWlkKLcpYl/gMIMJiyuGq2KeI2YFxUPjdlB+3Lc10seMLtL4cA==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
   yargs-parser@18.1.3:
     resolution: {integrity: sha512-o50j0JeToy/4K6OZcaQmW6lyXXKhq7csREXcDwk2omFPJEwUNOVtJKvmDr9EI1fAJZUyZcRF7kxGBWmRXudrCQ==}
     engines: {node: '>=6'}
@@ -4065,13 +4084,13 @@ snapshots:
 
   '@alloc/quick-lru@5.2.0': {}
 
-  '@azure-rest/core-client@2.5.1':
+  '@azure-rest/core-client@2.6.0':
     dependencies:
       '@azure/abort-controller': 2.1.2
       '@azure/core-auth': 1.10.1
       '@azure/core-rest-pipeline': 1.23.0
       '@azure/core-tracing': 1.3.1
-      '@typespec/ts-http-runtime': 0.3.4
+      '@typespec/ts-http-runtime': 0.3.5
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
@@ -4104,7 +4123,7 @@ snapshots:
       - supports-color
     optional: true
 
-  '@azure/core-http-compat@2.3.2(@azure/core-client@1.10.1)(@azure/core-rest-pipeline@1.23.0)':
+  '@azure/core-http-compat@2.4.0(@azure/core-client@1.10.1)(@azure/core-rest-pipeline@1.23.0)':
     dependencies:
       '@azure/abort-controller': 2.1.2
       '@azure/core-client': 1.10.1
@@ -4133,7 +4152,7 @@ snapshots:
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
       '@azure/logger': 1.3.0
-      '@typespec/ts-http-runtime': 0.3.4
+      '@typespec/ts-http-runtime': 0.3.5
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
@@ -4147,7 +4166,7 @@ snapshots:
   '@azure/core-util@1.13.1':
     dependencies:
       '@azure/abort-controller': 2.1.2
-      '@typespec/ts-http-runtime': 0.3.4
+      '@typespec/ts-http-runtime': 0.3.5
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
@@ -4162,19 +4181,19 @@ snapshots:
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
       '@azure/logger': 1.3.0
-      '@azure/msal-browser': 5.6.1
-      '@azure/msal-node': 5.1.1
+      '@azure/msal-browser': 5.10.1
+      '@azure/msal-node': 5.2.1
       open: 10.2.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
     optional: true
 
-  '@azure/keyvault-common@2.0.0':
+  '@azure/keyvault-common@2.1.0':
     dependencies:
+      '@azure-rest/core-client': 2.6.0
       '@azure/abort-controller': 2.1.2
       '@azure/core-auth': 1.10.1
-      '@azure/core-client': 1.10.1
       '@azure/core-rest-pipeline': 1.23.0
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
@@ -4186,16 +4205,16 @@ snapshots:
 
   '@azure/keyvault-keys@4.10.0(@azure/core-client@1.10.1)':
     dependencies:
-      '@azure-rest/core-client': 2.5.1
+      '@azure-rest/core-client': 2.6.0
       '@azure/abort-controller': 2.1.2
       '@azure/core-auth': 1.10.1
-      '@azure/core-http-compat': 2.3.2(@azure/core-client@1.10.1)(@azure/core-rest-pipeline@1.23.0)
+      '@azure/core-http-compat': 2.4.0(@azure/core-client@1.10.1)(@azure/core-rest-pipeline@1.23.0)
       '@azure/core-lro': 2.7.2
       '@azure/core-paging': 1.6.2
       '@azure/core-rest-pipeline': 1.23.0
       '@azure/core-tracing': 1.3.1
       '@azure/core-util': 1.13.1
-      '@azure/keyvault-common': 2.0.0
+      '@azure/keyvault-common': 2.1.0
       '@azure/logger': 1.3.0
       tslib: 2.8.1
     transitivePeerDependencies:
@@ -4205,25 +4224,24 @@ snapshots:
 
   '@azure/logger@1.3.0':
     dependencies:
-      '@typespec/ts-http-runtime': 0.3.4
+      '@typespec/ts-http-runtime': 0.3.5
       tslib: 2.8.1
     transitivePeerDependencies:
       - supports-color
     optional: true
 
-  '@azure/msal-browser@5.6.1':
+  '@azure/msal-browser@5.10.1':
     dependencies:
-      '@azure/msal-common': 16.4.0
+      '@azure/msal-common': 16.6.1
     optional: true
 
-  '@azure/msal-common@16.4.0':
+  '@azure/msal-common@16.6.1':
     optional: true
 
-  '@azure/msal-node@5.1.1':
+  '@azure/msal-node@5.2.1':
     dependencies:
-      '@azure/msal-common': 16.4.0
+      '@azure/msal-common': 16.6.1
       jsonwebtoken: 9.0.3
-      uuid: 8.3.2
     optional: true
 
   '@babel/helper-string-parser@7.27.1': {}
@@ -4242,6 +4260,54 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@babytalk/db@file:packages/db(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)':
+    dependencies:
+      drizzle-orm: 1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+      postgres: 3.4.9
+    transitivePeerDependencies:
+      - '@aws-sdk/client-rds-data'
+      - '@cloudflare/workers-types'
+      - '@effect/sql'
+      - '@effect/sql-pg'
+      - '@electric-sql/pglite'
+      - '@libsql/client'
+      - '@libsql/client-wasm'
+      - '@neondatabase/serverless'
+      - '@op-engineering/op-sqlite'
+      - '@opentelemetry/api'
+      - '@planetscale/database'
+      - '@sinclair/typebox'
+      - '@sqlitecloud/drivers'
+      - '@tidbcloud/serverless'
+      - '@tursodatabase/database'
+      - '@tursodatabase/database-common'
+      - '@tursodatabase/database-wasm'
+      - '@types/better-sqlite3'
+      - '@types/mssql'
+      - '@types/pg'
+      - '@types/sql.js'
+      - '@upstash/redis'
+      - '@vercel/postgres'
+      - '@xata.io/client'
+      - arktype
+      - better-sqlite3
+      - bun-types
+      - expo-sqlite
+      - gel
+      - mssql
+      - mysql2
+      - pg
+      - sql.js
+      - sqlite3
+      - typebox
+      - valibot
+      - zod
+
+  '@babytalk/standard-config@file:packages/standard-config':
+    dependencies:
+      defu: 6.1.7
+      yaml: 2.9.0
 
   '@changesets/apply-release-plan@7.1.0':
     dependencies:
@@ -4977,61 +5043,61 @@ snapshots:
   '@oxfmt/binding-win32-x64-msvc@0.43.0':
     optional: true
 
-  '@oxlint/binding-android-arm-eabi@1.56.0':
+  '@oxlint/binding-android-arm-eabi@1.64.0':
     optional: true
 
-  '@oxlint/binding-android-arm64@1.56.0':
+  '@oxlint/binding-android-arm64@1.64.0':
     optional: true
 
-  '@oxlint/binding-darwin-arm64@1.56.0':
+  '@oxlint/binding-darwin-arm64@1.64.0':
     optional: true
 
-  '@oxlint/binding-darwin-x64@1.56.0':
+  '@oxlint/binding-darwin-x64@1.64.0':
     optional: true
 
-  '@oxlint/binding-freebsd-x64@1.56.0':
+  '@oxlint/binding-freebsd-x64@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-arm-gnueabihf@1.56.0':
+  '@oxlint/binding-linux-arm-gnueabihf@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-arm-musleabihf@1.56.0':
+  '@oxlint/binding-linux-arm-musleabihf@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-arm64-gnu@1.56.0':
+  '@oxlint/binding-linux-arm64-gnu@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-arm64-musl@1.56.0':
+  '@oxlint/binding-linux-arm64-musl@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-ppc64-gnu@1.56.0':
+  '@oxlint/binding-linux-ppc64-gnu@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-riscv64-gnu@1.56.0':
+  '@oxlint/binding-linux-riscv64-gnu@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-riscv64-musl@1.56.0':
+  '@oxlint/binding-linux-riscv64-musl@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-s390x-gnu@1.56.0':
+  '@oxlint/binding-linux-s390x-gnu@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-x64-gnu@1.56.0':
+  '@oxlint/binding-linux-x64-gnu@1.64.0':
     optional: true
 
-  '@oxlint/binding-linux-x64-musl@1.56.0':
+  '@oxlint/binding-linux-x64-musl@1.64.0':
     optional: true
 
-  '@oxlint/binding-openharmony-arm64@1.56.0':
+  '@oxlint/binding-openharmony-arm64@1.64.0':
     optional: true
 
-  '@oxlint/binding-win32-arm64-msvc@1.56.0':
+  '@oxlint/binding-win32-arm64-msvc@1.64.0':
     optional: true
 
-  '@oxlint/binding-win32-ia32-msvc@1.56.0':
+  '@oxlint/binding-win32-ia32-msvc@1.64.0':
     optional: true
 
-  '@oxlint/binding-win32-x64-msvc@1.56.0':
+  '@oxlint/binding-win32-x64-msvc@1.64.0':
     optional: true
 
   '@peculiar/asn1-android@2.7.0':
@@ -5145,10 +5211,10 @@ snapshots:
     dependencies:
       graphql: 16.14.0
 
-  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.14.0))(drizzle-orm@1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.14.0)':
+  '@pothos/plugin-drizzle@0.17.0(@pothos/core@4.12.0(graphql@16.14.0))(drizzle-orm@1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6))(graphql@16.14.0)':
     dependencies:
       '@pothos/core': 4.12.0(graphql@16.14.0)
-      drizzle-orm: 1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.8)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
+      drizzle-orm: 1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6)
       graphql: 16.14.0
 
   '@repeaterjs/repeater@3.0.6': {}
@@ -5524,7 +5590,7 @@ snapshots:
       '@types/node': 25.5.0
     optional: true
 
-  '@typespec/ts-http-runtime@0.3.4':
+  '@typespec/ts-http-runtime@0.3.5':
     dependencies:
       http-proxy-agent: 7.0.2
       https-proxy-agent: 7.0.6
@@ -5562,6 +5628,14 @@ snapshots:
       magic-string: 0.30.21
     optionalDependencies:
       vite: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+
+  '@vitest/mocker@4.1.5(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))':
+    dependencies:
+      '@vitest/spy': 4.1.5
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
 
   '@vitest/pretty-format@4.1.5':
     dependencies:
@@ -5989,6 +6063,15 @@ snapshots:
       valibot: 1.3.1(typescript@5.9.3)
       zod: 4.3.6
 
+  drizzle-orm@1.0.0-beta.22(@types/mssql@9.1.9(@azure/core-client@1.10.1))(gel@2.2.0)(mssql@11.0.1(@azure/core-client@1.10.1))(postgres@3.4.9)(valibot@1.3.1(typescript@5.9.3))(zod@4.3.6):
+    optionalDependencies:
+      '@types/mssql': 9.1.9(@azure/core-client@1.10.1)
+      gel: 2.2.0
+      mssql: 11.0.1(@azure/core-client@1.10.1)
+      postgres: 3.4.9
+      valibot: 1.3.1(typescript@5.9.3)
+      zod: 4.3.6
+
   dunder-proto@1.0.1:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -6285,7 +6368,7 @@ snapshots:
       '@petamoriken/float16': 3.9.3
       debug: 4.4.3
       env-paths: 3.0.0
-      semver: 7.7.4
+      semver: 7.8.0
       shell-quote: 1.8.3
       which: 4.0.0
     transitivePeerDependencies:
@@ -6315,6 +6398,11 @@ snapshots:
   get-tsconfig@4.13.7:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  get-tsconfig@4.14.0:
+    dependencies:
+      resolve-pkg-maps: 1.0.0
+    optional: true
 
   glob-parent@5.1.2:
     dependencies:
@@ -6510,7 +6598,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.7.4
+      semver: 7.8.0
     optional: true
 
   jwa@2.0.1:
@@ -6847,27 +6935,27 @@ snapshots:
       '@oxfmt/binding-win32-ia32-msvc': 0.43.0
       '@oxfmt/binding-win32-x64-msvc': 0.43.0
 
-  oxlint@1.56.0:
+  oxlint@1.64.0:
     optionalDependencies:
-      '@oxlint/binding-android-arm-eabi': 1.56.0
-      '@oxlint/binding-android-arm64': 1.56.0
-      '@oxlint/binding-darwin-arm64': 1.56.0
-      '@oxlint/binding-darwin-x64': 1.56.0
-      '@oxlint/binding-freebsd-x64': 1.56.0
-      '@oxlint/binding-linux-arm-gnueabihf': 1.56.0
-      '@oxlint/binding-linux-arm-musleabihf': 1.56.0
-      '@oxlint/binding-linux-arm64-gnu': 1.56.0
-      '@oxlint/binding-linux-arm64-musl': 1.56.0
-      '@oxlint/binding-linux-ppc64-gnu': 1.56.0
-      '@oxlint/binding-linux-riscv64-gnu': 1.56.0
-      '@oxlint/binding-linux-riscv64-musl': 1.56.0
-      '@oxlint/binding-linux-s390x-gnu': 1.56.0
-      '@oxlint/binding-linux-x64-gnu': 1.56.0
-      '@oxlint/binding-linux-x64-musl': 1.56.0
-      '@oxlint/binding-openharmony-arm64': 1.56.0
-      '@oxlint/binding-win32-arm64-msvc': 1.56.0
-      '@oxlint/binding-win32-ia32-msvc': 1.56.0
-      '@oxlint/binding-win32-x64-msvc': 1.56.0
+      '@oxlint/binding-android-arm-eabi': 1.64.0
+      '@oxlint/binding-android-arm64': 1.64.0
+      '@oxlint/binding-darwin-arm64': 1.64.0
+      '@oxlint/binding-darwin-x64': 1.64.0
+      '@oxlint/binding-freebsd-x64': 1.64.0
+      '@oxlint/binding-linux-arm-gnueabihf': 1.64.0
+      '@oxlint/binding-linux-arm-musleabihf': 1.64.0
+      '@oxlint/binding-linux-arm64-gnu': 1.64.0
+      '@oxlint/binding-linux-arm64-musl': 1.64.0
+      '@oxlint/binding-linux-ppc64-gnu': 1.64.0
+      '@oxlint/binding-linux-riscv64-gnu': 1.64.0
+      '@oxlint/binding-linux-riscv64-musl': 1.64.0
+      '@oxlint/binding-linux-s390x-gnu': 1.64.0
+      '@oxlint/binding-linux-x64-gnu': 1.64.0
+      '@oxlint/binding-linux-x64-musl': 1.64.0
+      '@oxlint/binding-openharmony-arm64': 1.64.0
+      '@oxlint/binding-win32-arm64-msvc': 1.64.0
+      '@oxlint/binding-win32-ia32-msvc': 1.64.0
+      '@oxlint/binding-win32-x64-msvc': 1.64.0
 
   p-filter@2.1.0:
     dependencies:
@@ -6965,6 +7053,8 @@ snapshots:
       source-map-js: 1.2.1
 
   postgres@3.4.8: {}
+
+  postgres@3.4.9: {}
 
   prettier@2.8.8: {}
 
@@ -7174,6 +7264,9 @@ snapshots:
       lru-cache: 6.0.0
 
   semver@7.7.4: {}
+
+  semver@7.8.0:
+    optional: true
 
   send@1.2.1:
     dependencies:
@@ -7439,7 +7532,7 @@ snapshots:
   tsx@4.21.0:
     dependencies:
       esbuild: 0.27.4
-      get-tsconfig: 4.13.7
+      get-tsconfig: 4.14.0
     optionalDependencies:
       fsevents: 2.3.3
     optional: true
@@ -7469,7 +7562,7 @@ snapshots:
 
   ufo@1.6.3: {}
 
-  ultracite@7.3.2(oxlint@1.56.0):
+  ultracite@7.3.2(oxlint@1.64.0):
     dependencies:
       '@clack/prompts': 1.1.0
       commander: 14.0.3
@@ -7478,7 +7571,7 @@ snapshots:
       jsonc-parser: 3.3.1
       nypm: 0.6.5
     optionalDependencies:
-      oxlint: 1.56.0
+      oxlint: 1.64.0
 
   undici-types@7.18.2: {}
 
@@ -7505,9 +7598,6 @@ snapshots:
   use-debounce@10.1.0(react@19.2.4):
     dependencies:
       react: 19.2.4
-
-  uuid@8.3.2:
-    optional: true
 
   v8-compile-cache-lib@3.0.1: {}
 
@@ -7553,6 +7643,25 @@ snapshots:
       - rollup
       - supports-color
 
+  vite-plugin-dts@4.5.4(@types/node@25.5.0)(typescript@5.9.3)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)):
+    dependencies:
+      '@microsoft/api-extractor': 7.57.7(@types/node@25.5.0)
+      '@rollup/pluginutils': 5.3.0
+      '@volar/typescript': 2.4.28
+      '@vue/language-core': 2.2.0(typescript@5.9.3)
+      compare-versions: 6.1.1
+      debug: 4.4.3
+      kolorist: 1.8.0
+      local-pkg: 1.1.2
+      magic-string: 0.30.21
+      typescript: 5.9.3
+    optionalDependencies:
+      vite: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
+    transitivePeerDependencies:
+      - '@types/node'
+      - rollup
+      - supports-color
+
   vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3):
     dependencies:
       lightningcss: 1.32.0
@@ -7567,6 +7676,21 @@ snapshots:
       jiti: 2.6.1
       tsx: 4.21.0
       yaml: 2.8.3
+
+  vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0):
+    dependencies:
+      lightningcss: 1.32.0
+      picomatch: 4.0.4
+      postcss: 8.5.14
+      rolldown: 1.0.0-rc.18
+      tinyglobby: 0.2.16
+    optionalDependencies:
+      '@types/node': 25.5.0
+      esbuild: 0.27.4
+      fsevents: 2.3.3
+      jiti: 2.6.1
+      tsx: 4.21.0
+      yaml: 2.9.0
 
   vitest@4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)):
     dependencies:
@@ -7589,6 +7713,33 @@ snapshots:
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
       vite: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/node': 25.5.0
+    transitivePeerDependencies:
+      - msw
+
+  vitest@4.1.5(@types/node@25.5.0)(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)):
+    dependencies:
+      '@vitest/expect': 4.1.5
+      '@vitest/mocker': 4.1.5(vite@8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+      '@vitest/pretty-format': 4.1.5
+      '@vitest/runner': 4.1.5
+      '@vitest/snapshot': 4.1.5
+      '@vitest/spy': 4.1.5
+      '@vitest/utils': 4.1.5
+      es-module-lexer: 2.0.0
+      expect-type: 1.3.0
+      magic-string: 0.30.21
+      obug: 2.1.1
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 4.0.0
+      tinybench: 2.9.0
+      tinyexec: 1.0.4
+      tinyglobby: 0.2.15
+      tinyrainbow: 3.1.0
+      vite: 8.0.11(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.0
@@ -7648,6 +7799,8 @@ snapshots:
   yallist@4.0.0: {}
 
   yaml@2.8.3: {}
+
+  yaml@2.9.0: {}
 
   yargs-parser@18.1.3:
     dependencies:
