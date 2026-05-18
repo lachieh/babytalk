@@ -13,12 +13,15 @@ const STALE_DAYS = 7;
 // API URL — set by the main thread via postMessage, fallback to localhost for dev
 let configuredApiUrl = "http://localhost:4000/graphql";
 
-// Install: take over as soon as possible. We intentionally skip pre-caching
-// HTML routes — Next.js content-hashes its JS/CSS chunks per build, so a
+// Install: don't auto-activate. We intentionally skip pre-caching HTML
+// routes — Next.js content-hashes its JS/CSS chunks per build, so a
 // pre-cached HTML page from an old build references chunks that 404 after
-// the next deploy.
+// the next deploy. A new SW waits until the client sends SKIP_WAITING,
+// driven by the update-available toast — that way the page reloads at the
+// same moment the new SW takes control, so the page's JS chunks match the
+// SW's cache.
 self.addEventListener("install", () => {
-  self.skipWaiting();
+  // Intentionally no skipWaiting() — see comment above.
 });
 
 // Activate: clean old caches
@@ -247,6 +250,9 @@ async function syncQueue() {
 self.addEventListener("message", (event) => {
   if (event.data === "SYNC_NOW") {
     syncQueue();
+  }
+  if (event.data === "SKIP_WAITING") {
+    self.skipWaiting();
   }
   if (event.data && event.data.type === "SET_API_URL" && event.data.url) {
     configuredApiUrl = event.data.url;

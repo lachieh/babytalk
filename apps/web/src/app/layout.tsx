@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
 import { ThemeColorSync } from "@/components/theme-color-sync";
+import { UpdateToast } from "@/components/update-toast";
 
 import "./globals.css";
 import { ServiceWorkerRegistrar } from "./sw-registrar";
@@ -61,6 +62,7 @@ export default function RootLayout({
         <ThemeColorSync />
         {children}
         <ServiceWorkerRegistrar />
+        <UpdateToast />
       </body>
     </html>
   );
