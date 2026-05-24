@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { disableDeviceMode } from "@/lib/use-device-mode";
 
 const VERIFY_MAGIC_LINK = `
   mutation VerifyMagicLink($token: String!) {
@@ -53,6 +54,7 @@ const VerifyContent = () => {
         }
 
         localStorage.setItem("babytalk_token", result.verifyMagicLink.token);
+        disableDeviceMode();
 
         // If this is a partner invite link, auto-join the household
         if (joinCode) {

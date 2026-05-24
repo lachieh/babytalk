@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/tambo/graphql";
 import { useTamboStatus } from "@/lib/tambo/provider";
+import { disableDeviceMode, enableDeviceMode } from "@/lib/use-device-mode";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
@@ -363,6 +364,7 @@ const ProfileContent = ({
   onShare,
   onEditBaby,
   onAddDevice,
+  onUseAsStation,
   onManagePasskeys,
   onSignOut,
 }: {
@@ -377,6 +379,7 @@ const ProfileContent = ({
   onManagePasskeys: () => void;
   onShare: () => void;
   onSignOut: () => void;
+  onUseAsStation: () => void;
 }) => {
   const partner = members.find((m) => m.id !== me?.id);
   const { unit, toggle: toggleUnit } = useVolumeUnit();
@@ -462,47 +465,98 @@ const ProfileContent = ({
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
           Devices
         </h3>
-        <button
-          className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
-          onClick={onAddDevice}
-          type="button"
-        >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+        <div className="space-y-2">
+          <button
+            className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+            onClick={onAddDevice}
+            type="button"
+          >
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+              >
+                <rect height="14" rx="2" width="10" x="7" y="3" />
+                <path
+                  d="M11 19h2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-neutral-800">
+                Add a station device
+              </span>
+              <span className="mt-0.5 block text-xs text-neutral-500">
+                Sign in another phone or tablet for one-tap logging.
+              </span>
+            </span>
             <svg
               aria-hidden="true"
-              className="h-5 w-5"
+              className="h-4 w-4 text-neutral-300"
               fill="none"
               stroke="currentColor"
-              strokeWidth={1.8}
+              strokeWidth={2}
               viewBox="0 0 24 24"
             >
-              <rect height="14" rx="2" width="10" x="7" y="3" />
-              <path d="M11 19h2" strokeLinecap="round" strokeLinejoin="round" />
+              <path
+                d="M9 5l7 7-7 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-neutral-800">
-              Add a station device
-            </span>
-            <span className="mt-0.5 block text-xs text-neutral-500">
-              Sign in another phone or tablet for one-tap logging.
-            </span>
-          </span>
-          <svg
-            aria-hidden="true"
-            className="h-4 w-4 text-neutral-300"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            viewBox="0 0 24 24"
+          </button>
+          <button
+            className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100 active:bg-neutral-100"
+            onClick={onUseAsStation}
+            type="button"
           >
-            <path
-              d="M9 5l7 7-7 7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                viewBox="0 0 24 24"
+              >
+                <rect height="13" rx="2" width="18" x="3" y="4" />
+                <path
+                  d="M8 21h8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-neutral-800">
+                Use this device as a station
+              </span>
+              <span className="mt-0.5 block text-xs text-neutral-500">
+                Switch to one-tap logging. The app will reopen here.
+              </span>
+            </span>
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4 text-neutral-300"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M9 5l7 7-7 7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
       </section>
 
       {/* Sign-in */}
@@ -719,7 +773,13 @@ export const ProfileSheet = ({
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem("babytalk_token");
+    disableDeviceMode();
     router.replace("/auth/login");
+  }, [router]);
+
+  const handleUseAsStation = useCallback(() => {
+    enableDeviceMode();
+    router.replace("/station");
   }, [router]);
 
   const handleEditBaby = useCallback((baby: BabyInfo) => {
@@ -815,6 +875,7 @@ export const ProfileSheet = ({
             onManagePasskeys={handlePasskeysOpen}
             onShare={handleShareLink}
             onSignOut={handleSignOut}
+            onUseAsStation={handleUseAsStation}
           />
         )}
 

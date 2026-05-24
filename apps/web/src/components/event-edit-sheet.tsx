@@ -37,10 +37,6 @@ function parseMeta(event: BabyEvent): Record<string, unknown> {
 
 function hasDuration(form: EventFormData): boolean {
   if (form.type === "diaper" || form.type === "note") return false;
-  if (form.type === "feed") {
-    const method = form.meta.method as string | undefined;
-    return method === "breast";
-  }
   return true;
 }
 

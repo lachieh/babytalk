@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { isPasskeySupported, signInWithPasskey } from "@/lib/passkey";
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { disableDeviceMode } from "@/lib/use-device-mode";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
 const REQUEST_MAGIC_LINK = `
@@ -44,6 +45,7 @@ export default function LoginPage() {
         const result = await signInWithPasskey(null, { conditional: true });
         if (cancelled) return;
         localStorage.setItem("babytalk_token", result.token);
+        disableDeviceMode();
         const stored = localStorage.getItem("babytalk_auth_redirect");
         if (stored) localStorage.removeItem("babytalk_auth_redirect");
         router.replace(stored ?? "/dashboard");
@@ -63,6 +65,7 @@ export default function LoginPage() {
     try {
       const result = await signInWithPasskey(email.trim() || null);
       localStorage.setItem("babytalk_token", result.token);
+      disableDeviceMode();
       const stored = localStorage.getItem("babytalk_auth_redirect");
       if (stored) localStorage.removeItem("babytalk_auth_redirect");
       router.replace(stored ?? "/dashboard");
