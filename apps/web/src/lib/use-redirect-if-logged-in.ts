@@ -3,17 +3,18 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { isDeviceMode } from "@/lib/use-device-mode";
+
 /**
- * Redirects to /dashboard if a babytalk_token exists in localStorage.
- * Use on public pages (home, login) to skip past them for logged-in users.
+ * Redirects logged-in users away from public pages (home, login).
+ * Device-mode devices go to /station; everyone else to /dashboard.
  */
 export const useRedirectIfLoggedIn = () => {
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem("babytalk_token");
-    if (token) {
-      router.replace("/dashboard");
-    }
+    if (!token) return;
+    router.replace(isDeviceMode() ? "/station" : "/dashboard");
   }, [router]);
 };

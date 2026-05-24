@@ -5,6 +5,7 @@ import { useCallback } from "react";
 
 import { STATION_ACTIONS } from "@/lib/station-config";
 import type { StationActionKey } from "@/lib/station-config";
+import { disableDeviceMode } from "@/lib/use-device-mode";
 
 const ToggleRow = ({
   action,
@@ -82,6 +83,7 @@ export const StationSettingsSheet = ({
   );
 
   const handleExitStation = useCallback(() => {
+    disableDeviceMode();
     router.push("/dashboard");
   }, [router]);
 

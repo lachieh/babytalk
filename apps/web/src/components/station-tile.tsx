@@ -135,7 +135,7 @@ const inferDefault = (type: StationActionKey, events: BabyEvent[]): string => {
   }
 };
 
-type LocalPhase = "idle" | "picking" | "amount" | "note" | "pump-amount";
+type LocalPhase = "idle" | "picking" | "note" | "feed-amount" | "pump-amount";
 
 const VariantOption = ({
   variant,
@@ -245,6 +245,7 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
   );
   const [noteText, setNoteText] = useState("");
   const [pumpEventId, setPumpEventId] = useState<string | null>(null);
+  const [feedEventId, setFeedEventId] = useState<string | null>(null);
 
   useEffect(() => {
     setSelected(inferDefault(type, events));
@@ -276,20 +277,6 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
   const handleMainTap = useCallback(() => {
     const { meta } = selectedVariant;
 
-    if (type === "feed") {
-      const method = meta.method as string;
-      if (method === "bottle" || method === "formula") {
-        setPhase("amount");
-        return;
-      }
-      if (method === "solid") {
-        handleLog(meta, true);
-        return;
-      }
-      handleLog(meta, false);
-      return;
-    }
-
     if (type === "diaper") {
       handleLog(meta, true);
       return;
@@ -301,6 +288,7 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
       return;
     }
 
+    // All other types (feed, sleep, pump) start a timer
     handleLog(meta, false);
   }, [type, selectedVariant, handleLog]);
 
@@ -312,17 +300,31 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
         setPhase("pump-amount");
         return;
       }
+      if (type === "feed") {
+        const method = selectedVariant.meta.method as string;
+        stopEvent(id);
+        if (method === "bottle" || method === "formula") {
+          setFeedEventId(id);
+          setPhase("feed-amount");
+        }
+        return;
+      }
       stopEvent(id);
     },
-    [type, stopEvent]
+    [type, selectedVariant, stopEvent]
   );
 
-  const handleAmountConfirm = useCallback(
+  const handleFeedAmountConfirm = useCallback(
     (amountMl: number) => {
-      handleLog({ ...selectedVariant.meta, amountMl }, true);
+      if (!feedEventId) return;
+      updateEventMeta(feedEventId, "feed", {
+        ...selectedVariant.meta,
+        amountMl,
+      });
+      setFeedEventId(null);
       setPhase("idle");
     },
-    [selectedVariant, handleLog]
+    [feedEventId, selectedVariant, updateEventMeta]
   );
 
   const handlePumpAmountConfirm = useCallback(
@@ -341,6 +343,7 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
   const handleCancelOverlay = useCallback(() => {
     setPhase("idle");
     setPumpEventId(null);
+    setFeedEventId(null);
   }, []);
 
   const handleNoteSubmit = useCallback(() => {
@@ -393,15 +396,16 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
     );
   }
 
-  if (phase === "amount") {
+  if (phase === "feed-amount") {
     return (
       <article className="flex h-full flex-col rounded-3xl border-2 border-neutral-200 bg-surface-raised p-5">
         <p className="mb-3 text-center text-xs font-medium uppercase tracking-wider text-neutral-400">
-          {selectedVariant.label}
+          {selectedVariant.label} amount
         </p>
         <AmountInput
+          confirmLabel="Save"
           onCancel={handleCancelOverlay}
-          onConfirm={handleAmountConfirm}
+          onConfirm={handleFeedAmountConfirm}
         />
       </article>
     );

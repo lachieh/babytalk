@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { loadRuntimeConfig } from "@/lib/runtime-config";
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { enableDeviceMode } from "@/lib/use-device-mode";
 
 const REQUEST_DEVICE_CODE = `
   mutation RequestDeviceCode {
@@ -104,6 +105,7 @@ const DevicePage = () => {
         if (status === "approved" && token) {
           stopPolling();
           localStorage.setItem("babytalk_token", token);
+          enableDeviceMode();
           setPhase("approved");
           setTimeout(() => router.replace("/station"), 600);
           return;

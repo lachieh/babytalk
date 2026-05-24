@@ -219,7 +219,6 @@ const ActionSection = ({
 }) => {
   const [selected, setSelected] = useState(defaultVariant);
   const [expanded, setExpanded] = useState(false);
-  const [showAmountInput, setShowAmountInput] = useState(false);
 
   // Sync selected variant when the inferred default changes (e.g. after logging)
   useEffect(() => {
@@ -229,35 +228,16 @@ const ActionSection = ({
   const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
     null
   );
+  // For bottle/formula feeds: after stopping timer, capture amount
+  const [feedStoppedEventId, setFeedStoppedEventId] = useState<string | null>(
+    null
+  );
   const selectedVariant =
     variants.find((v) => v.key === selected) ?? variants[0];
 
   const handleMainTap = useCallback(() => {
     triggerFeedback("logged");
     const { meta } = selectedVariant;
-
-    if (type === "feed") {
-      const method = meta.method as string;
-      if (method === "bottle" || method === "formula") {
-        setShowAmountInput(true);
-        return;
-      }
-      if (method === "solid") {
-        // Solid: instant event
-        const now = new Date().toISOString();
-        onLog(type, { ...meta, _startedAt: now, _endedAt: now });
-        return;
-      }
-      // Breast: log with endedAt=null (starts timer)
-      onLog(type, meta);
-      return;
-    }
-
-    if (type === "pump") {
-      // Pump: always starts a timer (endedAt=null)
-      onLog(type, meta);
-      return;
-    }
 
     if (type === "diaper") {
       // Diaper: instant event — set endedAt = startedAt (point in time, not duration)
@@ -266,7 +246,7 @@ const ActionSection = ({
       return;
     }
 
-    // Sleep: log with endedAt=null (starts timer)
+    // Everything else (feed, sleep, pump) starts a timer
     onLog(type, meta);
   }, [type, selectedVariant, onLog]);
 
@@ -276,11 +256,19 @@ const ActionSection = ({
         // Pump: stop the timer, then ask for amount
         onStop(id);
         setPumpStoppedEventId(id);
-      } else {
-        onStop(id);
+        return;
       }
+      if (type === "feed") {
+        const method = selectedVariant.meta.method as string;
+        onStop(id);
+        if (method === "bottle" || method === "formula") {
+          setFeedStoppedEventId(id);
+        }
+        return;
+      }
+      onStop(id);
     },
-    [type, onStop]
+    [type, selectedVariant, onStop]
   );
 
   const handlePumpAmountConfirm = useCallback(
@@ -296,32 +284,29 @@ const ActionSection = ({
     setPumpStoppedEventId(null);
   }, []);
 
+  const handleFeedAmountConfirm = useCallback(
+    (amountMl: number) => {
+      if (!feedStoppedEventId) return;
+      onUpdateMeta(feedStoppedEventId, { ...selectedVariant.meta, amountMl });
+      setFeedStoppedEventId(null);
+    },
+    [feedStoppedEventId, selectedVariant, onUpdateMeta]
+  );
+
+  const handleFeedAmountCancel = useCallback(() => {
+    setFeedStoppedEventId(null);
+  }, []);
+
   const handleVariantTap = useCallback(() => setExpanded((prev) => !prev), []);
   const handleOptionSelect = useCallback((key: string) => {
     setSelected(key);
     setExpanded(false);
   }, []);
 
-  const handleAmountConfirm = useCallback(
-    (amountMl: number) => {
-      setShowAmountInput(false);
-      // Bottle/formula are instant events (known quantity, no timer)
-      const now = new Date().toISOString();
-      onLog(type, {
-        ...selectedVariant.meta,
-        amountMl,
-        _startedAt: now,
-        _endedAt: now,
-      });
-    },
-    [type, selectedVariant, onLog]
-  );
-
-  const handleAmountCancel = useCallback(() => setShowAmountInput(false), []);
-
   const hasTimer = activeEvent !== null;
   const showPumpAmount = pumpStoppedEventId !== null;
-  const showActions = !hasTimer && !showAmountInput && !showPumpAmount;
+  const showFeedAmount = feedStoppedEventId !== null;
+  const showActions = !hasTimer && !showPumpAmount && !showFeedAmount;
   const style = getEventStyle(type);
 
   return (
@@ -347,12 +332,13 @@ const ActionSection = ({
         </div>
       )}
 
-      {/* Bottle/formula amount input */}
-      {showAmountInput && (
+      {/* Bottle/formula: amount input after timer stops */}
+      {showFeedAmount && (
         <div className="rounded-lg border border-neutral-200 p-3">
           <AmountInput
-            onConfirm={handleAmountConfirm}
-            onCancel={handleAmountCancel}
+            confirmLabel="Save"
+            onConfirm={handleFeedAmountConfirm}
+            onCancel={handleFeedAmountCancel}
           />
         </div>
       )}

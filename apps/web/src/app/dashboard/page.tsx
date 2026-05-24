@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { AppShell } from "@/components/app-shell";
 import { DailySummary } from "@/components/daily-summary";
@@ -9,6 +12,7 @@ import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { eventsForDay } from "@/lib/daily-totals";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
+import { isDeviceMode } from "@/lib/use-device-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 /* ── Summary Card ─────────────────────────────────────────── */
@@ -109,6 +113,23 @@ const SummaryCard = () => {
 
 export default function DashboardPage() {
   useAutoDarkMode();
+  const router = useRouter();
+  const [redirecting, setRedirecting] = useState(false);
+
+  useEffect(() => {
+    if (isDeviceMode()) {
+      setRedirecting(true);
+      router.replace("/station");
+    }
+  }, [router]);
+
+  if (redirecting) {
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-surface">
+        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+      </div>
+    );
+  }
 
   return (
     <AppShell>

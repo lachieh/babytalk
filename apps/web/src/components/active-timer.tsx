@@ -46,8 +46,12 @@ export const ActiveTimer = ({
   let label = event.type;
   try {
     const meta = JSON.parse(event.metadata);
-    if (event.type === "feed" && meta.side) {
-      label = `${meta.side} side`;
+    if (event.type === "feed") {
+      if (meta.method === "breast" && meta.side) {
+        label = `${meta.side} side`;
+      } else if (meta.method) {
+        label = meta.method as string;
+      }
     }
     if (event.type === "sleep" && meta.location) {
       label = meta.location;
