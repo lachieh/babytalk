@@ -11,7 +11,12 @@ import { AudioWaveform } from "./audio-waveform";
 
 /* ── Constants ──────────────────────────────────────────────── */
 
-const AUTO_DISMISS_MS = 6000;
+/** Minimum time a text-only response stays on screen */
+const MIN_TEXT_DISMISS_MS = 6000;
+/** Roughly the time it takes to read one character */
+const READ_MS_PER_CHAR = 60;
+/** Cap so very long responses still auto-dismiss eventually */
+const MAX_TEXT_DISMISS_MS = 20_000;
 /** If no response starts within this window, show an error */
 const PROCESSING_TIMEOUT_MS = 15_000;
 
@@ -24,9 +29,21 @@ export const VoiceOverlay = () => {
   const { value, setValue, submit } = useTamboThreadInput();
 
   const pendingRef = useRef(false);
-  const wasStreamingRef = useRef(false);
+  const wasProcessingRef = useRef(false);
+  const baselineAssistantCountRef = useRef(0);
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const processingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /* Count of assistant messages that actually have content blocks. Empty
+   * placeholder messages (streaming about to start) are excluded so the
+   * baseline+growth check below doesn't trip on them. */
+  const assistantResponseCount = useMemo(
+    () =>
+      messages.filter(
+        (m) => m.role === "assistant" && (m.content?.length ?? 0) > 0
+      ).length,
+    [messages]
+  );
 
   /* ── Step 1: set the input value when processing starts ───── */
 
@@ -69,21 +86,45 @@ export const VoiceOverlay = () => {
     };
   }, [phase, value, submit, showError]);
 
-  /* ── Detect response completion (streaming → not streaming) ── */
+  /* ── Capture baseline assistant count when entering processing ──
+   * We use this to detect when a brand-new assistant response has
+   * landed, regardless of whether `isStreaming` ever flipped true. */
 
   useEffect(() => {
+    if (phase === "processing" && !wasProcessingRef.current) {
+      wasProcessingRef.current = true;
+      baselineAssistantCountRef.current = assistantResponseCount;
+    } else if (phase !== "processing") {
+      wasProcessingRef.current = false;
+    }
+  }, [phase, assistantResponseCount]);
+
+  /* ── Detect response completion ───────────────────────────────
+   * Transition to "response" once we have a NEW assistant message
+   * with content and we're not actively streaming. This handles
+   * both streamed responses and fast text-only responses where
+   * `isStreaming` never observably flipped true. */
+
+  useEffect(() => {
+    if (phase !== "processing") return;
+
     if (isStreaming) {
-      wasStreamingRef.current = true;
       if (processingTimerRef.current) {
         clearTimeout(processingTimerRef.current);
         processingTimerRef.current = null;
       }
-    } else if (wasStreamingRef.current && phase === "processing") {
-      wasStreamingRef.current = false;
+      return;
+    }
+
+    if (assistantResponseCount > baselineAssistantCountRef.current) {
       pendingRef.current = false;
+      if (processingTimerRef.current) {
+        clearTimeout(processingTimerRef.current);
+        processingTimerRef.current = null;
+      }
       setPhase("response");
     }
-  }, [isStreaming, phase, setPhase]);
+  }, [phase, isStreaming, assistantResponseCount, setPhase]);
 
   /* ── Extract last assistant response ──────────────────────── */
 
@@ -131,18 +172,25 @@ export const VoiceOverlay = () => {
     );
     if (hasComponents) return;
 
-    dismissTimerRef.current = setTimeout(handleDismiss, AUTO_DISMISS_MS);
+    /* Scale the dismiss window so longer text actually has time to be read. */
+    const textLength = responseText?.length ?? 0;
+    const dismissMs = Math.min(
+      MAX_TEXT_DISMISS_MS,
+      Math.max(MIN_TEXT_DISMISS_MS, textLength * READ_MS_PER_CHAR)
+    );
+
+    dismissTimerRef.current = setTimeout(handleDismiss, dismissMs);
     return () => {
       if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
     };
-  }, [phase, handleDismiss, lastAssistant]);
+  }, [phase, handleDismiss, lastAssistant, responseText]);
 
   /* ── Reset pending flag on idle ───────────────────────────── */
 
   useEffect(() => {
     if (phase === "idle") {
       pendingRef.current = false;
-      wasStreamingRef.current = false;
+      wasProcessingRef.current = false;
     }
   }, [phase]);
 
