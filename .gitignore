@@ -152,3 +152,7 @@ pnpm-debug.log*
 *.config.local.json
 .config/*.local.yaml
 .config/*.local.json
+
+# Playwright artifacts
+playwright-report/
+test-results/

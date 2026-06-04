@@ -827,14 +827,14 @@ export const ProfileSheet = ({
       aria-modal="true"
       aria-label="Profile"
     >
-      <div className="animate-slide-up w-full max-w-lg rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
+      <div className="animate-slide-up flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
         {/* Handle bar */}
-        <div className="flex justify-center pt-3 pb-1">
+        <div className="flex shrink-0 justify-center pt-3 pb-1">
           <div className="h-1 w-10 rounded-full bg-neutral-200" />
         </div>
 
         {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-4">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-2 pb-4">
           <h2 className="text-base font-semibold text-neutral-700">Profile</h2>
           <button
             className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
@@ -858,26 +858,28 @@ export const ProfileSheet = ({
           </button>
         </div>
 
-        {loading ? (
-          <div className="flex justify-center px-5 py-12">
-            <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
-          </div>
-        ) : (
-          <ProfileContent
-            me={me}
-            household={household}
-            babies={babies}
-            members={members}
-            latestWeights={latestWeights}
-            copied={copied}
-            onAddDevice={handleAddDeviceOpen}
-            onEditBaby={handleEditBaby}
-            onManagePasskeys={handlePasskeysOpen}
-            onShare={handleShareLink}
-            onSignOut={handleSignOut}
-            onUseAsStation={handleUseAsStation}
-          />
-        )}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          {loading ? (
+            <div className="flex justify-center px-5 py-12">
+              <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+            </div>
+          ) : (
+            <ProfileContent
+              me={me}
+              household={household}
+              babies={babies}
+              members={members}
+              latestWeights={latestWeights}
+              copied={copied}
+              onAddDevice={handleAddDeviceOpen}
+              onEditBaby={handleEditBaby}
+              onManagePasskeys={handlePasskeysOpen}
+              onShare={handleShareLink}
+              onSignOut={handleSignOut}
+              onUseAsStation={handleUseAsStation}
+            />
+          )}
+        </div>
 
         <EditBabySheet
           baby={editingBaby}
