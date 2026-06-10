@@ -156,3 +156,4 @@ pnpm-debug.log*
 # Playwright artifacts
 playwright-report/
 test-results/
+.gstack/

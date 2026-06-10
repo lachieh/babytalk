@@ -15,7 +15,6 @@ allowed-tools:
   - AskUserQuestion
   - WebSearch
 ---
-
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
@@ -76,7 +75,6 @@ ask the user about telemetry. Use AskUserQuestion:
 > Change anytime with `gstack-config set telemetry off`.
 
 Options:
-
 - A) Help gstack get better! (recommended)
 - B) No thanks
 
@@ -84,11 +82,10 @@ If A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry community`
 
 If B: ask a follow-up AskUserQuestion:
 
-> How about anonymous mode? We just learn that _someone_ used gstack — no unique ID,
+> How about anonymous mode? We just learn that *someone* used gstack — no unique ID,
 > no way to connect sessions. Just a counter that helps us know if anyone's out there.
 
 Options:
-
 - A) Sure, anonymous is fine
 - B) No thanks, fully off
 
@@ -96,7 +93,6 @@ If B→A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry anonymous
 If B→B: run `~/.claude/skills/gstack/bin/gstack-config set telemetry off`
 
 Always run:
-
 ```bash
 touch ~/.gstack/.telemetry-prompted
 ```
@@ -106,7 +102,6 @@ This only happens once. If `TEL_PROMPTED` is `yes`, skip this entirely.
 ## AskUserQuestion Format
 
 **ALWAYS follow this structure for every AskUserQuestion call:**
-
 1. **Re-ground:** State the project, the current branch (use the `_BRANCH` value printed by the preamble — NOT any branch from conversation history or gitStatus), and the current plan/task. (1-2 sentences)
 2. **Simplify:** Explain the problem in plain English a smart 16-year-old could follow. No raw function names, no internal jargon, no implementation details. Use concrete examples and analogies. Say what it DOES, not what it's called.
 3. **Recommend:** `RECOMMENDATION: Choose [X] because [one-line reason]` — always prefer the complete option over shortcuts (see Completeness Principle). Include `Completeness: X/10` for each option. Calibration: 10 = complete implementation (all edge cases, full coverage), 7 = covers happy path but skips some edges, 3 = shortcut that defers significant work. If both options are 8+, pick the higher; if one is ≤5, flag it.
@@ -125,19 +120,18 @@ AI-assisted coding makes the marginal cost of completeness near-zero. When you p
 - **Lake vs. ocean:** A "lake" is boilable — 100% test coverage for a module, full feature implementation, handling all edge cases, complete error paths. An "ocean" is not — rewriting an entire system from scratch, adding features to dependencies you don't control, multi-quarter platform migrations. Recommend boiling lakes. Flag oceans as out of scope.
 - **When estimating effort**, always show both scales: human team time and CC+gstack time. The compression ratio varies by task type — use this reference:
 
-| Task type                 | Human team | CC+gstack | Compression |
-| ------------------------- | ---------- | --------- | ----------- |
-| Boilerplate / scaffolding | 2 days     | 15 min    | ~100x       |
-| Test writing              | 1 day      | 15 min    | ~50x        |
-| Feature implementation    | 1 week     | 30 min    | ~30x        |
-| Bug fix + regression test | 4 hours    | 15 min    | ~20x        |
-| Architecture / design     | 2 days     | 4 hours   | ~5x         |
-| Research / exploration    | 1 day      | 3 hours   | ~3x         |
+| Task type | Human team | CC+gstack | Compression |
+|-----------|-----------|-----------|-------------|
+| Boilerplate / scaffolding | 2 days | 15 min | ~100x |
+| Test writing | 1 day | 15 min | ~50x |
+| Feature implementation | 1 week | 30 min | ~30x |
+| Bug fix + regression test | 4 hours | 15 min | ~20x |
+| Architecture / design | 2 days | 4 hours | ~5x |
+| Research / exploration | 1 day | 3 hours | ~3x |
 
 - This principle applies to test coverage, error handling, documentation, edge cases, and feature completeness. Don't skip the last 10% to "save time" — with AI, that 10% costs seconds.
 
 **Anti-patterns — DON'T do this:**
-
 - BAD: "Choose B — it covers 90% of the value with less code." (If A is only 70 lines more, choose A.)
 - BAD: "We can skip edge case handling to save time." (Edge case handling costs minutes with CC.)
 - BAD: "Let's defer test coverage to a follow-up PR." (Tests are the cheapest lake to boil.)
@@ -160,7 +154,6 @@ Never let a noticed issue silently pass. The whole point is proactive communicat
 Before building infrastructure, unfamiliar patterns, or anything the runtime might have a built-in — **search first.** Read `~/.claude/skills/gstack/ETHOS.md` for the full philosophy.
 
 **Three layers of knowledge:**
-
 - **Layer 1** (tried and true — in distribution). Don't reinvent the wheel. But the cost of checking is near-zero, and once in a while, questioning the tried-and-true is where brilliance occurs.
 - **Layer 2** (new and popular — search for these). But scrutinize: humans are subject to mania. Search results are inputs to your thinking, not answers.
 - **Layer 3** (first principles — prize these above all). Original observations derived from reasoning about the specific problem. The most valuable of all.
@@ -169,11 +162,9 @@ Before building infrastructure, unfamiliar patterns, or anything the runtime mig
 "EUREKA: Everyone does X because [assumption]. But [evidence] shows this is wrong. Y is better because [reasoning]."
 
 Log eureka moments:
-
 ```bash
 jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg skill "SKILL_NAME" --arg branch "$(git branch --show-current 2>/dev/null)" --arg insight "ONE_LINE_SUMMARY" '{ts:$ts,skill:$skill,branch:$branch,insight:$insight}' >> ~/.gstack/analytics/eureka.jsonl 2>/dev/null || true
 ```
-
 Replace SKILL_NAME and ONE_LINE_SUMMARY. Runs inline — don't stop the workflow.
 
 **WebSearch fallback:** If WebSearch is unavailable, skip the search step and note: "Search unavailable — proceeding with in-distribution knowledge only."
@@ -204,9 +195,7 @@ Hey gstack team — ran into this while using /{skill-name}:
 
 ## Raw output
 ```
-
 {paste the actual error or unexpected output here}
-
 ```
 
 ## What would make this a 10
@@ -220,7 +209,6 @@ Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file
 ## Completion Status Protocol
 
 When completing a skill workflow, report status using one of:
-
 - **DONE** — All steps completed successfully. Evidence provided for each claim.
 - **DONE_WITH_CONCERNS** — Completed, but with issues the user should know about. List each concern.
 - **BLOCKED** — Cannot proceed. State what is blocking and what was tried.
@@ -231,13 +219,11 @@ When completing a skill workflow, report status using one of:
 It is always OK to stop and say "this is too hard for me" or "I'm not confident in this result."
 
 Bad work is worse than no work. You will not be penalized for escalating.
-
 - If you have attempted a task 3 times without success, STOP and escalate.
 - If you are uncertain about a security-sensitive change, STOP and escalate.
 - If the scope of work exceeds what you can verify, STOP and escalate.
 
 Escalation format:
-
 ```
 STATUS: BLOCKED | NEEDS_CONTEXT
 REASON: [1-2 sentences]
@@ -293,15 +279,14 @@ Then write a `## GSTACK REVIEW REPORT` section to the end of the plan file:
 - If the output is `NO_REVIEWS` or empty: write this placeholder table:
 
 \`\`\`markdown
-
 ## GSTACK REVIEW REPORT
 
-| Review        | Trigger                 | Why                             | Runs | Status | Findings |
-| ------------- | ----------------------- | ------------------------------- | ---- | ------ | -------- |
-| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | 0    | —      | —        |
-| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | 0    | —      | —        |
-| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | 0    | —      | —        |
-| Design Review | \`/plan-design-review\` | UI/UX gaps                      | 0    | —      | —        |
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | \`/plan-ceo-review\` | Scope & strategy | 0 | — | — |
+| Codex Review | \`/codex review\` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | 0 | — | — |
+| Design Review | \`/plan-design-review\` | UI/UX gaps | 0 | — | — |
 
 **VERDICT:** NO REVIEWS YET — run \`/autoplan\` for full review pipeline, or individual reviews above.
 \`\`\`
@@ -318,13 +303,13 @@ You are a QA engineer. Test web applications like a real user — click everythi
 
 **Parse the user's request for these parameters:**
 
-| Parameter  | Default                   |                                                  Override example |
-| ---------- | ------------------------- | ----------------------------------------------------------------: |
-| Target URL | (auto-detect or required) |                      `https://myapp.com`, `http://localhost:3000` |
-| Mode       | full                      |        `--quick`, `--regression .gstack/qa-reports/baseline.json` |
-| Output dir | `.gstack/qa-reports/`     |                                               `Output to /tmp/qa` |
-| Scope      | Full app (or diff-scoped) |                                       `Focus on the billing page` |
-| Auth       | None                      | `Sign in to user@example.com`, `Import cookies from cookies.json` |
+| Parameter | Default | Override example |
+|-----------|---------|-----------------:|
+| Target URL | (auto-detect or required) | `https://myapp.com`, `http://localhost:3000` |
+| Mode | full | `--quick`, `--regression .gstack/qa-reports/baseline.json` |
+| Output dir | `.gstack/qa-reports/` | `Output to /tmp/qa` |
+| Scope | Full app (or diff-scoped) | `Focus on the billing page` |
+| Auth | None | `Sign in to user@example.com`, `Import cookies from cookies.json` |
 
 **If no URL is given and you're on a feature branch:** Automatically enter **diff-aware mode** (see Modes below). This is the most common case — the user just shipped code on a branch and wants to verify it works.
 
@@ -345,7 +330,6 @@ fi
 ```
 
 If `NEEDS_SETUP`:
-
 1. Tell the user: "gstack browse needs a one-time build (~10 seconds). OK to proceed?" Then STOP and wait.
 2. Run: `cd <SKILL_DIR> && ./setup`
 3. If `bun` is not installed: `curl -fsSL https://bun.sh/install | bash`
@@ -380,7 +364,6 @@ Before falling back to git diff heuristics, check for richer test plan sources:
 This is the **primary mode** for developers verifying their work. When the user says `/qa` without a URL and the repo is on a feature branch, automatically:
 
 1. **Analyze the branch diff** to understand what changed:
-
    ```bash
    git diff main...HEAD --name-only
    git log main..HEAD --oneline
@@ -397,13 +380,11 @@ This is the **primary mode** for developers verifying their work. When the user 
    **If no obvious pages/routes are identified from the diff:** Do not skip browser testing. The user invoked /qa because they want browser-based verification. Fall back to Quick mode — navigate to the homepage, follow the top 5 navigation targets, check console for errors, and test any interactive elements found. Backend, config, and infrastructure changes affect app behavior — always verify the app still works.
 
 3. **Detect the running app** — check common local dev ports:
-
    ```bash
    $B goto http://localhost:3000 2>/dev/null && echo "Found app on :3000" || \
    $B goto http://localhost:4000 2>/dev/null && echo "Found app on :4000" || \
    $B goto http://localhost:8080 2>/dev/null && echo "Found app on :8080"
    ```
-
    If no local app is found, check for a staging/preview URL in the PR or environment. If nothing works, ask the user for the URL.
 
 4. **Test each affected page/route:**
@@ -413,7 +394,7 @@ This is the **primary mode** for developers verifying their work. When the user 
    - If the change was interactive (forms, buttons, flows), test the interaction end-to-end
    - Use `snapshot -D` before and after actions to verify the change had the expected effect
 
-5. **Cross-reference with commit messages and PR description** to understand _intent_ — what should the change do? Verify it actually does that.
+5. **Cross-reference with commit messages and PR description** to understand *intent* — what should the change do? Verify it actually does that.
 
 6. **Check TODOS.md** (if it exists) for known bugs or issues related to the changed files. If a TODO describes a bug that this branch should fix, add it to your test plan. If you find a new bug during QA that isn't in TODOS.md, note it in the report.
 
@@ -425,15 +406,12 @@ This is the **primary mode** for developers verifying their work. When the user 
 **If the user provides a URL with diff-aware mode:** Use that URL as the base but still scope testing to the changed files.
 
 ### Full (default when URL is provided)
-
 Systematic exploration. Visit every reachable page. Document 5-10 well-evidenced issues. Produce health score. Takes 5-15 minutes depending on app size.
 
 ### Quick (`--quick`)
-
 30-second smoke test. Visit homepage + top 5 navigation targets. Check: page loads? Console errors? Broken links? Produce health score. No detailed issue documentation.
 
 ### Regression (`--regression <baseline>`)
-
 Run full mode, then load `baseline.json` from a previous run. Diff: which issues are fixed? Which are new? What's the score delta? Append regression section to report.
 
 ---
@@ -483,7 +461,6 @@ $B console --errors               # any errors on landing?
 ```
 
 **Detect framework** (note in report metadata):
-
 - `__next` in HTML or `_next/data` requests → Next.js
 - `csrf-token` meta tag → Rails
 - `wp-content` in URLs → WordPress
@@ -527,7 +504,6 @@ Document each issue **immediately when found** — don't batch them.
 **Two evidence tiers:**
 
 **Interactive bugs** (broken flows, dead buttons, form failures):
-
 1. Take a screenshot before the action
 2. Perform the action
 3. Take a screenshot showing the result
@@ -542,7 +518,6 @@ $B snapshot -D
 ```
 
 **Static bugs** (typos, layout issues, missing images):
-
 1. Take a single annotated screenshot showing the problem
 2. Describe what's wrong
 
@@ -571,7 +546,6 @@ $B snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
    ```
 
 **Regression mode:** After writing the report, load the baseline file. Compare:
-
 - Health score delta
 - Issues fixed (in baseline but not current)
 - New issues (in current but not baseline)
@@ -584,42 +558,36 @@ $B snapshot -i -a -o "$REPORT_DIR/screenshots/issue-002.png"
 Compute each category score (0-100), then take the weighted average.
 
 ### Console (weight: 15%)
-
 - 0 errors → 100
 - 1-3 errors → 70
 - 4-10 errors → 40
 - 10+ errors → 10
 
 ### Links (weight: 10%)
-
 - 0 broken → 100
 - Each broken link → -15 (minimum 0)
 
 ### Per-Category Scoring (Visual, Functional, UX, Content, Performance, Accessibility)
-
 Each category starts at 100. Deduct per finding:
-
 - Critical issue → -25
 - High issue → -15
 - Medium issue → -8
 - Low issue → -3
-  Minimum 0 per category.
+Minimum 0 per category.
 
 ### Weights
-
-| Category      | Weight |
-| ------------- | ------ |
-| Console       | 15%    |
-| Links         | 10%    |
-| Visual        | 10%    |
-| Functional    | 20%    |
-| UX            | 15%    |
-| Performance   | 10%    |
-| Content       | 5%     |
-| Accessibility | 15%    |
+| Category | Weight |
+|----------|--------|
+| Console | 15% |
+| Links | 10% |
+| Visual | 10% |
+| Functional | 20% |
+| UX | 15% |
+| Performance | 10% |
+| Content | 5% |
+| Accessibility | 15% |
 
 ### Final Score
-
 `score = Σ (category_score × weight)`
 
 ---
@@ -627,28 +595,24 @@ Each category starts at 100. Deduct per finding:
 ## Framework-Specific Guidance
 
 ### Next.js
-
 - Check console for hydration errors (`Hydration failed`, `Text content did not match`)
 - Monitor `_next/data` requests in network — 404s indicate broken data fetching
 - Test client-side navigation (click links, don't just `goto`) — catches routing issues
 - Check for CLS (Cumulative Layout Shift) on pages with dynamic content
 
 ### Rails
-
 - Check for N+1 query warnings in console (if development mode)
 - Verify CSRF token presence in forms
 - Test Turbo/Stimulus integration — do page transitions work smoothly?
 - Check for flash messages appearing and dismissing correctly
 
 ### WordPress
-
 - Check for plugin conflicts (JS errors from different plugins)
 - Verify admin bar visibility for logged-in users
 - Test REST API endpoints (`/wp-json/`)
 - Check for mixed content warnings (common with WP)
 
 ### General SPA (React, Vue, Angular)
-
 - Use `snapshot -i` for navigation — `links` command misses client-side routes
 - Check for stale state (navigate away and back — does data refresh?)
 - Test browser back/forward — does the app handle history correctly?
@@ -680,11 +644,9 @@ Write the report to both local and project-scoped locations:
 **Local:** `.gstack/qa-reports/qa-report-{domain}-{YYYY-MM-DD}.md`
 
 **Project-scoped:** Write test outcome artifact for cross-session context:
-
 ```bash
 eval "$(~/.claude/skills/gstack/bin/gstack-slug 2>/dev/null)" && mkdir -p ~/.gstack/projects/$SLUG
 ```
-
 Write to `~/.gstack/projects/{slug}/{user}-{branch}-test-outcome-{datetime}.md`
 
 ### Output Structure

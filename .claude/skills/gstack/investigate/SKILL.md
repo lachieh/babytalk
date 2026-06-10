@@ -31,7 +31,6 @@ hooks:
           command: "bash ${CLAUDE_SKILL_DIR}/../freeze/bin/check-freeze.sh"
           statusMessage: "Checking debug scope boundary..."
 ---
-
 <!-- AUTO-GENERATED from SKILL.md.tmpl — do not edit directly -->
 <!-- Regenerate: bun run gen:skill-docs -->
 
@@ -92,7 +91,6 @@ ask the user about telemetry. Use AskUserQuestion:
 > Change anytime with `gstack-config set telemetry off`.
 
 Options:
-
 - A) Help gstack get better! (recommended)
 - B) No thanks
 
@@ -100,11 +98,10 @@ If A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry community`
 
 If B: ask a follow-up AskUserQuestion:
 
-> How about anonymous mode? We just learn that _someone_ used gstack — no unique ID,
+> How about anonymous mode? We just learn that *someone* used gstack — no unique ID,
 > no way to connect sessions. Just a counter that helps us know if anyone's out there.
 
 Options:
-
 - A) Sure, anonymous is fine
 - B) No thanks, fully off
 
@@ -112,7 +109,6 @@ If B→A: run `~/.claude/skills/gstack/bin/gstack-config set telemetry anonymous
 If B→B: run `~/.claude/skills/gstack/bin/gstack-config set telemetry off`
 
 Always run:
-
 ```bash
 touch ~/.gstack/.telemetry-prompted
 ```
@@ -122,7 +118,6 @@ This only happens once. If `TEL_PROMPTED` is `yes`, skip this entirely.
 ## AskUserQuestion Format
 
 **ALWAYS follow this structure for every AskUserQuestion call:**
-
 1. **Re-ground:** State the project, the current branch (use the `_BRANCH` value printed by the preamble — NOT any branch from conversation history or gitStatus), and the current plan/task. (1-2 sentences)
 2. **Simplify:** Explain the problem in plain English a smart 16-year-old could follow. No raw function names, no internal jargon, no implementation details. Use concrete examples and analogies. Say what it DOES, not what it's called.
 3. **Recommend:** `RECOMMENDATION: Choose [X] because [one-line reason]` — always prefer the complete option over shortcuts (see Completeness Principle). Include `Completeness: X/10` for each option. Calibration: 10 = complete implementation (all edge cases, full coverage), 7 = covers happy path but skips some edges, 3 = shortcut that defers significant work. If both options are 8+, pick the higher; if one is ≤5, flag it.
@@ -141,19 +136,18 @@ AI-assisted coding makes the marginal cost of completeness near-zero. When you p
 - **Lake vs. ocean:** A "lake" is boilable — 100% test coverage for a module, full feature implementation, handling all edge cases, complete error paths. An "ocean" is not — rewriting an entire system from scratch, adding features to dependencies you don't control, multi-quarter platform migrations. Recommend boiling lakes. Flag oceans as out of scope.
 - **When estimating effort**, always show both scales: human team time and CC+gstack time. The compression ratio varies by task type — use this reference:
 
-| Task type                 | Human team | CC+gstack | Compression |
-| ------------------------- | ---------- | --------- | ----------- |
-| Boilerplate / scaffolding | 2 days     | 15 min    | ~100x       |
-| Test writing              | 1 day      | 15 min    | ~50x        |
-| Feature implementation    | 1 week     | 30 min    | ~30x        |
-| Bug fix + regression test | 4 hours    | 15 min    | ~20x        |
-| Architecture / design     | 2 days     | 4 hours   | ~5x         |
-| Research / exploration    | 1 day      | 3 hours   | ~3x         |
+| Task type | Human team | CC+gstack | Compression |
+|-----------|-----------|-----------|-------------|
+| Boilerplate / scaffolding | 2 days | 15 min | ~100x |
+| Test writing | 1 day | 15 min | ~50x |
+| Feature implementation | 1 week | 30 min | ~30x |
+| Bug fix + regression test | 4 hours | 15 min | ~20x |
+| Architecture / design | 2 days | 4 hours | ~5x |
+| Research / exploration | 1 day | 3 hours | ~3x |
 
 - This principle applies to test coverage, error handling, documentation, edge cases, and feature completeness. Don't skip the last 10% to "save time" — with AI, that 10% costs seconds.
 
 **Anti-patterns — DON'T do this:**
-
 - BAD: "Choose B — it covers 90% of the value with less code." (If A is only 70 lines more, choose A.)
 - BAD: "We can skip edge case handling to save time." (Edge case handling costs minutes with CC.)
 - BAD: "Let's defer test coverage to a follow-up PR." (Tests are the cheapest lake to boil.)
@@ -176,7 +170,6 @@ Never let a noticed issue silently pass. The whole point is proactive communicat
 Before building infrastructure, unfamiliar patterns, or anything the runtime might have a built-in — **search first.** Read `~/.claude/skills/gstack/ETHOS.md` for the full philosophy.
 
 **Three layers of knowledge:**
-
 - **Layer 1** (tried and true — in distribution). Don't reinvent the wheel. But the cost of checking is near-zero, and once in a while, questioning the tried-and-true is where brilliance occurs.
 - **Layer 2** (new and popular — search for these). But scrutinize: humans are subject to mania. Search results are inputs to your thinking, not answers.
 - **Layer 3** (first principles — prize these above all). Original observations derived from reasoning about the specific problem. The most valuable of all.
@@ -185,11 +178,9 @@ Before building infrastructure, unfamiliar patterns, or anything the runtime mig
 "EUREKA: Everyone does X because [assumption]. But [evidence] shows this is wrong. Y is better because [reasoning]."
 
 Log eureka moments:
-
 ```bash
 jq -n --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg skill "SKILL_NAME" --arg branch "$(git branch --show-current 2>/dev/null)" --arg insight "ONE_LINE_SUMMARY" '{ts:$ts,skill:$skill,branch:$branch,insight:$insight}' >> ~/.gstack/analytics/eureka.jsonl 2>/dev/null || true
 ```
-
 Replace SKILL_NAME and ONE_LINE_SUMMARY. Runs inline — don't stop the workflow.
 
 **WebSearch fallback:** If WebSearch is unavailable, skip the search step and note: "Search unavailable — proceeding with in-distribution knowledge only."
@@ -220,9 +211,7 @@ Hey gstack team — ran into this while using /{skill-name}:
 
 ## Raw output
 ```
-
 {paste the actual error or unexpected output here}
-
 ```
 
 ## What would make this a 10
@@ -236,7 +225,6 @@ Slug: lowercase, hyphens, max 60 chars (e.g. `browse-js-no-await`). Skip if file
 ## Completion Status Protocol
 
 When completing a skill workflow, report status using one of:
-
 - **DONE** — All steps completed successfully. Evidence provided for each claim.
 - **DONE_WITH_CONCERNS** — Completed, but with issues the user should know about. List each concern.
 - **BLOCKED** — Cannot proceed. State what is blocking and what was tried.
@@ -247,13 +235,11 @@ When completing a skill workflow, report status using one of:
 It is always OK to stop and say "this is too hard for me" or "I'm not confident in this result."
 
 Bad work is worse than no work. You will not be penalized for escalating.
-
 - If you have attempted a task 3 times without success, STOP and escalate.
 - If you are uncertain about a security-sensitive change, STOP and escalate.
 - If the scope of work exceeds what you can verify, STOP and escalate.
 
 Escalation format:
-
 ```
 STATUS: BLOCKED | NEEDS_CONTEXT
 REASON: [1-2 sentences]
@@ -309,15 +295,14 @@ Then write a `## GSTACK REVIEW REPORT` section to the end of the plan file:
 - If the output is `NO_REVIEWS` or empty: write this placeholder table:
 
 \`\`\`markdown
-
 ## GSTACK REVIEW REPORT
 
-| Review        | Trigger                 | Why                             | Runs | Status | Findings |
-| ------------- | ----------------------- | ------------------------------- | ---- | ------ | -------- |
-| CEO Review    | \`/plan-ceo-review\`    | Scope & strategy                | 0    | —      | —        |
-| Codex Review  | \`/codex review\`       | Independent 2nd opinion         | 0    | —      | —        |
-| Eng Review    | \`/plan-eng-review\`    | Architecture & tests (required) | 0    | —      | —        |
-| Design Review | \`/plan-design-review\` | UI/UX gaps                      | 0    | —      | —        |
+| Review | Trigger | Why | Runs | Status | Findings |
+|--------|---------|-----|------|--------|----------|
+| CEO Review | \`/plan-ceo-review\` | Scope & strategy | 0 | — | — |
+| Codex Review | \`/codex review\` | Independent 2nd opinion | 0 | — | — |
+| Eng Review | \`/plan-eng-review\` | Architecture & tests (required) | 0 | — | — |
+| Design Review | \`/plan-design-review\` | UI/UX gaps | 0 | — | — |
 
 **VERDICT:** NO REVIEWS YET — run \`/autoplan\` for full review pipeline, or individual reviews above.
 \`\`\`
@@ -345,11 +330,9 @@ Gather context before forming any hypothesis.
 2. **Read the code:** Trace the code path from the symptom back to potential causes. Use Grep to find all references, Read to understand the logic.
 
 3. **Check recent changes:**
-
    ```bash
    git log --oneline -20 -- <affected-files>
    ```
-
    Was this working before? What changed? A regression means the root cause is in the diff.
 
 4. **Reproduce:** Can you trigger the bug deterministically? If not, gather more evidence before proceeding.
@@ -387,22 +370,20 @@ If the bug spans the entire repo or the scope is genuinely unclear, skip the loc
 
 Check if this bug matches a known pattern:
 
-| Pattern              | Signature                            | Where to look                          |
-| -------------------- | ------------------------------------ | -------------------------------------- |
-| Race condition       | Intermittent, timing-dependent       | Concurrent access to shared state      |
-| Nil/null propagation | NoMethodError, TypeError             | Missing guards on optional values      |
-| State corruption     | Inconsistent data, partial updates   | Transactions, callbacks, hooks         |
-| Integration failure  | Timeout, unexpected response         | External API calls, service boundaries |
-| Configuration drift  | Works locally, fails in staging/prod | Env vars, feature flags, DB state      |
-| Stale cache          | Shows old data, fixes on cache clear | Redis, CDN, browser cache, Turbo       |
+| Pattern | Signature | Where to look |
+|---------|-----------|---------------|
+| Race condition | Intermittent, timing-dependent | Concurrent access to shared state |
+| Nil/null propagation | NoMethodError, TypeError | Missing guards on optional values |
+| State corruption | Inconsistent data, partial updates | Transactions, callbacks, hooks |
+| Integration failure | Timeout, unexpected response | External API calls, service boundaries |
+| Configuration drift | Works locally, fails in staging/prod | Env vars, feature flags, DB state |
+| Stale cache | Shows old data, fixes on cache clear | Redis, CDN, browser cache, Turbo |
 
 Also check:
-
 - `TODOS.md` for related known issues
 - `git log` for prior fixes in the same area — **recurring bugs in the same files are an architectural smell**, not a coincidence
 
 **External pattern search:** If the bug doesn't match a known pattern above, WebSearch for:
-
 - "{framework} {generic error type}" — **sanitize first:** strip hostnames, IPs, file paths, SQL, customer data. Search the error category, not the raw message.
 - "{library} {component} known issues"
 
@@ -419,7 +400,6 @@ Before writing ANY fix, verify your hypothesis.
 2. **If the hypothesis is wrong:** Before forming the next hypothesis, consider searching for the error. **Sanitize first** — strip hostnames, IPs, file paths, SQL fragments, customer identifiers, and any internal/proprietary data from the error message. Search only the generic error type and framework context: "{component} {sanitized error type} {framework version}". If the error message is too specific to sanitize safely, skip the search. If WebSearch is unavailable, skip and proceed. Then return to Phase 1. Gather more evidence. Do not guess.
 
 3. **3-strike rule:** If 3 hypotheses fail, **STOP**. Use AskUserQuestion:
-
    ```
    3 hypotheses tested, none match. This may be an architectural issue
    rather than a simple bug.
@@ -430,7 +410,6 @@ Before writing ANY fix, verify your hypothesis.
    ```
 
 **Red flags** — if you see any of these, slow down:
-
 - "Quick fix for now" — there is no "for now." Fix it right or escalate.
 - Proposing a fix before tracing data flow — you're guessing.
 - Each fix reveals a new problem elsewhere — wrong layer, not wrong code.
@@ -468,7 +447,6 @@ Once root cause is confirmed:
 Run the test suite and paste the output.
 
 Output a structured debug report:
-
 ```
 DEBUG REPORT
 ════════════════════════════════════════
