@@ -34,6 +34,7 @@
       "Bash(pnpm db:generate)",
       "Bash(pnpm db:migrate)",
       "Bash(pnpm db:studio)"
-    ]
+    ],
+    "defaultMode": "bypassPermissions"
   }
 }
