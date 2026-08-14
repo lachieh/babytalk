@@ -2,10 +2,12 @@
 
 import type { BabyEvent } from "@/lib/baby-context";
 import {
+  eventsForDay,
   formatSleepDuration,
   totalDiapers,
   totalFedMl,
   totalSleepMinutes,
+  totalSleepMinutesForDay,
 } from "@/lib/daily-totals";
 import { EventIcon } from "@/lib/event-styles";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -38,6 +40,8 @@ export type LastEventDetail = {
 
 export interface DailySummaryProps {
   events: BabyEvent[];
+  /** Calendar day represented by this summary. Duration totals are clipped to it. */
+  date?: Date;
   /** Optional details rendered below each blob (last-event info on home page). */
   details?: {
     feed?: LastEventDetail;
@@ -83,27 +87,33 @@ const Blob = ({
 function buildColumns(
   events: BabyEvent[],
   unit: "ml" | "oz",
-  details: DailySummaryProps["details"]
+  details: DailySummaryProps["details"],
+  date?: Date
 ): SummaryColumn[] {
+  const pointEvents = date ? eventsForDay(events, date) : events;
+  const sleepMinutes = date
+    ? totalSleepMinutesForDay(events, date)
+    : totalSleepMinutes(events);
+
   return [
     {
       type: "feed",
       label: "Fed",
-      value: formatVolume(totalFedMl(events), unit),
+      value: formatVolume(totalFedMl(pointEvents), unit),
       detail: details?.feed?.detail ?? null,
       ago: details?.feed?.ago ?? null,
     },
     {
       type: "sleep",
       label: "Sleep",
-      value: formatSleepDuration(totalSleepMinutes(events)),
+      value: formatSleepDuration(sleepMinutes),
       detail: details?.sleep?.detail ?? null,
       ago: details?.sleep?.ago ?? null,
     },
     {
       type: "diaper",
       label: "Diapers",
-      value: String(totalDiapers(events)),
+      value: String(totalDiapers(pointEvents)),
       detail: details?.diaper?.detail ?? null,
       ago: details?.diaper?.ago ?? null,
     },
@@ -112,12 +122,13 @@ function buildColumns(
 
 export const DailySummary = ({
   events,
+  date,
   details,
   className = "px-4",
   compact = false,
 }: DailySummaryProps) => {
   const { unit } = useVolumeUnit();
-  const columns = buildColumns(events, unit, details);
+  const columns = buildColumns(events, unit, details, date);
   const padY = compact ? "py-3" : "py-5";
   const valueSize = compact ? "text-xl" : "text-2xl";
 
