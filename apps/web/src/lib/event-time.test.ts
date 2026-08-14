@@ -24,12 +24,8 @@ describe("event time ranges", () => {
       startedAt: "2026-08-14T23:30:00-04:00",
     });
 
-    expect(eventsOverlappingDay([sleep], new Date("2026-08-14T12:00:00Z"))).toEqual([
-      sleep,
-    ]);
-    expect(eventsOverlappingDay([sleep], new Date("2026-08-15T12:00:00Z"))).toEqual([
-      sleep,
-    ]);
+    expect(eventsOverlappingDay([sleep], new Date("2026-08-14T12:00:00Z"))).toEqual([sleep]);
+    expect(eventsOverlappingDay([sleep], new Date("2026-08-15T12:00:00Z"))).toEqual([sleep]);
   });
 
   it("clips an overnight duration to each day", () => {
@@ -39,10 +35,10 @@ describe("event time ranges", () => {
     });
 
     expect(durationWithinRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))).toBe(
-      30 * 60_000
+      30 * 60_000,
     );
     expect(durationWithinRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")))).toBe(
-      6 * 60 * 60_000
+      6 * 60 * 60_000,
     );
   });
 
@@ -53,9 +49,9 @@ describe("event time ranges", () => {
     });
     const now = new Date("2026-08-15T00:15:00-04:00").getTime();
 
-    expect(
-      durationWithinRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")), now)
-    ).toBe(15 * 60_000);
+    expect(durationWithinRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")), now)).toBe(
+      15 * 60_000,
+    );
   });
 
   it("does not double-count an event ending exactly at midnight", () => {
@@ -64,12 +60,8 @@ describe("event time ranges", () => {
       startedAt: "2026-08-14T23:30:00-04:00",
     });
 
-    expect(
-      eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
-    ).toBe(true);
-    expect(
-      eventOverlapsRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")))
-    ).toBe(false);
+    expect(eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))).toBe(true);
+    expect(eventOverlapsRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")))).toBe(false);
   });
 
   it("keeps point events on their start day", () => {
@@ -79,12 +71,8 @@ describe("event time ranges", () => {
       type: "diaper",
     });
 
-    expect(eventsOverlappingDay([diaper], new Date("2026-08-14T12:00:00Z"))).toEqual([
-      diaper,
-    ]);
-    expect(eventsOverlappingDay([diaper], new Date("2026-08-15T12:00:00Z"))).toEqual(
-      []
-    );
+    expect(eventsOverlappingDay([diaper], new Date("2026-08-14T12:00:00Z"))).toEqual([diaper]);
+    expect(eventsOverlappingDay([diaper], new Date("2026-08-15T12:00:00Z"))).toEqual([]);
   });
 
   it("ignores invalid negative durations", () => {
@@ -93,12 +81,8 @@ describe("event time ranges", () => {
       startedAt: "2026-08-14T10:00:00.000Z",
     });
 
-    expect(
-      eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
-    ).toBe(false);
-    expect(
-      durationWithinRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
-    ).toBe(0);
+    expect(eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))).toBe(false);
+    expect(durationWithinRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))).toBe(0);
   });
 
   it("uses calendar midnights across daylight-saving changes", () => {
