@@ -10,9 +10,9 @@ import { gqlRequest } from "@/lib/tambo/graphql";
 
 import { useHistorySheet } from "../_context";
 
-const EVENTS_IN_RANGE_QUERY = `
-  query EventsInRange($babyId: String!, $startedAfter: String!, $startedBefore: String!) {
-    eventsInRange(babyId: $babyId, startedAfter: $startedAfter, startedBefore: $startedBefore) {
+const EVENTS_OVERLAPPING_RANGE_QUERY = `
+  query EventsOverlappingRange($babyId: String!, $rangeStart: String!, $rangeEnd: String!) {
+    eventsOverlappingRange(babyId: $babyId, rangeStart: $rangeStart, rangeEnd: $rangeEnd) {
       id type startedAt endedAt metadata
     }
   }
@@ -321,17 +321,17 @@ export default function HistoryWeekPage() {
   useEffect(() => {
     if (!baby) return;
     let cancelled = false;
-    const startedAfter = weekStart.toISOString();
+    const rangeStart = weekStart.toISOString();
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
-    const startedBefore = weekEnd.toISOString();
+    const rangeEnd = weekEnd.toISOString();
 
     const load = async () => {
       setEventsLoading(true);
       try {
         const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
-          EVENTS_IN_RANGE_QUERY,
-          { babyId: baby.id, startedAfter, startedBefore }
+          EVENTS_OVERLAPPING_RANGE_QUERY,
+          { babyId: baby.id, rangeEnd, rangeStart }
         );
         if (!cancelled) {
           setEvents(data.eventsInRange.filter((e) => e.type !== "pump"));
