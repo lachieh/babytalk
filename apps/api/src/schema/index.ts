@@ -5,6 +5,7 @@ import "./mutations.js";
 import "./household-types.js";
 import "./household-queries.js";
 import "./household-mutations.js";
+import "./event-range-queries.js";
 import "./measurement-types.js";
 import "./measurement-mutations.js";
 import "./agent-thread.js";
