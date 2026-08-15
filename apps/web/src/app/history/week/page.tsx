@@ -9,6 +9,7 @@ import { useBabyContext } from "@/lib/baby-context";
 import { gqlRequest } from "@/lib/tambo/graphql";
 
 import { useHistorySheet } from "../_context";
+import { filterWeekEvents, type WeekEventsResponse } from "./week-data";
 
 const EVENTS_OVERLAPPING_RANGE_QUERY = `
   query EventsOverlappingRange($babyId: String!, $rangeStart: String!, $rangeEnd: String!) {
@@ -329,12 +330,12 @@ export default function HistoryWeekPage() {
     const load = async () => {
       setEventsLoading(true);
       try {
-        const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
+        const data = await gqlRequest<WeekEventsResponse>(
           EVENTS_OVERLAPPING_RANGE_QUERY,
           { babyId: baby.id, rangeEnd, rangeStart }
         );
         if (!cancelled) {
-          setEvents(data.eventsInRange.filter((e) => e.type !== "pump"));
+          setEvents(filterWeekEvents(data));
         }
       } catch {
         if (!cancelled) setEvents([]);
