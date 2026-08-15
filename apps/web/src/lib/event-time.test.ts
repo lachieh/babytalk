@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import type { BabyEvent } from "./baby-context";
 import {
   dayRange,
@@ -26,10 +24,10 @@ describe("event time ranges", () => {
 
     expect(
       eventsOverlappingDay([sleep], new Date("2026-08-14T12:00:00Z"))
-    ).toEqual([sleep]);
+    ).toStrictEqual([sleep]);
     expect(
       eventsOverlappingDay([sleep], new Date("2026-08-15T12:00:00Z"))
-    ).toEqual([sleep]);
+    ).toStrictEqual([sleep]);
   });
 
   it("clips an overnight duration to each day", () => {
@@ -70,10 +68,10 @@ describe("event time ranges", () => {
 
     expect(
       eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
-    ).toBe(true);
+    ).toBeTruthy();
     expect(
       eventOverlapsRange(sleep, dayRange(new Date("2026-08-15T12:00:00Z")))
-    ).toBe(false);
+    ).toBeFalsy();
   });
 
   it("keeps point events on their start day", () => {
@@ -85,10 +83,10 @@ describe("event time ranges", () => {
 
     expect(
       eventsOverlappingDay([diaper], new Date("2026-08-14T12:00:00Z"))
-    ).toEqual([diaper]);
+    ).toStrictEqual([diaper]);
     expect(
       eventsOverlappingDay([diaper], new Date("2026-08-15T12:00:00Z"))
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 
   it("ignores invalid negative durations", () => {
@@ -99,7 +97,7 @@ describe("event time ranges", () => {
 
     expect(
       eventOverlapsRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
-    ).toBe(false);
+    ).toBeFalsy();
     expect(
       durationWithinRange(sleep, dayRange(new Date("2026-08-14T12:00:00Z")))
     ).toBe(0);
