@@ -5,6 +5,7 @@ import { useCallback, useMemo } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
+import { isDurationEvent } from "@/lib/event-time";
 import { formatEventNotes, formatEventParts } from "@/lib/format-event";
 
 import { useHistorySheet } from "../_context";
@@ -70,8 +71,12 @@ const EventRow = ({
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
   const { label, detail } = formatEventParts(event);
   const notes = formatEventNotes(event);
-  const inProgress =
-    !event.endedAt && event.type !== "diaper" && event.type !== "note";
+  const inProgress = isDurationEvent(event) && event.endedAt === null;
+  const hasDistinctEndTime =
+    event.endedAt !== null && event.endedAt !== event.startedAt;
+  const showSingleTimeCell = !hasDistinctEndTime && !inProgress;
+  const endTimeLabel =
+    hasDistinctEndTime && event.endedAt ? formatTime(event.endedAt) : "—";
 
   return (
     <button
@@ -79,9 +84,16 @@ const EventRow = ({
       onClick={handleClick}
       type="button"
     >
-      <span className="w-14 shrink-0 text-neutral-400 text-xs tabular-nums">
-        {formatTime(event.startedAt)}
-      </span>
+      <div className="grid w-24 shrink-0 grid-cols-2 gap-x-2 text-neutral-400 text-xs tabular-nums">
+        {showSingleTimeCell ? (
+          <span className="col-span-2">{formatTime(event.startedAt)}</span>
+        ) : (
+          <>
+            <span>{formatTime(event.startedAt)}</span>
+            <span>{endTimeLabel}</span>
+          </>
+        )}
+      </div>
       <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
         <p className="text-neutral-700 text-sm">
