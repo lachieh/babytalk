@@ -2,3 +2,4 @@
 *.gen.ts
 *.gen.d.ts
 *.schema.json
+.claude/skills/**
