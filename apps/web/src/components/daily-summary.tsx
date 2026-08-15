@@ -26,11 +26,11 @@ const blobShapes = [
 ];
 
 interface SummaryColumn {
-  type: string;
-  label: string;
-  value: string;
-  detail: string | null;
   ago: string | null;
+  detail: string | null;
+  label: string;
+  type: string;
+  value: string;
 }
 
 export type LastEventDetail = {
@@ -52,6 +52,13 @@ export interface DailySummaryProps {
   /** Compact mode tightens padding for use in dense lists (history days view). */
   compact?: boolean;
 }
+
+const getLastEventSummary = (
+  detail?: LastEventDetail
+): Pick<SummaryColumn, "ago" | "detail"> => ({
+  ago: detail?.ago ?? null,
+  detail: detail?.detail ?? null,
+});
 
 const Blob = ({
   column,
@@ -94,28 +101,28 @@ function buildColumns(
   const sleepMinutes = date
     ? totalSleepMinutesForDay(events, date)
     : totalSleepMinutes(events);
+  const feedSummary = getLastEventSummary(details?.feed);
+  const sleepSummary = getLastEventSummary(details?.sleep);
+  const diaperSummary = getLastEventSummary(details?.diaper);
 
   return [
     {
-      type: "feed",
+      ...feedSummary,
       label: "Fed",
+      type: "feed",
       value: formatVolume(totalFedMl(pointEvents), unit),
-      detail: details?.feed?.detail ?? null,
-      ago: details?.feed?.ago ?? null,
     },
     {
-      type: "sleep",
+      ...sleepSummary,
       label: "Sleep",
+      type: "sleep",
       value: formatSleepDuration(sleepMinutes),
-      detail: details?.sleep?.detail ?? null,
-      ago: details?.sleep?.ago ?? null,
     },
     {
-      type: "diaper",
+      ...diaperSummary,
       label: "Diapers",
+      type: "diaper",
       value: String(totalDiapers(pointEvents)),
-      detail: details?.diaper?.detail ?? null,
-      ago: details?.diaper?.ago ?? null,
     },
   ];
 }
