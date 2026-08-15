@@ -2,10 +2,12 @@
 
 import type { BabyEvent } from "@/lib/baby-context";
 import {
+  eventsForDay,
   formatSleepDuration,
   totalDiapers,
   totalFedMl,
   totalSleepMinutes,
+  totalSleepMinutesForDay,
 } from "@/lib/daily-totals";
 import { EventIcon } from "@/lib/event-styles";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -24,11 +26,11 @@ const blobShapes = [
 ];
 
 interface SummaryColumn {
-  type: string;
-  label: string;
-  value: string;
-  detail: string | null;
   ago: string | null;
+  detail: string | null;
+  label: string;
+  type: string;
+  value: string;
 }
 
 export type LastEventDetail = {
@@ -38,6 +40,8 @@ export type LastEventDetail = {
 
 export interface DailySummaryProps {
   events: BabyEvent[];
+  /** Calendar day represented by this summary. Duration totals are clipped to it. */
+  date?: Date;
   /** Optional details rendered below each blob (last-event info on home page). */
   details?: {
     feed?: LastEventDetail;
@@ -48,6 +52,13 @@ export interface DailySummaryProps {
   /** Compact mode tightens padding for use in dense lists (history days view). */
   compact?: boolean;
 }
+
+const getLastEventSummary = (
+  detail?: LastEventDetail
+): Pick<SummaryColumn, "ago" | "detail"> => ({
+  ago: detail?.ago ?? null,
+  detail: detail?.detail ?? null,
+});
 
 const Blob = ({
   column,
@@ -83,41 +94,48 @@ const Blob = ({
 function buildColumns(
   events: BabyEvent[],
   unit: "ml" | "oz",
-  details: DailySummaryProps["details"]
+  details: DailySummaryProps["details"],
+  date?: Date
 ): SummaryColumn[] {
+  const pointEvents = date ? eventsForDay(events, date) : events;
+  const sleepMinutes = date
+    ? totalSleepMinutesForDay(events, date)
+    : totalSleepMinutes(events);
+  const feedSummary = getLastEventSummary(details?.feed);
+  const sleepSummary = getLastEventSummary(details?.sleep);
+  const diaperSummary = getLastEventSummary(details?.diaper);
+
   return [
     {
-      type: "feed",
+      ...feedSummary,
       label: "Fed",
-      value: formatVolume(totalFedMl(events), unit),
-      detail: details?.feed?.detail ?? null,
-      ago: details?.feed?.ago ?? null,
+      type: "feed",
+      value: formatVolume(totalFedMl(pointEvents), unit),
     },
     {
-      type: "sleep",
+      ...sleepSummary,
       label: "Sleep",
-      value: formatSleepDuration(totalSleepMinutes(events)),
-      detail: details?.sleep?.detail ?? null,
-      ago: details?.sleep?.ago ?? null,
+      type: "sleep",
+      value: formatSleepDuration(sleepMinutes),
     },
     {
-      type: "diaper",
+      ...diaperSummary,
       label: "Diapers",
-      value: String(totalDiapers(events)),
-      detail: details?.diaper?.detail ?? null,
-      ago: details?.diaper?.ago ?? null,
+      type: "diaper",
+      value: String(totalDiapers(pointEvents)),
     },
   ];
 }
 
 export const DailySummary = ({
   events,
+  date,
   details,
   className = "px-4",
   compact = false,
 }: DailySummaryProps) => {
   const { unit } = useVolumeUnit();
-  const columns = buildColumns(events, unit, details);
+  const columns = buildColumns(events, unit, details, date);
   const padY = compact ? "py-3" : "py-5";
   const valueSize = compact ? "text-xl" : "text-2xl";
 

@@ -1,4 +1,5 @@
 import type { BabyEvent } from "./baby-context";
+import { dayRange, durationWithinRange } from "./event-time";
 
 export function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -7,17 +8,17 @@ export function startOfDay(date: Date): Date {
 }
 
 export function endOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(23, 59, 59, 999);
+  const d = startOfDay(date);
+  d.setDate(d.getDate() + 1);
+  d.setMilliseconds(-1);
   return d;
 }
 
 export function eventsForDay(events: BabyEvent[], date: Date): BabyEvent[] {
-  const start = startOfDay(date).getTime();
-  const end = endOfDay(date).getTime();
-  return events.filter((e) => {
-    const t = new Date(e.startedAt).getTime();
-    return t >= start && t <= end;
+  const range = dayRange(date);
+  return events.filter((event) => {
+    const startedAt = new Date(event.startedAt).getTime();
+    return startedAt >= range.start && startedAt < range.end;
   });
 }
 
@@ -42,6 +43,20 @@ export function totalSleepMinutes(events: BabyEvent[]): number {
     total +=
       (new Date(e.endedAt).getTime() - new Date(e.startedAt).getTime()) /
       60_000;
+  }
+  return total;
+}
+
+export function totalSleepMinutesForDay(
+  events: BabyEvent[],
+  date: Date,
+  now = Date.now()
+): number {
+  const range = dayRange(date);
+  let total = 0;
+  for (const event of events) {
+    if (event.type !== "sleep") continue;
+    total += durationWithinRange(event, range, now) / 60_000;
   }
   return total;
 }

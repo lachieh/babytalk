@@ -5,12 +5,32 @@ import { useCallback, useState } from "react";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
+import { eventsOverlappingDay, isDurationEvent } from "@/lib/event-time";
 import { formatEventNotes, formatEventParts } from "@/lib/format-event";
 
 import { EventEditSheet } from "./event-edit-sheet";
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+const EventTime = ({ event }: { event: BabyEvent }) => {
+  const showEnd =
+    isDurationEvent(event) &&
+    event.endedAt !== null &&
+    event.endedAt !== event.startedAt;
+
+  return (
+    <span className="w-20 shrink-0 text-xs tabular-nums text-neutral-400">
+      <span className="block">{formatTime(event.startedAt)}</span>
+      {showEnd && event.endedAt && (
+        <span className="block">to {formatTime(event.endedAt)}</span>
+      )}
+      {isDurationEvent(event) && event.endedAt === null && (
+        <span className="block">in progress</span>
+      )}
+    </span>
+  );
+};
 
 const TimelineRow = ({
   event,
@@ -29,9 +49,7 @@ const TimelineRow = ({
       onClick={handleClick}
       type="button"
     >
-      <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-400">
-        {formatTime(event.startedAt)}
-      </span>
+      <EventTime event={event} />
       <EventIcon type={event.type} />
       <div className="min-w-0 flex-1">
         <p className="text-sm text-neutral-700">
@@ -72,10 +90,8 @@ export const PersistentTimeline = () => {
 
   if (loading) return null;
 
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayEvents = events.filter(
-    (e) => new Date(e.startedAt) >= todayStart && e.type !== "pump"
+  const todayEvents = eventsOverlappingDay(events, new Date()).filter(
+    (event) => event.type !== "pump"
   );
 
   if (todayEvents.length === 0) {

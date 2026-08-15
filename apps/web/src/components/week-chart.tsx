@@ -57,8 +57,13 @@ function hoursOf(d: Date): number {
 }
 
 function dayIndex(d: Date, weekStart: Date): number {
-  const ms = d.getTime() - weekStart.getTime();
-  return Math.floor(ms / 86_400_000);
+  const day = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  const start = Date.UTC(
+    weekStart.getFullYear(),
+    weekStart.getMonth(),
+    weekStart.getDate()
+  );
+  return Math.round((day - start) / 86_400_000);
 }
 
 function formatHour(h: number): string {

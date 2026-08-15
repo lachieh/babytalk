@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { useBabyContext } from "@/lib/baby-context";
+import { eventsForDay, totalSleepMinutesForDay } from "@/lib/daily-totals";
 import { EventIcon, getEventStyle } from "@/lib/event-styles";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
@@ -76,11 +77,8 @@ export const StatusWidget = () => {
   }, []);
 
   const cards = useMemo(() => {
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEvents = events.filter(
-      (e) => new Date(e.startedAt) >= todayStart
-    );
+    const today = new Date(now);
+    const todayEvents = eventsForDay(events, today);
 
     const states: CardState[] = [];
 
@@ -88,12 +86,7 @@ export const StatusWidget = () => {
       // ── Today's total ──
       let total: string;
       if (eventType === "sleep") {
-        let mins = 0;
-        for (const e of todayEvents) {
-          if (e.type !== "sleep") continue;
-          const end = e.endedAt ? new Date(e.endedAt).getTime() : now;
-          mins += (end - new Date(e.startedAt).getTime()) / 60_000;
-        }
+        const mins = totalSleepMinutesForDay(events, today, now);
         const h = Math.floor(mins / 60);
         const m = Math.floor(mins % 60);
         total = m > 0 ? `${h}h ${m}m` : `${h}h`;

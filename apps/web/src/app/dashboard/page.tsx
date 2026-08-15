@@ -10,7 +10,6 @@ import { PersistentTimeline } from "@/components/persistent-timeline";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import { eventsForDay } from "@/lib/daily-totals";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { isDeviceMode } from "@/lib/use-device-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -91,7 +90,7 @@ const SummaryCard = () => {
   const { unit } = useVolumeUnit();
 
   const now = Date.now();
-  const todayEvents = eventsForDay(events, new Date(now));
+  const today = new Date(now);
 
   const lastSleep = events.find((e) => e.type === "sleep");
   const lastFeed = events.find((e) => e.type === "feed");
@@ -99,12 +98,13 @@ const SummaryCard = () => {
 
   return (
     <DailySummary
+      date={today}
       details={{
         feed: lastFeed ? lastFeedDetail(lastFeed, now, unit) : null,
         sleep: lastSleep ? lastSleepDetail(lastSleep, now) : null,
         diaper: lastDiaper ? lastDiaperDetail(lastDiaper, now) : null,
       }}
-      events={todayEvents}
+      events={events}
     />
   );
 };

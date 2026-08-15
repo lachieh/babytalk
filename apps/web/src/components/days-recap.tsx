@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
-import { eventsForDay, startOfDay } from "@/lib/daily-totals";
+import { startOfDay } from "@/lib/daily-totals";
+import { eventsOverlappingDay } from "@/lib/event-time";
 
 import { DailySummary } from "./daily-summary";
 
@@ -45,7 +46,10 @@ export const DaysRecap = ({ events }: { events: BabyEvent[] }) => {
   const rows = useMemo(
     () =>
       days
-        .map((date) => ({ date, dayEvents: eventsForDay(events, date) }))
+        .map((date) => ({
+          date,
+          dayEvents: eventsOverlappingDay(events, date),
+        }))
         .filter(({ date, dayEvents }) =>
           // Always show today, even if empty.
           sameYmd(date, today) ? true : dayEvents.length > 0
@@ -63,12 +67,12 @@ export const DaysRecap = ({ events }: { events: BabyEvent[] }) => {
 
   return (
     <div className="space-y-5 pb-4">
-      {rows.map(({ date, dayEvents }) => (
+      {rows.map(({ date }) => (
         <div key={date.toISOString()}>
           <p className="mx-4 mb-2 text-[10px] font-medium uppercase tracking-widest text-neutral-500">
             {formatDayHeading(date, today)}
           </p>
-          <DailySummary compact events={dayEvents} />
+          <DailySummary compact date={date} events={events} />
         </div>
       ))}
     </div>
