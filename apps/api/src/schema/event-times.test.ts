@@ -15,6 +15,18 @@ describe("event end-time normalization", () => {
     ).toStrictEqual(startedAt);
   });
 
+  it("keeps note end time aligned with its start time", () => {
+    const startedAt = new Date("2026-08-16T11:00:00.000Z");
+
+    expect(
+      normalizeEventEndTime(
+        "note",
+        startedAt,
+        new Date("2026-08-16T11:30:00.000Z")
+      )
+    ).toStrictEqual(startedAt);
+  });
+
   it("preserves duration event end times", () => {
     const endedAt = new Date("2026-08-16T10:30:00.000Z");
 

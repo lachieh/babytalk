@@ -5,7 +5,7 @@ import { invitePartner } from "../auth/magic-link";
 import type { Context } from "../context";
 import { generateInviteCode } from "../utils/invite-code";
 import { builder } from "./builder";
-import { normalizeEventEndTime } from "./event-times";
+import { isInstantEventType, normalizeEventEndTime } from "./event-times";
 import {
   BabyEventType,
   BabyType,
@@ -335,8 +335,8 @@ builder.mutationField("updateEvent", (t) =>
       if (args.startedAt !== undefined && args.startedAt !== null) {
         updates.startedAt = startedAt;
       }
-      if (existing.type === "diaper") {
-        updates.endedAt = normalizeEventEndTime("diaper", startedAt, null);
+      if (isInstantEventType(existing.type)) {
+        updates.endedAt = normalizeEventEndTime(existing.type, startedAt, null);
       } else if (args.endedAt !== undefined && args.endedAt !== null) {
         updates.endedAt = new Date(args.endedAt);
       }
