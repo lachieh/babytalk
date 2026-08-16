@@ -1,11 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { AppShell } from "@/components/app-shell";
 import { DailySummary } from "@/components/daily-summary";
+import { EventEditSheet } from "@/components/event-edit-sheet";
 import { HistoryEventTable } from "@/components/history-event-table";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
@@ -115,6 +116,8 @@ export default function DashboardPage() {
   useAutoDarkMode();
   const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
+  const closeEditingEvent = useCallback(() => setEditingEvent(null), []);
   const { events } = useBabyContext();
   const now = Date.now();
   const recentEvents = events.filter((event) => {
@@ -168,7 +171,7 @@ export default function DashboardPage() {
 
         <div className="mt-3">
           {recentEvents.length > 0 ? (
-            <HistoryEventTable events={recentEvents} />
+            <HistoryEventTable events={recentEvents} onEdit={setEditingEvent} />
           ) : (
             <p className="px-4 py-8 text-center text-neutral-400 text-sm">
               No events started in the last 24 hours
@@ -176,6 +179,11 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      <EventEditSheet
+        event={editingEvent}
+        onClose={closeEditingEvent}
+        open={editingEvent !== null}
+      />
     </AppShell>
   );
 }

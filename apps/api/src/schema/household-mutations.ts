@@ -5,6 +5,7 @@ import { invitePartner } from "../auth/magic-link";
 import type { Context } from "../context";
 import { generateInviteCode } from "../utils/invite-code";
 import { builder } from "./builder";
+import { normalizeEventEndTime } from "./event-times";
 import {
   BabyEventType,
   BabyType,
@@ -277,15 +278,21 @@ builder.mutationField("logEvent", (t) =>
       await requireBabyAccess(ctx, args.babyId, householdId);
 
       const metadata = buildMetadata(args.type, args);
+      const startedAt = args.startedAt ? new Date(args.startedAt) : new Date();
+      const endedAt = normalizeEventEndTime(
+        args.type,
+        startedAt,
+        args.endedAt ? new Date(args.endedAt) : null
+      );
 
       const [event] = await ctx.db
         .insert(events)
         .values({
           babyId: args.babyId,
-          endedAt: args.endedAt ? new Date(args.endedAt) : null,
+          endedAt,
           loggedById: userId,
           metadata,
-          startedAt: args.startedAt ? new Date(args.startedAt) : new Date(),
+          startedAt,
           type: args.type,
         })
         .returning();
@@ -321,10 +328,16 @@ builder.mutationField("updateEvent", (t) =>
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       const updates: Record<string, unknown> = {};
+      const startedAt =
+        args.startedAt !== undefined && args.startedAt !== null
+          ? new Date(args.startedAt)
+          : existing.startedAt;
       if (args.startedAt !== undefined && args.startedAt !== null) {
-        updates.startedAt = new Date(args.startedAt);
+        updates.startedAt = startedAt;
       }
-      if (args.endedAt !== undefined && args.endedAt !== null) {
+      if (existing.type === "diaper") {
+        updates.endedAt = normalizeEventEndTime("diaper", startedAt, null);
+      } else if (args.endedAt !== undefined && args.endedAt !== null) {
         updates.endedAt = new Date(args.endedAt);
       }
 
