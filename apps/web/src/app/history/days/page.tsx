@@ -2,37 +2,14 @@
 
 import { useMemo } from "react";
 
-import { HistoryEventTable } from "@/components/history-event-table";
+import { DaysRecap } from "@/components/days-recap";
 import { useBabyContext } from "@/lib/baby-context";
-import { startOfDay } from "@/lib/daily-totals";
-import { eventsOverlappingDay } from "@/lib/event-time";
 
 import { useHistorySheet } from "../_context";
 
-function sameYmd(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
-function formatDayHeading(date: Date, today: Date): string {
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-
-  if (sameYmd(date, today)) return "Today";
-  if (sameYmd(date, yesterday)) return "Yesterday";
-  return date.toLocaleDateString([], {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function HistoryDaysPage() {
   const { events, loading } = useBabyContext();
-  const { openAdd, openEdit } = useHistorySheet();
+  const { openAdd } = useHistorySheet();
 
   const nonPumpEvents = useMemo(
     () => events.filter((e) => e.type !== "pump"),
@@ -40,13 +17,6 @@ export default function HistoryDaysPage() {
   );
 
   if (loading) return null;
-
-  const today = startOfDay(new Date());
-  const days = Array.from({ length: 14 }, (_, i) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-    return date;
-  });
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -70,23 +40,7 @@ export default function HistoryDaysPage() {
         </svg>
         Add past entry
       </button>
-      <div className="space-y-5 pb-4">
-        {days.map((date) => {
-          const dayEvents = eventsOverlappingDay(nonPumpEvents, date);
-          if (dayEvents.length === 0 && date.getTime() !== today.getTime()) {
-            return null;
-          }
-
-          return (
-            <div key={date.toISOString()}>
-              <p className="mx-4 mb-2 text-[10px] font-medium text-neutral-500 uppercase tracking-widest">
-                {formatDayHeading(date, today)}
-              </p>
-              <HistoryEventTable events={dayEvents} onEdit={openEdit} />
-            </div>
-          );
-        })}
-      </div>
+      <DaysRecap events={nonPumpEvents} />
     </div>
   );
 }

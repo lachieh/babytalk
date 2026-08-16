@@ -15,9 +15,9 @@ const EventRow = ({
   onEdit,
 }: {
   event: BabyEvent;
-  onEdit: (event: BabyEvent) => void;
+  onEdit?: (event: BabyEvent) => void;
 }) => {
-  const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
+  const handleClick = useCallback(() => onEdit?.(event), [onEdit, event]);
   const { label, detail } = formatEventParts(event);
   const notes = formatEventNotes(event);
   const inProgress = isDurationEvent(event) && event.endedAt === null;
@@ -30,7 +30,7 @@ const EventRow = ({
   return (
     <button
       className="flex w-full items-center gap-3 border-neutral-100 border-b px-4 py-3 text-left transition-colors active:bg-neutral-50"
-      onClick={handleClick}
+      onClick={onEdit ? handleClick : undefined}
       type="button"
     >
       <div className="grid w-28 shrink-0 grid-cols-2 gap-x-1 text-neutral-400 text-xs tabular-nums">
@@ -80,7 +80,7 @@ export const HistoryEventTable = ({
   onEdit,
 }: {
   events: BabyEvent[];
-  onEdit: (event: BabyEvent) => void;
+  onEdit?: (event: BabyEvent) => void;
 }) => (
   <div className="space-y-0.5">
     {events.map((event) => (

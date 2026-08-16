@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AIInsightCard } from "@/components/ai-insight-card";
 import { AppShell } from "@/components/app-shell";
 import { DailySummary } from "@/components/daily-summary";
-import { PersistentTimeline } from "@/components/persistent-timeline";
+import { HistoryEventTable } from "@/components/history-event-table";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
@@ -115,6 +115,16 @@ export default function DashboardPage() {
   useAutoDarkMode();
   const router = useRouter();
   const [redirecting, setRedirecting] = useState(false);
+  const { events } = useBabyContext();
+  const now = Date.now();
+  const recentEvents = events.filter((event) => {
+    const startedAt = new Date(event.startedAt).getTime();
+    return (
+      event.type !== "pump" &&
+      startedAt <= now &&
+      startedAt >= now - 24 * 60 * 60 * 1000
+    );
+  });
 
   useEffect(() => {
     if (isDeviceMode()) {
@@ -152,12 +162,18 @@ export default function DashboardPage() {
 
         <div className="mt-6 px-4">
           <h2 className="text-center font-serif text-lg text-neutral-600 italic">
-            Recent Logs
+            Last 24 Hours
           </h2>
         </div>
 
         <div className="mt-3">
-          <PersistentTimeline />
+          {recentEvents.length > 0 ? (
+            <HistoryEventTable events={recentEvents} />
+          ) : (
+            <p className="px-4 py-8 text-center text-neutral-400 text-sm">
+              No events started in the last 24 hours
+            </p>
+          )}
         </div>
       </div>
     </AppShell>
