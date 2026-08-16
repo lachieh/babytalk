@@ -69,7 +69,7 @@ export default function HistoryListPage() {
   if (loading) return null;
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto px-4">
+    <div className="min-h-0 flex-1 overflow-y-auto">
       <button
         className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border border-neutral-200 border-dashed px-4 py-3 font-medium text-neutral-500 text-sm transition-colors hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-700"
         onClick={openAdd}
