@@ -9,7 +9,8 @@ import { useBabyContext } from "@/lib/baby-context";
 import { gqlRequest } from "@/lib/tambo/graphql";
 
 import { useHistorySheet } from "../_context";
-import { filterWeekEvents, type WeekEventsResponse } from "./week-data";
+import { filterWeekEvents } from "./week-data";
+import type { WeekEventsResponse } from "./week-data";
 
 const EVENTS_OVERLAPPING_RANGE_QUERY = `
   query EventsOverlappingRange($babyId: String!, $rangeStart: String!, $rangeEnd: String!) {
