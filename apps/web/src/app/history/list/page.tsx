@@ -98,7 +98,7 @@ export default function HistoryListPage() {
       ) : (
         [...grouped.entries()].map(([dateKey, dayEvents]) => (
           <div className="mb-4" key={dateKey}>
-            <p className="mb-1 font-medium text-neutral-400 text-xs uppercase tracking-wider">
+            <p className="mb-1 px-4 font-medium text-neutral-400 text-xs uppercase tracking-wider">
               {dayLabel(dayEvents[0].startedAt)}
             </p>
             <HistoryEventTable events={dayEvents} onEdit={openEdit} />
