@@ -42,7 +42,9 @@ function lastSleepDetail(
   }
   return {
     detail,
-    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+    ago: event.endedAt
+      ? `woke ${formatAgo((now - new Date(event.endedAt).getTime()) / 60_000)}`
+      : "asleep now",
   };
 }
 
@@ -64,7 +66,7 @@ function lastFeedDetail(
   }
   return {
     detail: parts.length > 0 ? parts.join(" · ") : null,
-    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+    ago: `fed ${formatAgo((now - new Date(event.startedAt).getTime()) / 60_000)}`,
   };
 }
 
@@ -82,7 +84,7 @@ function lastDiaperDetail(
   }
   return {
     detail: parts.length > 0 ? parts.join(" + ") : null,
-    ago: formatAgo((now - new Date(event.startedAt).getTime()) / 60_000),
+    ago: `changed ${formatAgo((now - new Date(event.startedAt).getTime()) / 60_000)}`,
   };
 }
 

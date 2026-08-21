@@ -82,11 +82,11 @@ const Blob = ({
     <p className="text-[10px] font-medium uppercase tracking-widest text-neutral-500">
       {column.label}
     </p>
-    {column.detail && (
-      <p className="mt-1 text-[10px] text-neutral-400">{column.detail}</p>
-    )}
     {column.ago && (
-      <p className="mt-0.5 text-[10px] text-neutral-400">{column.ago}</p>
+      <p className="mt-1 text-[10px] text-neutral-400">{column.ago}</p>
+    )}
+    {column.detail && (
+      <p className="mt-0.5 text-[10px] text-neutral-400">{column.detail}</p>
     )}
   </div>
 );
