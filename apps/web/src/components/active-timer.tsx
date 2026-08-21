@@ -3,14 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
+import { formatElapsed } from "@/lib/format-elapsed";
 import { triggerFeedback } from "@/lib/haptics";
-
-function formatTimer(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${min}:${String(sec).padStart(2, "0")}`;
-}
 
 export const ActiveTimer = ({
   event,
@@ -66,7 +60,7 @@ export const ActiveTimer = ({
   return (
     <div className="flex flex-col items-center gap-2">
       <span className="font-mono text-xl font-bold tabular-nums text-neutral-800">
-        {formatTimer(elapsed)}
+        {formatElapsed(elapsed)}
       </span>
       <span className="text-xs text-neutral-500">{label}</span>
       <button
