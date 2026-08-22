@@ -59,7 +59,7 @@ export const ActiveTimer = ({
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <span className="font-mono text-xl font-bold tabular-nums text-neutral-800">
+      <span className="font-serif text-xl font-bold tabular-nums text-neutral-800">
         {formatElapsed(elapsed)}
       </span>
       <span className="text-xs text-neutral-500">{label}</span>
