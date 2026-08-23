@@ -60,7 +60,7 @@ export const Timer = ({ eventId, startTime, type }: TimerProps) => {
           <p className={`text-sm font-medium ${style.iconColor}`}>
             {typeLabels[type] ?? type} Timer
           </p>
-          <p className="mt-1 font-serif text-2xl font-bold tabular-nums text-neutral-800">
+          <p className="mt-1 font-sans text-2xl font-bold tabular-nums text-neutral-800">
             {formatElapsed(elapsed)}
           </p>
         </div>
