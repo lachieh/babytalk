@@ -98,7 +98,7 @@ const PumpTimer = ({
       <p className="text-xs font-medium capitalize text-pump-600">
         {side} side
       </p>
-      <p className="font-sans text-4xl font-bold tabular-nums text-neutral-800">
+      <p className="font-sans text-4xl tabular-nums text-neutral-800">
         {formatTimer(elapsed)}
       </p>
       <button
