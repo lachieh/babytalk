@@ -14,7 +14,7 @@ export const signToken = (userId: string, email: string): Promise<string> =>
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(userId)
     .setIssuedAt()
-    .setExpirationTime("7d")
+    .setExpirationTime("15m")
     .sign(secret);
 
 export const verifyToken = async (

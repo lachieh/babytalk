@@ -42,6 +42,7 @@ const AUTH_FINISH = `
   mutation PasskeyAuthFinish($response: String!) {
     passkeyAuthFinish(response: $response) {
       token
+      refreshToken
       user { id email }
     }
   }
@@ -95,6 +96,7 @@ export const enrollPasskey = async (
 };
 
 export interface PasskeyAuthSuccess {
+  refreshToken: string;
   token: string;
   user: { email: string; id: string };
 }

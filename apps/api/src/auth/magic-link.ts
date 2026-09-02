@@ -4,7 +4,8 @@ import { db, magicLinks, users } from "@babytalk/db";
 import { eq } from "drizzle-orm";
 
 import { sendMagicLinkEmail, sendPartnerInviteEmail } from "../email/send";
-import { signToken } from "./jwt";
+import type { AuthTokens } from "./session";
+import { issueAuthTokens } from "./session";
 
 export const requestMagicLink = async (email: string): Promise<boolean> => {
   const token = randomUUID();
@@ -39,7 +40,7 @@ export const invitePartner = async (
 
 export const verifyMagicLink = async (
   token: string
-): Promise<{ token: string; user: { id: string; email: string } } | null> => {
+): Promise<(AuthTokens & { user: { id: string; email: string } }) | null> => {
   const [link] = await db
     .select()
     .from(magicLinks)
@@ -75,6 +76,6 @@ export const verifyMagicLink = async (
     user = created;
   }
 
-  const jwt = await signToken(user.id, user.email);
-  return { token: jwt, user };
+  const tokens = await issueAuthTokens(user);
+  return { ...tokens, user };
 };

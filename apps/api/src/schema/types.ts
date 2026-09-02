@@ -17,6 +17,7 @@ UserType.implement({
 });
 
 export const AuthPayloadType = builder.objectRef<{
+  refreshToken: string;
   token: string;
   user: {
     email: string;
@@ -28,6 +29,7 @@ export const AuthPayloadType = builder.objectRef<{
 
 AuthPayloadType.implement({
   fields: (t) => ({
+    refreshToken: t.exposeString("refreshToken"),
     token: t.exposeString("token"),
     user: t.field({
       resolve: (parent) => parent.user,
@@ -55,6 +57,7 @@ export const DeviceCodeStatusEnum = builder.enumType("DeviceCodeStatus", {
 });
 
 export const DeviceCodePollPayloadType = builder.objectRef<{
+  refreshToken: string | null;
   status: "pending" | "expired" | "approved";
   token: string | null;
   user: {
@@ -67,6 +70,7 @@ export const DeviceCodePollPayloadType = builder.objectRef<{
 
 DeviceCodePollPayloadType.implement({
   fields: (t) => ({
+    refreshToken: t.exposeString("refreshToken", { nullable: true }),
     status: t.field({
       resolve: (parent) => parent.status,
       type: DeviceCodeStatusEnum,

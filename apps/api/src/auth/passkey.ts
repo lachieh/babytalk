@@ -15,7 +15,7 @@ import type {
 import { and, eq, gt } from "drizzle-orm";
 
 import { config } from "../env";
-import { signToken } from "./jwt";
+import { issueAuthTokens } from "./session";
 
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 
@@ -237,6 +237,7 @@ export const startPasskeyAuthentication = async (
 };
 
 export interface PasskeyAuthResult {
+  refreshToken: string;
   token: string;
   user: { email: string; id: string };
 }
@@ -291,8 +292,8 @@ export const finishPasskeyAuthentication = async (
 
   if (!user) return null;
 
-  const token = await signToken(user.id, user.email);
-  return { token, user };
+  const tokens = await issueAuthTokens(user);
+  return { ...tokens, user };
 };
 
 export const listUserPasskeys = async (

@@ -45,6 +45,7 @@ export default function LoginPage() {
         const result = await signInWithPasskey(null, { conditional: true });
         if (cancelled) return;
         localStorage.setItem("babytalk_token", result.token);
+        localStorage.setItem("babytalk_refresh_token", result.refreshToken);
         disableDeviceMode();
         const stored = localStorage.getItem("babytalk_auth_redirect");
         if (stored) localStorage.removeItem("babytalk_auth_redirect");
@@ -65,6 +66,7 @@ export default function LoginPage() {
     try {
       const result = await signInWithPasskey(email.trim() || null);
       localStorage.setItem("babytalk_token", result.token);
+      localStorage.setItem("babytalk_refresh_token", result.refreshToken);
       disableDeviceMode();
       const stored = localStorage.getItem("babytalk_auth_redirect");
       if (stored) localStorage.removeItem("babytalk_auth_redirect");

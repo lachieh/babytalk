@@ -16,6 +16,7 @@ import {
   startPasskeyAuthentication,
   startPasskeyRegistration,
 } from "../auth/passkey";
+import { rotateRefreshToken } from "../auth/session";
 import { builder } from "./builder";
 import {
   AuthPayloadType,
@@ -54,6 +55,7 @@ builder.mutationField("verifyMagicLink", (t) =>
         return null;
       }
       return {
+        refreshToken: result.refreshToken,
         token: result.token,
         user: {
           email: result.user.email,
@@ -62,6 +64,31 @@ builder.mutationField("verifyMagicLink", (t) =>
           name: null,
         },
       };
+    },
+    type: AuthPayloadType,
+  })
+);
+
+builder.mutationField("refreshToken", (t) =>
+  t.field({
+    args: {
+      refreshToken: t.arg.string({ required: true }),
+    },
+    nullable: true,
+    resolve: async (_root, args) => {
+      const result = await rotateRefreshToken(args.refreshToken);
+      return result
+        ? {
+            refreshToken: result.refreshToken,
+            token: result.token,
+            user: {
+              email: result.user.email,
+              householdId: null,
+              id: result.user.id,
+              name: null,
+            },
+          }
+        : null;
     },
     type: AuthPayloadType,
   })
@@ -95,6 +122,7 @@ builder.mutationField("pollDeviceCode", (t) =>
     resolve: async (_root, args) => {
       const result = await pollDeviceCode(args.code);
       return {
+        refreshToken: result.refreshToken ?? null,
         status: result.status,
         token: result.token ?? null,
         user: result.user
@@ -165,6 +193,7 @@ builder.mutationField("passkeyAuthFinish", (t) =>
       const result = await finishPasskeyAuthentication(parsed);
       if (!result) return null;
       return {
+        refreshToken: result.refreshToken,
         token: result.token,
         user: {
           email: result.user.email,

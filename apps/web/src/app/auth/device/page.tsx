@@ -19,6 +19,7 @@ const POLL_DEVICE_CODE = `
   mutation PollDeviceCode($code: String!) {
     pollDeviceCode(code: $code) {
       status
+      refreshToken
       token
     }
   }
@@ -98,13 +99,18 @@ const DevicePage = () => {
     const tick = async () => {
       try {
         const data = await gqlRequest<{
-          pollDeviceCode: { status: string; token: string | null };
+          pollDeviceCode: {
+            refreshToken: string | null;
+            status: string;
+            token: string | null;
+          };
         }>(POLL_DEVICE_CODE, { code });
-        const { status, token } = data.pollDeviceCode;
+        const { refreshToken, status, token } = data.pollDeviceCode;
 
-        if (status === "approved" && token) {
+        if (status === "approved" && token && refreshToken) {
           stopPolling();
           localStorage.setItem("babytalk_token", token);
+          localStorage.setItem("babytalk_refresh_token", refreshToken);
           enableDeviceMode();
           setPhase("approved");
           setTimeout(() => router.replace("/station"), 600);

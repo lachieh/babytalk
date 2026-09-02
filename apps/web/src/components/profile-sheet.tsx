@@ -773,6 +773,7 @@ export const ProfileSheet = ({
 
   const handleSignOut = useCallback(() => {
     localStorage.removeItem("babytalk_token");
+    localStorage.removeItem("babytalk_refresh_token");
     disableDeviceMode();
     router.replace("/auth/login");
   }, [router]);

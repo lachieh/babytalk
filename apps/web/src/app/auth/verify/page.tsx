@@ -11,6 +11,7 @@ const VERIFY_MAGIC_LINK = `
   mutation VerifyMagicLink($token: String!) {
     verifyMagicLink(token: $token) {
       token
+      refreshToken
       user {
         id
         email
@@ -44,6 +45,7 @@ const VerifyContent = () => {
         const result = await gqlRequest<{
           verifyMagicLink: {
             token: string;
+            refreshToken: string;
             user: { id: string; email: string };
           } | null;
         }>(VERIFY_MAGIC_LINK, { token });
@@ -54,6 +56,10 @@ const VerifyContent = () => {
         }
 
         localStorage.setItem("babytalk_token", result.verifyMagicLink.token);
+        localStorage.setItem(
+          "babytalk_refresh_token",
+          result.verifyMagicLink.refreshToken
+        );
         disableDeviceMode();
 
         // If this is a partner invite link, auto-join the household

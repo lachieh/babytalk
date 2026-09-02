@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { db, deviceCodes, users } from "@babytalk/db";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
-import { signToken } from "./jwt";
+import { issueAuthTokens } from "./session";
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const CODE_LENGTH = 8;
@@ -70,6 +70,7 @@ export const approveDeviceCode = async (
 };
 
 export interface DeviceCodePollResult {
+  refreshToken?: string;
   status: "pending" | "expired" | "approved";
   token?: string;
   user?: { id: string; email: string };
@@ -113,6 +114,6 @@ export const pollDeviceCode = async (
 
   if (!user) return { status: "expired" };
 
-  const token = await signToken(user.id, user.email);
-  return { status: "approved", token, user };
+  const tokens = await issueAuthTokens(user);
+  return { status: "approved", ...tokens, user };
 };
