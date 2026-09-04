@@ -1,6 +1,7 @@
 import { babies, events, users } from "@babytalk/db";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, or } from "drizzle-orm";
 
+import { requireCurrentUser } from "../auth/require-auth";
 import type { Context } from "../context";
 import { builder } from "./builder";
 import { BabyEventType } from "./household-types";
@@ -8,11 +9,11 @@ import { BabyEventType } from "./household-types";
 const DURATION_EVENT_TYPES = ["feed", "pump", "sleep"];
 
 const getHouseholdId = async (ctx: Context): Promise<string | null> => {
-  if (!ctx.currentUser) return null;
+  const currentUser = requireCurrentUser(ctx);
   const [user] = await ctx.db
     .select({ householdId: users.householdId })
     .from(users)
-    .where(eq(users.id, ctx.currentUser.sub))
+    .where(eq(users.id, currentUser.sub))
     .limit(1);
   return user?.householdId ?? null;
 };

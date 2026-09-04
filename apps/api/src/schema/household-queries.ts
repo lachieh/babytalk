@@ -1,17 +1,18 @@
 import { babies, events, households, users } from "@babytalk/db";
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 
+import { requireCurrentUser } from "../auth/require-auth";
 import type { Context } from "../context";
 import { builder } from "./builder";
 import { BabyEventType, BabyType, HouseholdType } from "./household-types";
 import { UserType } from "./types";
 
 const getHouseholdId = async (ctx: Context): Promise<string | null> => {
-  if (!ctx.currentUser) return null;
+  const currentUser = requireCurrentUser(ctx);
   const [user] = await ctx.db
     .select({ householdId: users.householdId })
     .from(users)
-    .where(eq(users.id, ctx.currentUser.sub))
+    .where(eq(users.id, currentUser.sub))
     .limit(1);
   return user?.householdId ?? null;
 };
