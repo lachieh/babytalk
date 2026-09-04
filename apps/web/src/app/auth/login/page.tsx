@@ -15,7 +15,7 @@ const REQUEST_MAGIC_LINK = `
 `;
 
 export default function LoginPage() {
-  useRedirectIfLoggedIn();
+  const checkingAuth = useRedirectIfLoggedIn();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
@@ -115,6 +115,14 @@ export default function LoginPage() {
     },
     []
   );
+
+  if (checkingAuth) {
+    return (
+      <main className="flex min-h-svh items-center justify-center bg-surface">
+        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+      </main>
+    );
+  }
 
   if (sent) {
     return (

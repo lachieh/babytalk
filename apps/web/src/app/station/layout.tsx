@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { BabyContextProvider } from "@/lib/baby-context";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { gqlRequest, restoreSession } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
 
 const CHECK_HOUSEHOLD = `
@@ -21,13 +21,12 @@ export default function StationLayout({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("babytalk_token");
-    if (!token) {
-      router.replace("/auth/device");
-      return;
-    }
-
     const verify = async () => {
+      if (!(await restoreSession())) {
+        router.replace("/auth/device");
+        return;
+      }
+
       await loadRuntimeConfig();
       try {
         const data = await gqlRequest<{

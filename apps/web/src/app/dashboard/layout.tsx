@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { BabyContextProvider } from "@/lib/baby-context";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { gqlRequest, restoreSession } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
 
 const CHECK_HOUSEHOLD = `
@@ -22,23 +22,21 @@ export default function DashboardLayout({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("babytalk_token");
-    if (!token) {
-      router.replace("/auth/login");
-      return;
-    }
-
-    // Skip household check on setup/join pages
-    if (
-      pathname.startsWith("/dashboard/setup") ||
-      pathname.startsWith("/dashboard/join")
-    ) {
-      setReady(true);
-      return;
-    }
-
     const checkHousehold = async () => {
-      // Ensure runtime config is loaded before any GraphQL calls
+      if (!(await restoreSession())) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      // Skip household check on setup/join pages
+      if (
+        pathname.startsWith("/dashboard/setup") ||
+        pathname.startsWith("/dashboard/join")
+      ) {
+        setReady(true);
+        return;
+      }
+
       await loadRuntimeConfig();
       try {
         const data = await gqlRequest<{

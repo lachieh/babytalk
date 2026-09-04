@@ -8,7 +8,7 @@ import { EventEditSheet } from "@/components/event-edit-sheet";
 import type { BabyEvent } from "@/lib/baby-context";
 import { BabyContextProvider } from "@/lib/baby-context";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { gqlRequest, restoreSession } from "@/lib/tambo/graphql";
 import { BabyTamboProvider } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
@@ -126,13 +126,12 @@ export default function HistoryLayout({
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("babytalk_token");
-    if (!token) {
-      router.replace("/auth/login");
-      return;
-    }
-
     const checkHousehold = async () => {
+      if (!(await restoreSession())) {
+        router.replace("/auth/login");
+        return;
+      }
+
       await loadRuntimeConfig();
       try {
         const data = await gqlRequest<{

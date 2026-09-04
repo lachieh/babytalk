@@ -1,8 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
+import { restoreSession } from "@/lib/tambo/graphql";
 import { isDeviceMode } from "@/lib/use-device-mode";
 
 /**
@@ -11,10 +12,19 @@ import { isDeviceMode } from "@/lib/use-device-mode";
  */
 export const useRedirectIfLoggedIn = () => {
   const router = useRouter();
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("babytalk_token");
-    if (!token) return;
-    router.replace(isDeviceMode() ? "/station" : "/dashboard");
+    const restore = async () => {
+      const authenticated = await restoreSession();
+      if (authenticated) {
+        router.replace(isDeviceMode() ? "/station" : "/dashboard");
+        return;
+      }
+      setChecking(false);
+    };
+    restore();
   }, [router]);
+
+  return checking;
 };

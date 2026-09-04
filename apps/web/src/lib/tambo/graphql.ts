@@ -60,6 +60,23 @@ const refreshSession = (apiUrl: string): Promise<boolean> => {
   return refreshPromise;
 };
 
+export const restoreSession = async (): Promise<boolean> => {
+  if (typeof window === "undefined") return false;
+  if (!getRuntimeConfig()) await loadRuntimeConfig();
+  const token = getToken();
+  const refreshToken = getRefreshToken();
+  if (!token && !refreshToken) return false;
+  if (!token) return refreshSession(getApiUrl());
+
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1])) as { exp?: number };
+    if (payload.exp && payload.exp * 1000 > Date.now() + 30_000) return true;
+  } catch {
+    // Let the refresh token recover malformed or legacy access tokens.
+  }
+
+  return refreshSession(getApiUrl());
+};
 export const gqlRequest = async <T = unknown>(
   query: string,
   variables?: Record<string, unknown>,
