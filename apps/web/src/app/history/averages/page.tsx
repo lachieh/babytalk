@@ -9,6 +9,7 @@ import {
   monthStartsThrough,
 } from "@/lib/monthly-averages";
 import { gqlRequest } from "@/lib/tambo/graphql";
+import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 const EVENTS_IN_RANGE = `
   query EventsInRange(
@@ -34,6 +35,7 @@ const formatAverage = (value: number, suffix = "") =>
   `${value.toFixed(1)}${suffix}`;
 
 export default function HistoryAveragesPage() {
+  const { unit } = useVolumeUnit();
   const { baby, loading } = useBabyContext();
   const [averages, setAverages] = useState<
     ReturnType<typeof calculateMonthlyAverages>[]
@@ -106,13 +108,21 @@ export default function HistoryAveragesPage() {
             <h2 className="font-serif text-lg text-neutral-700">
               {average.month}
             </h2>
-            <div className="mt-4 grid grid-cols-3 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="rounded-xl bg-feed-50 px-2 py-3 text-center">
                 <p className="font-sans text-xl tabular-nums text-neutral-700">
                   {formatAverage(average.feedingsPerDay)}
                 </p>
                 <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
                   feeds / day
+                </p>
+              </div>
+              <div className="rounded-xl bg-feed-50 px-2 py-3 text-center">
+                <p className="font-sans text-xl tabular-nums text-neutral-700">
+                  {formatVolume(average.feedVolumeMlPerDay, unit)}
+                </p>
+                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
+                  volume / day
                 </p>
               </div>
               <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">

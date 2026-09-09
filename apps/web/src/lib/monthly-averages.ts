@@ -1,9 +1,14 @@
 import type { BabyEvent } from "./baby-context";
-import { eventsForDay, totalSleepMinutesForDay } from "./daily-totals";
+import {
+  eventsForDay,
+  totalFedMl,
+  totalSleepMinutesForDay,
+} from "./daily-totals";
 
 export interface MonthlyAverage {
   diaperChangesPerDay: number;
   feedingsPerDay: number;
+  feedVolumeMlPerDay: number;
   month: string;
   sleepHoursPerDay: number;
 }
@@ -46,6 +51,7 @@ export function calculateMonthlyAverages(
   );
 
   let feeds = 0;
+  let feedVolumeMl = 0;
   let diapers = 0;
   let sleepMinutes = 0;
   for (let index = 0; index < days; index += 1) {
@@ -53,6 +59,7 @@ export function calculateMonthlyAverages(
     date.setDate(date.getDate() + index);
     const dayEvents = eventsForDay(events, date);
     feeds += dayEvents.filter((event) => event.type === "feed").length;
+    feedVolumeMl += totalFedMl(dayEvents);
     diapers += dayEvents.filter((event) => event.type === "diaper").length;
     sleepMinutes += totalSleepMinutesForDay(events, date, through.getTime());
   }
@@ -60,6 +67,7 @@ export function calculateMonthlyAverages(
   return {
     diaperChangesPerDay: diapers / days,
     feedingsPerDay: feeds / days,
+    feedVolumeMlPerDay: feedVolumeMl / days,
     month: monthLabel(start),
     sleepHoursPerDay: sleepMinutes / days / 60,
   };

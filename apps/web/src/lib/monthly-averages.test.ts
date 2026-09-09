@@ -9,14 +9,14 @@ describe("monthly activity averages", () => {
         type: "feed",
         startedAt: "2026-01-01T08:00:00Z",
         endedAt: null,
-        metadata: "{}",
+        metadata: '{"amountMl":90}',
       },
       {
         id: "f2",
         type: "feed",
         startedAt: "2026-01-02T08:00:00Z",
         endedAt: null,
-        metadata: "{}",
+        metadata: '{"amountMl":120}',
       },
       {
         id: "d1",
@@ -41,6 +41,7 @@ describe("monthly activity averages", () => {
     );
 
     expect(result.feedingsPerDay).toBeCloseTo(2 / 31);
+    expect(result.feedVolumeMlPerDay).toBeCloseTo(210 / 31);
     expect(result.diaperChangesPerDay).toBeCloseTo(1 / 31);
     expect(result.sleepHoursPerDay).toBeCloseTo(8 / 31);
   });
