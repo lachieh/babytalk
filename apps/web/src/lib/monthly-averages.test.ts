@@ -54,6 +54,7 @@ describe("monthly activity averages", () => {
     expect(result.feedVolumeMlPerDay).toBeCloseTo(210 / 31);
     expect(result.diaperChangesPerDay).toBeCloseTo(1 / 31);
     expect(result.daytimeSleepHoursPerDay).toBeCloseTo(1 / 31);
+    expect(result.napsPerDay).toBeCloseTo(1 / 31);
     expect(result.nighttimeSleepHoursPerDay).toBeCloseTo(9 / 31);
   });
 
@@ -66,6 +67,7 @@ describe("monthly activity averages", () => {
 
     expect(result.feedingsPerDay).toBe(0);
     expect(result.daytimeSleepHoursPerDay).toBe(0);
+    expect(result.napsPerDay).toBe(0);
     expect(result.nighttimeSleepHoursPerDay).toBe(0);
     expect(result.diaperChangesPerDay).toBe(0);
   });

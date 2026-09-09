@@ -108,7 +108,7 @@ export default function HistoryAveragesPage() {
             <h2 className="font-serif text-lg text-neutral-700">
               {average.month}
             </h2>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
               <div className="rounded-xl bg-feed-50 px-2 py-3 text-center">
                 <p className="font-sans text-xl tabular-nums text-neutral-700">
                   {formatAverage(average.feedingsPerDay)}
@@ -131,6 +131,14 @@ export default function HistoryAveragesPage() {
                 </p>
                 <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
                   daytime sleep
+                </p>
+              </div>
+              <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">
+                <p className="font-sans text-xl tabular-nums text-neutral-700">
+                  {formatAverage(average.napsPerDay)}
+                </p>
+                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
+                  number of naps
                 </p>
               </div>
               <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">

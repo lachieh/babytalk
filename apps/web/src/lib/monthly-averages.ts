@@ -7,6 +7,7 @@ export interface MonthlyAverage {
   feedingsPerDay: number;
   feedVolumeMlPerDay: number;
   month: string;
+  napsPerDay: number;
   nighttimeSleepHoursPerDay: number;
 }
 
@@ -86,6 +87,7 @@ export function calculateMonthlyAverages(
   let feeds = 0;
   let feedVolumeMl = 0;
   let diapers = 0;
+  let naps = 0;
   for (let index = 0; index < days; index += 1) {
     const date = new Date(start);
     date.setDate(date.getDate() + index);
@@ -93,6 +95,11 @@ export function calculateMonthlyAverages(
     feeds += dayEvents.filter((event) => event.type === "feed").length;
     feedVolumeMl += totalFedMl(dayEvents);
     diapers += dayEvents.filter((event) => event.type === "diaper").length;
+    naps += dayEvents.filter((event) => {
+      if (event.type !== "sleep") return false;
+      const hour = new Date(event.startedAt).getHours();
+      return hour >= 6 && hour < 19;
+    }).length;
   }
 
   return {
@@ -101,6 +108,7 @@ export function calculateMonthlyAverages(
     feedingsPerDay: feeds / days,
     feedVolumeMlPerDay: feedVolumeMl / days,
     month: monthLabel(start),
+    napsPerDay: naps / days,
     nighttimeSleepHoursPerDay: sleep.nighttime / days / 60,
   };
 }
