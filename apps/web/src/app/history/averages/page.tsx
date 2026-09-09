@@ -92,7 +92,7 @@ export default function HistoryAveragesPage() {
     <div className="min-h-0 flex-1 overflow-y-auto px-4">
       <div className="mb-5">
         <h1 className="font-serif text-2xl text-neutral-700">
-          Monthly averages
+          Monthly Averages
         </h1>
         <p className="mt-1 text-neutral-400 text-sm">
           Average activity per calendar day.
