@@ -1,5 +1,8 @@
 import { calculateMonthlyAverages } from "./monthly-averages";
 
+const localIso = (date: number, hour: number) =>
+  new Date(2026, 0, date, hour).toISOString();
+
 describe("monthly activity averages", () => {
   it("averages feeds, sleep, and diapers over calendar days", () => {
     const month = new Date(2026, 0, 1);
@@ -19,6 +22,13 @@ describe("monthly activity averages", () => {
         metadata: '{"amountMl":120}',
       },
       {
+        id: "s2",
+        type: "sleep",
+        startedAt: localIso(3, 18),
+        endedAt: localIso(3, 20),
+        metadata: "{}",
+      },
+      {
         id: "d1",
         type: "diaper",
         startedAt: "2026-01-02T09:00:00Z",
@@ -28,8 +38,8 @@ describe("monthly activity averages", () => {
       {
         id: "s1",
         type: "sleep",
-        startedAt: "2026-01-01T20:00:00Z",
-        endedAt: "2026-01-02T04:00:00Z",
+        startedAt: localIso(1, 20),
+        endedAt: localIso(2, 4),
         metadata: "{}",
       },
     ];
@@ -43,7 +53,8 @@ describe("monthly activity averages", () => {
     expect(result.feedingsPerDay).toBeCloseTo(2 / 31);
     expect(result.feedVolumeMlPerDay).toBeCloseTo(210 / 31);
     expect(result.diaperChangesPerDay).toBeCloseTo(1 / 31);
-    expect(result.sleepHoursPerDay).toBeCloseTo(8 / 31);
+    expect(result.daytimeSleepHoursPerDay).toBeCloseTo(1 / 31);
+    expect(result.nighttimeSleepHoursPerDay).toBeCloseTo(9 / 31);
   });
 
   it("uses elapsed days for the current month", () => {
@@ -54,7 +65,8 @@ describe("monthly activity averages", () => {
     );
 
     expect(result.feedingsPerDay).toBe(0);
-    expect(result.sleepHoursPerDay).toBe(0);
+    expect(result.daytimeSleepHoursPerDay).toBe(0);
+    expect(result.nighttimeSleepHoursPerDay).toBe(0);
     expect(result.diaperChangesPerDay).toBe(0);
   });
 });
