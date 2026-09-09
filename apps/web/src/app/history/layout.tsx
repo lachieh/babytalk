@@ -18,9 +18,10 @@ const CHECK_HOUSEHOLD = `
   query { myHousehold { id } myBabies { id } }
 `;
 
-type SubTab = "days" | "week" | "list";
+type SubTab = "averages" | "days" | "week" | "list";
 
 function subTabFromPath(pathname: string): SubTab {
+  if (pathname.startsWith("/history/averages")) return "averages";
   if (pathname.startsWith("/history/week")) return "week";
   if (pathname.startsWith("/history/list")) return "list";
   return "days";
@@ -85,7 +86,12 @@ const HistoryShell = ({ children }: { children: React.ReactNode }) => {
     <AppShell>
       <HistorySheetContext.Provider value={ctxValue}>
         <div className="flex min-h-0 flex-1 flex-col py-2">
-          <div className="mx-4 mb-3 flex shrink-0 gap-1 rounded-xl bg-neutral-100 p-1">
+          <div className="mx-4 mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-neutral-100 p-1">
+            <SubTabButton
+              active={sub === "averages"}
+              href="/history/averages"
+              label="Averages"
+            />
             <SubTabButton
               active={sub === "days"}
               href="/history/days"
