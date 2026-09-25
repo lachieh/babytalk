@@ -11,19 +11,14 @@ import { HistoryEventTable } from "@/components/history-event-table";
 import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { formatRelativeAge } from "@/lib/format-relative-age";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { isDeviceMode } from "@/lib/use-device-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 /* ── Summary Card ─────────────────────────────────────────── */
 
-const formatAgo = (minutes: number): string => {
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${Math.floor(minutes)}m ago`;
-  const h = Math.floor(minutes / 60);
-  const m = Math.floor(minutes % 60);
-  return m > 0 ? `${h}h ${m}m ago` : `${h}h ago`;
-};
+const formatAgo = formatRelativeAge;
 
 function lastSleepDetail(
   event: BabyEvent,
@@ -91,8 +86,13 @@ function lastDiaperDetail(
 const SummaryCard = () => {
   const { events } = useBabyContext();
   const { unit } = useVolumeUnit();
+  const [now, setNow] = useState(() => Date.now());
 
-  const now = Date.now();
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   const today = new Date(now);
 
   const lastSleep = events.find((e) => e.type === "sleep");
