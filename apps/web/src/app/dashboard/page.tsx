@@ -12,6 +12,7 @@ import { SuggestionZone } from "@/components/suggestion-zone";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { formatRelativeAge } from "@/lib/format-relative-age";
+import { latestPastEvent } from "@/lib/latest-past-event";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { isDeviceMode } from "@/lib/use-device-mode";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
@@ -95,9 +96,9 @@ const SummaryCard = () => {
 
   const today = new Date(now);
 
-  const lastSleep = events.find((e) => e.type === "sleep");
-  const lastFeed = events.find((e) => e.type === "feed");
-  const lastDiaper = events.find((e) => e.type === "diaper");
+  const lastSleep = latestPastEvent(events, "sleep", now);
+  const lastFeed = latestPastEvent(events, "feed", now);
+  const lastDiaper = latestPastEvent(events, "diaper", now);
 
   return (
     <DailySummary
