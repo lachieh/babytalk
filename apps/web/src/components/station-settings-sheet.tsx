@@ -6,6 +6,7 @@ import { useCallback } from "react";
 import { STATION_ACTIONS } from "@/lib/station-config";
 import type { StationActionKey } from "@/lib/station-config";
 import { disableDeviceMode } from "@/lib/use-device-mode";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 const ToggleRow = ({
   action,
@@ -67,6 +68,7 @@ export const StationSettingsSheet = ({
   onToggle: (key: StationActionKey) => void;
 }) => {
   const router = useRouter();
+  const { unit, toggle: toggleUnit } = useVolumeUnit();
 
   const handleBackdropClick = useCallback(
     (e: React.MouseEvent | React.KeyboardEvent) => {
@@ -152,6 +154,32 @@ export const StationSettingsSheet = ({
                 );
               })}
             </ul>
+          </section>
+
+          <section>
+            <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+              Preferences
+            </h3>
+            <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
+              <span className="text-sm text-neutral-700">Volume unit</span>
+              <button
+                aria-label="Toggle volume unit"
+                className="flex rounded-lg border border-neutral-200 text-xs"
+                onClick={toggleUnit}
+                type="button"
+              >
+                <span
+                  className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+                >
+                  fl oz
+                </span>
+                <span
+                  className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
+                >
+                  ml
+                </span>
+              </button>
+            </div>
           </section>
 
           <button
