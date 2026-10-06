@@ -24,7 +24,7 @@
     "icons:all": "node scripts/render-icons.mjs all"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.30.0",
+    "@changesets/cli": "^2.31.0",
     "@playwright/test": "^1.58.2",
     "lefthook": "^2.1.4",
     "oxfmt": "^0.43.0",
