@@ -8,14 +8,14 @@ import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
 const HOW_IT_WORKS = [
   {
-    body: "Say it naturally: “120 mil bottle at 2:10” or “she just went down for a nap.”",
+    body: "Feed, sleep, or diaper. Your usual bottle, side, or nap spot is already picked, so one tap is enough.",
     number: "01",
-    title: "Talk like a parent",
+    title: "Tap what happened",
   },
   {
-    body: "BabyTalk puts the amount, time, and activity in the right place. No forms to finish.",
+    body: "Adjust a time or amount afterwards, or add the feed you forgot to log. No forms to finish.",
     number: "02",
-    title: "The details get sorted",
+    title: "Fix the details later",
   },
   {
     body: "Feeds, sleep, diapers, and pumping stay in one timeline your household can check.",
@@ -159,15 +159,14 @@ export default function Home() {
         <div className="relative z-10 animate-fade-up">
           <p className="flex items-center gap-3 text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
             <span className="h-px w-8 bg-primary-400" />
-            Voice-first baby tracking
+            Shared baby tracking
           </p>
           <h1 className="mt-6 max-w-[10ch] font-serif text-[clamp(3.6rem,6vw,5.5rem)] leading-[0.88] tracking-[-0.045em] text-neutral-900">
-            Track every feed without stopping to type.
+            Log every feed in a single tap.
           </h1>
           <p className="mt-8 max-w-xl text-lg leading-8 text-neutral-600 sm:text-xl sm:leading-9">
-            BabyTalk turns a quick sentence into a clear, shared record of
-            feeds, sleep, diapers, and pumping. So no one has to remember what
-            happened at 3am.
+            BabyTalk keeps a clear, shared record of feeds, sleep, diapers, and
+            pumping. So no one has to remember what happened at 3am.
           </p>
           <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Link
@@ -195,7 +194,7 @@ export default function Home() {
         </div>
 
         <div
-          aria-label="Example of BabyTalk turning a spoken update into a daily log"
+          aria-label="Example of a BabyTalk daily log"
           className="relative mx-auto w-full max-w-[34rem] lg:mx-0"
         >
           <div className="absolute -top-12 -right-24 h-64 w-64 rounded-[47%_53%_61%_39%/44%_42%_58%_56%] bg-sleep-100" />
@@ -276,24 +275,20 @@ export default function Home() {
                   viewBox="0 0 24 24"
                 >
                   <path
-                    d="M12 3a3 3 0 0 0-3 3v6a3 3 0 1 0 6 0V6a3 3 0 0 0-3-3Z"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                  />
-                  <path
-                    d="M6 11.5v.5a6 6 0 0 0 12 0v-.5M12 18v3M9 21h6"
+                    d="m5 12.5 4.5 4.5L19 7.5"
                     stroke="currentColor"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                     strokeWidth="1.7"
                   />
                 </svg>
               </span>
               <div>
-                <p className="font-serif text-lg leading-snug text-neutral-800 italic">
-                  “Wet diaper. And a 120 mil bottle at 2:10.”
+                <p className="font-serif text-lg leading-snug text-neutral-800">
+                  Bottle · 120 ml
                 </p>
                 <p className="mt-2 text-xs font-medium text-primary-600">
-                  Logged. That’s four feeds today.
+                  Logged in one tap. That’s four feeds today.
                 </p>
               </div>
             </div>
@@ -328,10 +323,10 @@ export default function Home() {
             How it works
           </p>
           <h2 className="mt-5 max-w-[10ch] font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
-            Speak once. It stays remembered.
+            Tap once. It stays remembered.
           </h2>
           <p className="mt-6 max-w-md text-base leading-7 text-neutral-500">
-            Baby tracking should take less attention than the baby. One sentence
+            Baby tracking should take less attention than the baby. One tap
             gives your whole household the useful version of what happened.
           </p>
         </div>
@@ -378,15 +373,15 @@ export default function Home() {
                 When your hands are full
               </p>
               <h3 className="mt-5 max-w-md font-serif text-4xl leading-tight text-neutral-900">
-                Use the words already in your head.
+                One thumb is enough.
               </h3>
               <p className="mt-5 max-w-md text-sm leading-7 text-neutral-500">
-                Say “left side for 15 minutes,” “wet and dirty,” or “start a
-                nap.” BabyTalk understands the ordinary language of your day.
+                Big buttons, sensible defaults, and nothing to type. Log a feed,
+                start a nap, or record a change without putting the baby down.
               </p>
               <div className="mt-10 rounded-[1.5rem] bg-feed-100 p-6">
-                <p className="font-serif text-2xl leading-snug text-neutral-800 italic">
-                  “She ate for 15 minutes on the left.”
+                <p className="font-serif text-2xl leading-snug text-neutral-800">
+                  Feed · Breast · Left
                 </p>
                 <div className="mt-5 flex items-center gap-3 border-feed-200 border-t pt-4">
                   <span className="h-2 w-2 rounded-full bg-feed-500" />
@@ -477,8 +472,7 @@ export default function Home() {
             Keep the memory. Lose the mental load.
           </h2>
           <p className="mx-auto mt-7 max-w-xl text-base leading-7 text-neutral-500">
-            Start a shared baby log you can update with one sentence, even at
-            3am.
+            Start a shared baby log you can update with one thumb, even at 3am.
           </p>
           <Link
             className="mt-9 inline-flex min-h-14 items-center justify-center rounded-full bg-primary-500 px-8 text-base font-semibold text-[oklch(97%_0.012_75)] shadow-[0_12px_30px_oklch(48%_0.06_100/0.2)] transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 hover:shadow-[0_16px_36px_oklch(48%_0.06_100/0.28)] active:scale-[0.98]"

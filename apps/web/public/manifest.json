@@ -2,7 +2,7 @@
   "id": "/",
   "name": "BabyTalk",
   "short_name": "BabyTalk",
-  "description": "Track feeds, sleep, and diapers with your voice",
+  "description": "Track feeds, sleep, and diapers in one tap",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
