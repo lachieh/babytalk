@@ -1,20 +1,19 @@
 # BabyTalk
 
-**Track every feed without stopping to type.**
+**Log every feed in a single tap.**
 
-BabyTalk turns a quick sentence into a clear, shared record of feeds, sleep,
-diapers, and pumping. So no one has to remember what happened at 3am.
+BabyTalk keeps a clear, shared record of feeds, sleep, diapers, and pumping. So no one has to remember what happened at 3am.
 
-![BabyTalk homepage: a spoken update becomes a daily log](docs/screenshots/home-hero.png)
+![BabyTalk homepage with a sample daily log](docs/screenshots/home-hero.png)
 
 ## How it works
 
-Speak once. It stays remembered.
+Tap once. It stays remembered.
 
-1. **Talk like a parent.** Say it naturally: "120 mil bottle at 2:10" or "she
-   just went down for a nap."
-2. **The details get sorted.** BabyTalk puts the amount, time, and activity in
-   the right place. No forms to finish.
+1. **Tap what happened.** Feed, sleep, or diaper. Your usual bottle, side, or
+   nap spot is already picked, so one tap is enough.
+2. **Fix the details later.** Adjust a time or amount afterwards, or add the
+   feed you forgot to log. No forms to finish.
 3. **Everyone stays caught up.** Feeds, sleep, diapers, and pumping stay in one
    timeline your household can check.
 
@@ -22,12 +21,12 @@ Speak once. It stays remembered.
 
 Less admin. More knowing.
 
-### When your hands are full: use the words already in your head
+### When your hands are full: one thumb is enough
 
-Say "left side for 15 minutes," "wet and dirty," or "start a nap." BabyTalk
-understands the ordinary language of your day.
+Big buttons, sensible defaults, and nothing to type. Log a feed, start a nap,
+or record a change without putting the baby down.
 
-![“She ate for 15 minutes on the left” logged as a left feed](docs/screenshots/home-hands-full.png)
+![A one-tap left breast feed, logged now](docs/screenshots/home-hands-full.png)
 
 ### When your brain is tired: see the answer, not a spreadsheet
 

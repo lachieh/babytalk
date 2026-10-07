@@ -4,17 +4,18 @@ test.describe("Landing page", () => {
   test("renders hero content and CTA", async ({ page }) => {
     await page.goto("/");
 
-    await expect(page.getByText("For tired parents")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "BabyTalk" })).toBeVisible();
+    await expect(page.getByText("Shared baby tracking")).toBeVisible();
     await expect(
-      page.getByText("Track feeds, sleep, and diapers")
+      page.getByRole("heading", { name: "Log every feed in a single tap." })
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: "Get started" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Start tracking" }).first()
+    ).toBeVisible();
   });
 
   test("CTA links to login page", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("link", { name: "Get started" }).click();
+    await page.getByRole("link", { name: "Start tracking" }).first().click();
     await expect(page).toHaveURL(/\/auth\/login/);
   });
 

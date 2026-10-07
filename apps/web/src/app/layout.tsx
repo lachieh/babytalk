@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   },
   applicationName: "BabyTalk",
   description:
-    "Track feeds, sleep, diapers, and pumping with your voice. One clear, shared baby log for the whole family.",
+    "Track feeds, sleep, diapers, and pumping in one tap. One clear, shared baby log for the whole family.",
   icons: {
     apple: "/icons/apple-touch-icon.png",
     icon: [
