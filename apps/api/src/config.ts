@@ -12,7 +12,7 @@ export default defineConfig({
     port: z.number().default(4000).describe("HTTP server port"),
     rpName: z
       .string()
-      .default("BabyTalk")
+      .default("Bubsie")
       .describe("Relying Party display name shown by passkey prompts"),
     smtpFrom: z
       .string()

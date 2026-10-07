@@ -17,7 +17,7 @@
       "type": "number"
     },
     "rpName": {
-      "default": "BabyTalk",
+      "default": "Bubsie",
       "description": "Relying Party display name shown by passkey prompts",
       "type": "string"
     },

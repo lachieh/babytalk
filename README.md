@@ -1,10 +1,10 @@
-# BabyTalk
+# Bubsie
 
 **Log every feed in a single tap.**
 
-BabyTalk keeps a clear, shared record of feeds, sleep, diapers, and pumping. So no one has to remember what happened at 3am.
+Bubsie keeps a clear, shared record of feeds, sleep, diapers, and pumping. So no one has to remember what happened at 3am.
 
-![BabyTalk homepage with a sample daily log](docs/screenshots/home-hero.png)
+![Bubsie homepage with a sample daily log](docs/screenshots/home-hero.png)
 
 ## How it works
 
@@ -17,7 +17,7 @@ Tap once. It stays remembered.
 3. **Everyone stays caught up.** Feeds, sleep, diapers, and pumping stay in one
    timeline your household can check.
 
-## Why BabyTalk
+## Why Bubsie
 
 Less admin. More knowing.
 
@@ -98,7 +98,7 @@ No password required. Sign in by email magic link or passkey.
 
 ## Development
 
-BabyTalk is a pnpm monorepo: a GraphQL API (`apps/api`), a Next.js web app
+Bubsie is a pnpm monorepo: a GraphQL API (`apps/api`), a Next.js web app
 (`apps/web`), and a Drizzle/PostgreSQL schema (`packages/db`). See
 [AGENTS.md](AGENTS.md) for architecture and conventions.
 

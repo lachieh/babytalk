@@ -12,7 +12,7 @@ const DEBOUNCE_MS = 5000;
 /** Don't refresh more than once per 30s */
 const MIN_REFRESH_INTERVAL = 30_000;
 
-const INSIGHT_SYSTEM_MESSAGE = `INSIGHT MODE: You are the BabyTalk insight engine.
+const INSIGHT_SYSTEM_MESSAGE = `INSIGHT MODE: You are the Bubsie insight engine.
 Your ONLY job is to produce a single-line contextual insight for display on the home screen.
 
 Rules:

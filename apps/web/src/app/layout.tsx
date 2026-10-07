@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "BabyTalk",
+    title: "Bubsie",
   },
-  applicationName: "BabyTalk",
+  applicationName: "Bubsie",
   description:
     "Track feeds, sleep, diapers, and pumping in one tap. One clear, shared baby log for the whole family.",
   icons: {
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     ],
   },
   manifest: "/manifest.json",
-  title: "BabyTalk",
+  title: "Bubsie",
 };
 
 export const viewport: Viewport = {

@@ -194,7 +194,7 @@ export default function SetupPage() {
             </Link>
             <a
               className="min-h-[44px] flex items-center justify-center text-sm font-medium text-primary-500 transition-colors hover:text-primary-600"
-              href="mailto:support@babytalk.app"
+              href="mailto:support@bubsie.app"
             >
               Get in touch
             </a>
@@ -215,8 +215,8 @@ export default function SetupPage() {
             We&apos;ve got this.
           </h1>
           <p className="mt-6 text-base leading-relaxed text-neutral-400">
-            BabyTalk tracks feeds, sleep, and diapers with just your voice. No
-            typing, no tapping through menus — just talk.
+            Bubsie keeps track of feeds, sleep, and diapers. One tap to log,
+            nothing to type, and everyone in the family stays caught up.
           </p>
 
           <div className="mt-12 flex flex-col gap-3">

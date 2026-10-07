@@ -21,12 +21,12 @@ export const sendMagicLinkEmail = async (
   await transport.sendMail({
     from: config.smtpFrom,
     html: `
-      <h2>Sign in to BabyTalk</h2>
+      <h2>Sign in to Bubsie</h2>
       <p>Click the link below to sign in:</p>
-      <p><a href="${link}">Sign in to BabyTalk</a></p>
+      <p><a href="${link}">Sign in to Bubsie</a></p>
       <p>This link expires in 15 minutes.</p>
     `,
-    subject: "Sign in to BabyTalk",
+    subject: "Sign in to Bubsie",
     text: `Click this link to sign in: ${link}\n\nThis link expires in 15 minutes.`,
     to: email,
   });
@@ -42,13 +42,13 @@ export const sendPartnerInviteEmail = async (
   await transport.sendMail({
     from: config.smtpFrom,
     html: `
-      <h2>You've been invited to BabyTalk</h2>
-      <p>Your partner is using BabyTalk to track feeds, sleep, and diapers. Tap below to join their family:</p>
-      <p><a href="${link}">Join BabyTalk</a></p>
+      <h2>You've been invited to Bubsie</h2>
+      <p>Your partner is using Bubsie to track feeds, sleep, and diapers. Tap below to join their family:</p>
+      <p><a href="${link}">Join Bubsie</a></p>
       <p>This link expires in 24 hours.</p>
     `,
-    subject: "Join your partner on BabyTalk",
-    text: `Your partner invited you to BabyTalk! Tap this link to join: ${link}\n\nThis link expires in 24 hours.`,
+    subject: "Join your partner on Bubsie",
+    text: `Your partner invited you to Bubsie! Tap this link to join: ${link}\n\nThis link expires in 24 hours.`,
     to: email,
   });
 };

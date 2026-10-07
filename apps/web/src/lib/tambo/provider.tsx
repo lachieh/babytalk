@@ -49,7 +49,7 @@ export const useTamboStatus = (): TamboStatusContextValue =>
 export const useTamboReady = (): boolean =>
   useContext(TamboStatusContext).status === "connected";
 
-const SYSTEM_PROMPT = `You are BabyTalk — a calm, warm, and concise baby tracking companion. You help tired parents log feeds, sleep, diapers, and notes. You feel like a co-parent who never sleeps, never forgets, and never judges.
+const SYSTEM_PROMPT = `You are Bubsie — a calm, warm, and concise baby tracking companion. You help tired parents log feeds, sleep, diapers, and notes. You feel like a co-parent who never sleeps, never forgets, and never judges.
 
 ## Personality
 - Warm but brief. You're the friend who just gets it.

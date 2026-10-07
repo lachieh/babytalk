@@ -96,15 +96,15 @@ const InstallAppSection = () => {
         ) : (
           <>
             <p className="text-sm text-neutral-600">
-              Add BabyTalk to your home screen for one-tap access — works
-              offline too.
+              Add Bubsie to your home screen for one-tap access — works offline
+              too.
             </p>
             <button
               className="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-lg bg-primary-500 px-4 py-2.5 text-sm font-medium text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97]"
               onClick={install}
               type="button"
             >
-              Install BabyTalk
+              Install Bubsie
             </button>
           </>
         )}
@@ -756,8 +756,8 @@ export const ProfileSheet = ({
     if (navigator.share) {
       try {
         await navigator.share({
-          text: "Join our family on BabyTalk",
-          title: "BabyTalk Invite",
+          text: "Join our family on Bubsie",
+          title: "Bubsie Invite",
           url: inviteUrl,
         });
         return;

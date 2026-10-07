@@ -111,7 +111,7 @@ export default function Home() {
       <header className="relative z-20 border-neutral-200/80 border-b">
         <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
           <Link
-            aria-label="BabyTalk home"
+            aria-label="Bubsie home"
             className="flex min-h-11 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
             href="/"
           >
@@ -124,7 +124,7 @@ export default function Home() {
               width={36}
             />
             <span className="font-serif text-2xl tracking-tight text-neutral-900">
-              BabyTalk
+              Bubsie
             </span>
           </Link>
 
@@ -140,9 +140,9 @@ export default function Home() {
             </a>
             <a
               className="flex min-h-11 items-center text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-800"
-              href="#why-babytalk"
+              href="#why-bubsie"
             >
-              Why BabyTalk
+              Why Bubsie
             </a>
           </nav>
 
@@ -165,7 +165,7 @@ export default function Home() {
             Log every feed in a single tap.
           </h1>
           <p className="mt-8 max-w-xl text-lg leading-8 text-neutral-600 sm:text-xl sm:leading-9">
-            BabyTalk keeps a clear, shared record of feeds, sleep, diapers, and
+            Bubsie keeps a clear, shared record of feeds, sleep, diapers, and
             pumping. So no one has to remember what happened at 3am.
           </p>
           <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
@@ -194,7 +194,7 @@ export default function Home() {
         </div>
 
         <div
-          aria-label="Example of a BabyTalk daily log"
+          aria-label="Example of a Bubsie daily log"
           className="relative mx-auto w-full max-w-[34rem] lg:mx-0"
         >
           <div className="absolute -top-12 -right-24 h-64 w-64 rounded-[47%_53%_61%_39%/44%_42%_58%_56%] bg-sleep-100" />
@@ -355,12 +355,12 @@ export default function Home() {
 
       <section
         className="bg-surface-sunken px-5 py-24 sm:px-8 sm:py-32 lg:px-12"
-        id="why-babytalk"
+        id="why-bubsie"
       >
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
             <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
-              Why BabyTalk
+              Why Bubsie
             </p>
             <h2 className="mt-5 font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
               Less admin. More knowing.
@@ -485,12 +485,12 @@ export default function Home() {
 
       <footer className="border-neutral-200 border-t">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-xs text-neutral-400 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-12">
-          <p>BabyTalk. Built for tired parents.</p>
+          <p>Bubsie. Built for tired parents.</p>
           <Link
             className="flex min-h-11 items-center font-semibold text-neutral-500 transition-colors hover:text-neutral-800"
             href="/auth/login"
           >
-            Sign in to BabyTalk
+            Sign in to Bubsie
           </Link>
         </div>
       </footer>

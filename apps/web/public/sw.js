@@ -1,4 +1,4 @@
-/// Service Worker for BabyTalk PWA
+/// Service Worker for Bubsie PWA
 /// Handles: offline caching, background sync for mutations
 
 // Bumped to v2 to evict the v1 cache, which served stale HTML referencing

@@ -13,7 +13,7 @@ import { gqlRequest } from "./tambo/graphql";
 const STALE_AFTER_MS = 60 * 60 * 1000;
 const MIN_REFRESH_INTERVAL_MS = 30_000;
 
-const PUMP_SYSTEM_MESSAGE = `PUMP COACH MODE: You are BabyTalk's pump & supply coach.
+const PUMP_SYSTEM_MESSAGE = `PUMP COACH MODE: You are Bubsie's pump & supply coach.
 
 Your ONLY job is to maintain the "pump hint" displayed on the pumping page. You do this by calling the updatePumpHint tool with a babyId, a one-sentence hint, and (optionally) a suggested side.
 
