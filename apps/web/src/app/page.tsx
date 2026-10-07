@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
+import { loadRuntimeConfig } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
@@ -102,9 +104,37 @@ const SummaryIcon = ({ type }: { type: "feed" | "sleep" | "diaper" }) => {
   );
 };
 
+const SELF_HOST_POINTS = [
+  {
+    body: "Postgres, the API, and the web app, from one Docker Compose file.",
+    title: "One command to run",
+  },
+  {
+    body: "Your URLs, email, and secrets are environment variables. Nothing is baked into the image.",
+    title: "Configured, not forked",
+  },
+  {
+    body: "Read it, change it, run it for your family or your friends.",
+    title: "MIT licensed",
+  },
+];
+
 export default function Home() {
   useRedirectIfLoggedIn();
   useAutoDarkMode();
+  const [sourceUrl, setSourceUrl] = useState<string | undefined>();
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const config = await loadRuntimeConfig();
+        setSourceUrl(config.sourceUrl);
+      } catch {
+        // The homepage works without the source link.
+      }
+    };
+    load();
+  }, []);
 
   return (
     <main className="h-svh overflow-y-auto overflow-x-hidden bg-surface text-neutral-800 scroll-smooth">
@@ -143,6 +173,12 @@ export default function Home() {
               href="#why-bubsie"
             >
               Why Bubsie
+            </a>
+            <a
+              className="flex min-h-11 items-center text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-800"
+              href="#self-host"
+            >
+              Self-host
             </a>
           </nav>
 
@@ -458,6 +494,76 @@ export default function Home() {
                 </div>
               </div>
             </article>
+          </div>
+        </div>
+      </section>
+
+      <section className="px-5 py-24 sm:px-8 sm:py-32 lg:px-12" id="self-host">
+        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-20">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
+              Yours to run
+            </p>
+            <h2 className="mt-5 font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
+              Keep your family’s records on your own server.
+            </h2>
+            <p className="mt-6 max-w-xl text-base leading-7 text-neutral-500">
+              Bubsie is open source. Run it on a home server or a small VPS and
+              every feed, nap, and change stays in a database you own.
+            </p>
+            <ul className="mt-10 space-y-6">
+              {SELF_HOST_POINTS.map((point) => (
+                <li className="flex gap-4" key={point.title}>
+                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-400" />
+                  <div>
+                    <p className="font-semibold text-neutral-800">
+                      {point.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-neutral-500">
+                      {point.body}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {sourceUrl ? (
+              <a
+                className="mt-10 inline-flex min-h-12 items-center justify-center rounded-full border border-neutral-300 px-6 text-sm font-semibold text-neutral-700 transition-[background-color,border-color,transform] duration-[var(--duration-normal)] hover:border-neutral-400 hover:bg-surface-raised active:scale-[0.98]"
+                href={sourceUrl}
+                rel="noopener"
+              >
+                Read the self-hosting guide
+              </a>
+            ) : null}
+          </div>
+
+          <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-surface-raised shadow-[0_24px_50px_oklch(25%_0.04_100/0.08)]">
+            <div className="flex items-center gap-2 border-neutral-200 border-b px-6 py-4">
+              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
+              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
+              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
+              <span className="ml-3 text-xs font-medium text-neutral-400">
+                Self-hosting
+              </span>
+            </div>
+            <pre className="overflow-x-auto px-6 py-6 font-mono text-[13px] leading-7 text-neutral-600">
+              <code>
+                <span className="text-neutral-400">
+                  # Where your family will find it
+                </span>
+                {"\n"}BUBSIE_API_WEB_URL=https://bubsie.example.com
+                {"\n"}BUBSIE_WEB_API_URL=https://api.bubsie.example.com/graphql
+                {"\n\n"}
+                <span className="text-neutral-400"># Sign-in emails</span>
+                {"\n"}BUBSIE_API_SMTP_HOST=smtp.example.com
+                {"\n"}BUBSIE_API_SMTP_FROM=hello@example.com
+                {"\n\n"}
+                <span className="text-neutral-400">$ </span>
+                <span className="text-neutral-800">
+                  docker compose -f docker-compose.selfhost.yml up -d
+                </span>
+              </code>
+            </pre>
           </div>
         </div>
       </section>

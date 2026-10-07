@@ -1,0 +1,7 @@
+# yaml-language-server: $schema=../apps/web/src/config.schema.json
+# Copy to .config/bubsie_web.local.yaml for local development.
+# Every key can also be set as an environment variable, e.g. BUBSIE_WEB_API_URL.
+
+apiUrl: http://localhost:4000/graphql
+tamboUrl: https://api.tambo.co
+tamboApiKey: ""

@@ -1,4 +1,4 @@
-import { db, userCredentials, users, webauthnChallenges } from "@babytalk/db";
+import { db, userCredentials, users, webauthnChallenges } from "@bubsie/db";
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,

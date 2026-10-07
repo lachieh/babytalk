@@ -772,8 +772,8 @@ export const ProfileSheet = ({
   }, [household?.inviteCode]);
 
   const handleSignOut = useCallback(() => {
-    localStorage.removeItem("babytalk_token");
-    localStorage.removeItem("babytalk_refresh_token");
+    localStorage.removeItem("bubsie_token");
+    localStorage.removeItem("bubsie_refresh_token");
     disableDeviceMode();
     router.replace("/auth/login");
   }, [router]);

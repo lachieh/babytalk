@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { db, magicLinks, users } from "@babytalk/db";
+import { db, magicLinks, users } from "@bubsie/db";
 import { eq } from "drizzle-orm";
 
 import { sendMagicLinkEmail, sendPartnerInviteEmail } from "../email/send";

@@ -18,7 +18,7 @@ export const STATION_ACTIONS: StationActionMeta[] = [
   { description: "Quick text notes", key: "note", label: "Note" },
 ];
 
-const STORAGE_KEY = "babytalk_station_actions";
+const STORAGE_KEY = "bubsie_station_actions";
 const DEFAULT_VISIBLE: StationActionKey[] = ["feed", "diaper", "sleep"];
 
 const sanitize = (raw: unknown): StationActionKey[] => {

@@ -5,12 +5,12 @@ import {
 } from "@/lib/runtime-config";
 
 const getToken = () =>
-  typeof window === "undefined" ? null : localStorage.getItem("babytalk_token");
+  typeof window === "undefined" ? null : localStorage.getItem("bubsie_token");
 
 const getRefreshToken = () =>
   typeof window === "undefined"
     ? null
-    : localStorage.getItem("babytalk_refresh_token");
+    : localStorage.getItem("bubsie_refresh_token");
 
 const REFRESH_TOKEN_MUTATION = `
   mutation RefreshToken($refreshToken: String!) {
@@ -47,8 +47,8 @@ const refreshSession = (apiUrl: string): Promise<boolean> => {
         const json = await res.json();
         const next = json.data?.refreshToken;
         if (!res.ok || !next?.token || !next?.refreshToken) return false;
-        localStorage.setItem("babytalk_token", next.token);
-        localStorage.setItem("babytalk_refresh_token", next.refreshToken);
+        localStorage.setItem("bubsie_token", next.token);
+        localStorage.setItem("bubsie_refresh_token", next.refreshToken);
         return true;
       } catch {
         return false;
@@ -112,8 +112,8 @@ export const gqlRequest = async <T = unknown>(
     }
 
     if (typeof window !== "undefined" && isAuthError(message, res.status)) {
-      localStorage.removeItem("babytalk_token");
-      localStorage.removeItem("babytalk_refresh_token");
+      localStorage.removeItem("bubsie_token");
+      localStorage.removeItem("bubsie_refresh_token");
       const returnTo = window.location.pathname + window.location.search;
       window.location.href = `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
       throw new Error("Session expired — redirecting to login");

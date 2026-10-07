@@ -4,14 +4,15 @@
 // Bumped to v2 to evict the v1 cache, which served stale HTML referencing
 // content-hashed JS chunks that no longer exist after a deploy — leaving
 // returning users with a blank page until they hard-refreshed.
-const CACHE_NAME = "babytalk-v2";
-const OFFLINE_QUEUE_KEY = "babytalk_offline_queue";
+const CACHE_NAME = "bubsie-v2";
+const OFFLINE_QUEUE_KEY = "bubsie_offline_queue";
 const MAX_QUEUE_SIZE = 100;
 const MAX_RETRIES = 3;
 const STALE_DAYS = 7;
 
-// API URL — set by the main thread via postMessage, fallback to localhost for dev
-let configuredApiUrl = "http://localhost:4000/graphql";
+// API URL — set by the main thread via postMessage from the runtime config.
+// Queued mutations wait until it arrives.
+let configuredApiUrl = null;
 
 // Install: take over as soon as possible. We intentionally skip pre-caching
 // HTML routes — Next.js content-hashes its JS/CSS chunks per build, so a
@@ -21,15 +22,28 @@ self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
+// Carry queued offline mutations over from the pre-rename cache.
+async function migrateLegacyQueue() {
+  const legacyName = "babytalk-queue";
+  if (!(await caches.has(legacyName))) return;
+  const legacy = await (await caches.open(legacyName)).match("/queue");
+  if (legacy) {
+    const items = await legacy.json();
+    if (items.length > 0) await saveQueue([...(await getQueue()), ...items]);
+  }
+  await caches.delete(legacyName);
+}
+
 // Activate: clean old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches
-      .keys()
+    migrateLegacyQueue()
+      .catch(() => {})
+      .then(() => caches.keys())
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k !== CACHE_NAME && k !== "babytalk-queue")
+            .filter((k) => k !== CACHE_NAME && k !== "bubsie-queue")
             .map((k) => caches.delete(k))
         )
       )
@@ -159,7 +173,7 @@ async function getQueue() {
     const clients = await self.clients.matchAll();
     // Use IndexedDB via a simple approach
     // For SW, we use the Cache API as a key-value store
-    const cache = await caches.open("babytalk-queue");
+    const cache = await caches.open("bubsie-queue");
     const response = await cache.match("/queue");
     if (response) {
       return response.json();
@@ -169,7 +183,7 @@ async function getQueue() {
 }
 
 async function saveQueue(queue) {
-  const cache = await caches.open("babytalk-queue");
+  const cache = await caches.open("bubsie-queue");
   await cache.put(
     "/queue",
     new Response(JSON.stringify(queue), {
@@ -180,7 +194,7 @@ async function saveQueue(queue) {
 
 // Background sync: replay queued mutations
 self.addEventListener("sync", (event) => {
-  if (event.tag === "babytalk-sync") {
+  if (event.tag === "bubsie-sync") {
     event.waitUntil(syncQueue());
   }
 });

@@ -31,7 +31,7 @@ const ApproveContent = () => {
     const token =
       typeof window === "undefined"
         ? null
-        : localStorage.getItem("babytalk_token");
+        : localStorage.getItem("bubsie_token");
     if (!token) {
       setPhase("needs-login");
       return;

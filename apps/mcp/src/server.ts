@@ -10,7 +10,7 @@ import { registerHouseholdTools } from "./tools/household";
 
 export const createServer = (getToken: () => string): McpServer => {
   const server = new McpServer({
-    name: "babytalk",
+    name: "bubsie",
     version: "0.1.0",
   });
 

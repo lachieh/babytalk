@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { ThemeColorSync } from "@/components/theme-color-sync";
 
 import "./globals.css";
+import { LegacyStorageMigration } from "./legacy-storage";
 import { ServiceWorkerRegistrar } from "./sw-registrar";
 
 export const metadata: Metadata = {
@@ -59,6 +60,7 @@ export default function RootLayout({
         />
       </head>
       <body className="overflow-hidden overscroll-none">
+        <LegacyStorageMigration />
         <ThemeColorSync />
         {children}
         <ServiceWorkerRegistrar />

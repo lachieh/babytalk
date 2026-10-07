@@ -3,7 +3,7 @@ FROM base AS installer
 # copy all source files and prune to app dependencies
 COPY packages ./packages
 COPY apps/web ./apps/web
-RUN turbo prune @babytalk/web --docker
+RUN turbo prune @bubsie/web --docker
 
 FROM base AS builder
 
@@ -17,7 +17,7 @@ COPY --from=installer /app/out/full/ .
 RUN --mount=type=secret,id=TURBO_TOKEN,env=TURBO_TOKEN \
     --mount=type=secret,id=TURBO_TEAM,env=TURBO_TEAM \
     --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm turbo build --filter=@babytalk/web
+    pnpm turbo build --filter=@bubsie/web
 
 FROM runner
 RUN addgroup --system --gid 1001 nodejs && \

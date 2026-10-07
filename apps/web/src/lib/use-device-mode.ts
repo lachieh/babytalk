@@ -1,6 +1,6 @@
 "use client";
 
-const DEVICE_MODE_KEY = "babytalk_device_mode";
+const DEVICE_MODE_KEY = "bubsie_device_mode";
 
 export const isDeviceMode = (): boolean => {
   if (typeof window === "undefined") return false;

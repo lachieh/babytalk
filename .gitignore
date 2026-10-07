@@ -157,3 +157,9 @@ pnpm-debug.log*
 playwright-report/
 test-results/
 .gstack/
+.config/bubsie_*.yaml
+.config/bubsie_*.json
+!.config/bubsie_*.example.yaml
+
+# Private deployment notes
+INFRA.md

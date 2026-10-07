@@ -1,4 +1,4 @@
-import { agentThreads, babies, users } from "@babytalk/db";
+import { agentThreads, babies, users } from "@bubsie/db";
 import { and, eq } from "drizzle-orm";
 
 import type { Context } from "../context";

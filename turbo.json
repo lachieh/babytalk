@@ -5,7 +5,7 @@
       "dependsOn": ["^build", "//#docker:dev:up"],
       "cache": false,
       "persistent": true,
-      "passThroughEnv": ["NEXT_PUBLIC_*", "BABYTALK_*"]
+      "passThroughEnv": ["NEXT_PUBLIC_*", "BUBSIE_*"]
     },
     "generate": {
       "dependsOn": ["^build"],
@@ -14,7 +14,7 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": [".next/**", "dist/**"],
-      "passThroughEnv": ["NEXT_PUBLIC_*", "BABYTALK_*"]
+      "passThroughEnv": ["NEXT_PUBLIC_*", "BUBSIE_*"]
     },
     "typecheck": {
       "dependsOn": ["^build"]
@@ -34,7 +34,7 @@
     },
     "//#docker:dev:up": {
       "cache": false,
-      "env": ["RESEND_API_KEY", "TAMBO_API_KEY", "NEXT_PUBLIC_*", "BABYTALK_*"]
+      "env": ["RESEND_API_KEY", "TAMBO_API_KEY", "NEXT_PUBLIC_*", "BUBSIE_*"]
     },
     "//#docker:dev:down": {
       "cache": false

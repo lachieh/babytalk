@@ -1,13 +1,16 @@
-import { defineConfig } from "@babytalk/standard-config";
+import { defineConfig } from "@bubsie/standard-config";
 import { z } from "zod";
 
 export default defineConfig({
-  prefix: "babytalk_web",
-  public: ["apiUrl", "tamboUrl", "tamboApiKey"],
-  publicPrefix: "NEXT_PUBLIC_",
+  prefix: "bubsie_web",
+  public: ["apiUrl", "sourceUrl", "tamboUrl", "tamboApiKey"],
   schema: z.object({
-    apiUrl: z.string().default("http://localhost:4000/graphql"),
+    apiUrl: z.url().describe("Public URL of the GraphQL API"),
+    sourceUrl: z
+      .url()
+      .optional()
+      .describe("Source code link shown on the homepage (hidden if unset)"),
     tamboApiKey: z.string().default(""),
-    tamboUrl: z.string().default("https://api.tambo.co"),
+    tamboUrl: z.url().describe("Tambo API URL"),
   }),
 });

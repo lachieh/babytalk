@@ -177,7 +177,7 @@ export const registerCodeModeTools = (
 ) => {
   server.tool(
     "search_api",
-    `Search the BabyTalk API schema. Write JavaScript code that filters the \`schema\` array (each entry has name, description, inputSchema). Return the entries you need. The schema has ${String(toolDescriptors.length)} tools for baby tracking (feeds, sleep, diapers, notes).`,
+    `Search the Bubsie API schema. Write JavaScript code that filters the \`schema\` array (each entry has name, description, inputSchema). Return the entries you need. The schema has ${String(toolDescriptors.length)} tools for baby tracking (feeds, sleep, diapers, notes).`,
     {
       code: z
         .string()
@@ -187,7 +187,7 @@ export const registerCodeModeTools = (
     },
     async (args) => {
       const searchResult = await executor.execute(
-        `const schema = await babytalk._getSchema(); ${args.code}`,
+        `const schema = await bubsie._getSchema(); ${args.code}`,
         { _getSchema: () => Promise.resolve(toolDescriptors) }
       );
 
@@ -209,12 +209,12 @@ export const registerCodeModeTools = (
 
   server.tool(
     "execute_code",
-    `Execute JavaScript code that calls BabyTalk API functions. Available functions: ${toolDescriptors.map((t) => t.name).join(", ")}. Call them via babytalk.toolName(args). You can chain multiple calls. TypeScript types:\n\n${typeDefinitions}`,
+    `Execute JavaScript code that calls Bubsie API functions. Available functions: ${toolDescriptors.map((t) => t.name).join(", ")}. Call them via bubsie.toolName(args). You can chain multiple calls. TypeScript types:\n\n${typeDefinitions}`,
     {
       code: z
         .string()
         .describe(
-          "JavaScript async code. Call babytalk.list_babies(), babytalk.log_event({...}), etc. Return the final result."
+          "JavaScript async code. Call bubsie.list_babies(), bubsie.log_event({...}), etc. Return the final result."
         ),
     },
     async (args) => {

@@ -1,5 +1,5 @@
 {
-  "name": "@babytalk/zpages",
+  "name": "@bubsie/zpages",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -25,7 +25,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@babytalk/tsconfig": "workspace:*",
+    "@bubsie/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
     "typescript": "^5",
     "vite": "^8.0.10",

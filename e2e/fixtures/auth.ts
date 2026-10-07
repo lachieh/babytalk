@@ -43,7 +43,7 @@ export const test = base.extend<{
 
   testEmail: async ({}, use) => {
     const id = Math.random().toString(36).slice(2, 10);
-    await use(`test-${id}@babytalk.test`);
+    await use(`test-${id}@bubsie.test`);
   },
 });
 

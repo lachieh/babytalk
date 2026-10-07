@@ -1,5 +1,5 @@
 {
-  "name": "@babytalk/db",
+  "name": "@bubsie/db",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "postgres": "^3.4.8"
   },
   "devDependencies": {
-    "@babytalk/tsconfig": "workspace:*",
+    "@bubsie/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
     "drizzle-kit": "1.0.0-beta.22",
     "typescript": "^5",

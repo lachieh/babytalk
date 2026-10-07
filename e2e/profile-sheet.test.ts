@@ -43,7 +43,7 @@ test.describe("Profile sheet — overflow handling", () => {
   }) => {
     await signInWithMagicLink(testEmail);
     const token = await page.evaluate(() =>
-      localStorage.getItem("babytalk_token")
+      localStorage.getItem("bubsie_token")
     );
     if (!token) throw new Error("No token after sign-in");
     await provisionBaby(token);
@@ -84,7 +84,7 @@ test.describe("Profile sheet — overflow handling", () => {
   }) => {
     await signInWithMagicLink(testEmail);
     const token = await page.evaluate(() =>
-      localStorage.getItem("babytalk_token")
+      localStorage.getItem("bubsie_token")
     );
     if (!token) throw new Error("No token after sign-in");
     await provisionBaby(token);
@@ -124,7 +124,7 @@ test.describe("Profile sheet — overflow handling", () => {
   }) => {
     await signInWithMagicLink(testEmail);
     const token = await page.evaluate(() =>
-      localStorage.getItem("babytalk_token")
+      localStorage.getItem("bubsie_token")
     );
     if (!token) throw new Error("No token after sign-in");
     await provisionBaby(token);

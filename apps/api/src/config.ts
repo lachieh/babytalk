@@ -1,14 +1,11 @@
-import { defineConfig } from "@babytalk/standard-config";
+import { defineConfig } from "@bubsie/standard-config";
 import { z } from "zod";
 
 export default defineConfig({
-  prefix: "babytalk_api",
+  prefix: "bubsie_api",
   schema: z.object({
     databaseUrl: z.string().describe("PostgreSQL connection string"),
-    jwtSecret: z
-      .string()
-      .default("dev-secret-change-me")
-      .describe("Secret key for signing JWTs"),
+    jwtSecret: z.string().min(16).describe("Secret key for signing JWTs"),
     port: z.number().default(4000).describe("HTTP server port"),
     rpName: z
       .string()
@@ -16,9 +13,9 @@ export default defineConfig({
       .describe("Relying Party display name shown by passkey prompts"),
     smtpFrom: z
       .string()
-      .default("noreply@babytalk.dev")
-      .describe("Sender email address"),
-    smtpHost: z.string().default("localhost").describe("SMTP server hostname"),
+      .min(1)
+      .describe("Sender email address, e.g. noreply@example.com"),
+    smtpHost: z.string().min(1).describe("SMTP server hostname"),
     smtpPass: z
       .string()
       .default("")
@@ -29,8 +26,9 @@ export default defineConfig({
       .default("")
       .describe("SMTP username ('resend' for smtp.resend.com)"),
     webUrl: z
-      .string()
-      .default("http://localhost:3000")
-      .describe("Frontend URL for CORS and email links"),
+      .url()
+      .describe(
+        "Public URL of the web app, used for CORS, passkeys, and email links"
+      ),
   }),
 });

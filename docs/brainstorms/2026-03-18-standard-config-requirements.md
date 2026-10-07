@@ -3,11 +3,11 @@ date: 2026-03-18
 topic: standard-config
 ---
 
-# @babytalk/standard-config
+# @bubsie/standard-config
 
 ## Problem Frame
 
-The babytalk monorepo currently uses raw `process.env` access with no validation, no defaults, and no type safety. Config is scattered across apps with no shared loading convention. This package provides schema-validated, type-safe config loading from files and environment variables, with a clear precedence model.
+The bubsie monorepo currently uses raw `process.env` access with no validation, no defaults, and no type safety. Config is scattered across apps with no shared loading convention. This package provides schema-validated, type-safe config loading from files and environment variables, with a clear precedence model.
 
 ## Requirements
 
@@ -39,7 +39,7 @@ The babytalk monorepo currently uses raw `process.env` access with no validation
 
 - R9. **TypeScript type generation** — Generate a `.gen.ts` file with TypeScript types derived from the schema, following TanStack conventions (`.gen.ts` suffix, lives alongside source, intended to be committed).
 
-- R10. **Bundler plugins via unplugin** — Built on [unplugin](https://github.com/unjs/unplugin) for a single plugin definition. Exported as `@babytalk/standard-config/vite`, `@babytalk/standard-config/webpack`, etc. Generates JSON Schema and TS types on dev server start, watches for schema changes, and regenerates automatically.
+- R10. **Bundler plugins via unplugin** — Built on [unplugin](https://github.com/unjs/unplugin) for a single plugin definition. Exported as `@bubsie/standard-config/vite`, `@bubsie/standard-config/webpack`, etc. Generates JSON Schema and TS types on dev server start, watches for schema changes, and regenerates automatically.
 
 - R11. **CLI command** — Provide a CLI (e.g. `standard-config generate`) for explicit generation in CI or manual use, independent of bundler plugins.
 
@@ -58,7 +58,7 @@ The babytalk monorepo currently uses raw `process.env` access with no validation
 - **No remote config** — Files are local only. No HTTP fetching, no cloud config services.
 - **No runtime config reloading** — Config is loaded once at startup. Hot-reload of config values is out of scope.
 - **No TOML/INI support** — Only YAML and JSON.
-- **Public release is deferred** — Ships as `@babytalk/standard-config` first; extraction to a standalone org/repo happens later if it proves useful.
+- **Public release is deferred** — Ships as `@bubsie/standard-config` first; extraction to a standalone org/repo happens later if it proves useful.
 
 ## Key Decisions
 

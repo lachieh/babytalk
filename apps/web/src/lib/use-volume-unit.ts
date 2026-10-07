@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export type VolumeUnit = "ml" | "oz";
 
-const STORAGE_KEY = "babytalk_volume_unit";
+const STORAGE_KEY = "bubsie_volume_unit";
 
 const ML_PER_OZ = 29.5735;
 

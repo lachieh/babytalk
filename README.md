@@ -4,6 +4,8 @@
 
 Bubsie keeps a clear, shared record of feeds, sleep, diapers, and pumping. So no one has to remember what happened at 3am.
 
+Open source and [easy to run on your own server](#self-hosting).
+
 ![Bubsie homepage with a sample daily log](docs/screenshots/home-hero.png)
 
 ## How it works
@@ -96,6 +98,65 @@ happened and what may be coming next.
 
 No password required. Sign in by email magic link or passkey.
 
+## Self-hosting
+
+![Self-hosting section of the Bubsie homepage](docs/screenshots/home-self-host.png)
+
+Bubsie is built to run on your own server. Your family's records stay in a
+Postgres database you own, and every setting is an environment variable, so the
+same images run anywhere.
+
+You need Docker, two public URLs behind a reverse proxy (one for the web app,
+one for the API), and an SMTP account for sign-in emails.
+
+1. Download [`docker-compose.selfhost.yml`](docker-compose.selfhost.yml).
+2. Create a `.env` file next to it:
+
+   ```sh
+   POSTGRES_PASSWORD=change-me
+   BUBSIE_API_JWT_SECRET=a-long-random-string    # openssl rand -hex 32
+
+   # Public URLs
+   BUBSIE_API_WEB_URL=https://bubsie.example.com
+   BUBSIE_WEB_API_URL=https://api.bubsie.example.com/graphql
+
+   # Sign-in emails
+   BUBSIE_API_SMTP_HOST=smtp.example.com
+   BUBSIE_API_SMTP_PORT=587
+   BUBSIE_API_SMTP_USER=...
+   BUBSIE_API_SMTP_PASS=...
+   BUBSIE_API_SMTP_FROM=hello@example.com
+   ```
+
+3. Start it:
+
+   ```sh
+   docker compose -f docker-compose.selfhost.yml up -d
+   ```
+
+4. Point your proxy at the web app on port `3000` and the API on port `4000`.
+
+The API runs database migrations when it starts. Both servers refuse to start
+if a required URL or setting is missing, and print which one.
+
+| Variable                   | Required | Purpose                                            |
+| -------------------------- | -------- | -------------------------------------------------- |
+| `BUBSIE_API_WEB_URL`       | yes      | Public web URL, used for CORS, passkeys, and email |
+| `BUBSIE_API_JWT_SECRET`    | yes      | Signs sessions (16+ characters)                    |
+| `BUBSIE_API_SMTP_HOST`     | yes      | Mail server                                        |
+| `BUBSIE_API_SMTP_FROM`     | yes      | Sender address for sign-in emails                  |
+| `BUBSIE_API_SMTP_PORT`     | no       | Mail server port                                   |
+| `BUBSIE_API_SMTP_USER`     | no       | SMTP username                                      |
+| `BUBSIE_API_SMTP_PASS`     | no       | SMTP password                                      |
+| `BUBSIE_API_RP_NAME`       | no       | Name shown in passkey prompts                      |
+| `BUBSIE_WEB_API_URL`       | yes      | Public GraphQL URL, ending in `/graphql`           |
+| `BUBSIE_WEB_TAMBO_URL`     | yes      | Tambo API URL (defaults in the compose file)       |
+| `BUBSIE_WEB_TAMBO_API_KEY` | no       | Enables the AI insights                            |
+| `BUBSIE_WEB_SOURCE_URL`    | no       | Shows a source link on the homepage                |
+
+Images are published to GHCR: `latest` follows releases and `nightly` follows
+`main`. Set `BUBSIE_IMAGE_TAG` to pin a version.
+
 ## Development
 
 Bubsie is a pnpm monorepo: a GraphQL API (`apps/api`), a Next.js web app
@@ -105,11 +166,13 @@ Bubsie is a pnpm monorepo: a GraphQL API (`apps/api`), a Next.js web app
 ```sh
 pnpm install
 docker compose up -d postgres mailpit
-DATABASE_URL=postgresql://babytalk:babytalk@localhost:5432/babytalk pnpm db:migrate
-pnpm turbo build --filter=@babytalk/api^... --filter=@babytalk/web^...
+cp .config/bubsie_api.example.yaml .config/bubsie_api.local.yaml
+cp .config/bubsie_web.example.yaml .config/bubsie_web.local.yaml
+DATABASE_URL=postgresql://bubsie:bubsie@localhost:5432/bubsie pnpm db:migrate
+pnpm turbo build --filter=@bubsie/api^... --filter=@bubsie/web^...
 
 # in separate terminals
-(cd apps/api && SKIP_MIGRATIONS=1 BABYTALK_API_DATABASE_URL=postgresql://babytalk:babytalk@localhost:5432/babytalk pnpm dev)
+(cd apps/api && SKIP_MIGRATIONS=1 pnpm dev)
 (cd apps/web && pnpm dev)
 ```
 

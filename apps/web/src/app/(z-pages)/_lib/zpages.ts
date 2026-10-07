@@ -1,15 +1,14 @@
-import { loadConfig } from "@babytalk/standard-config";
-import { ZPages } from "@babytalk/zpages";
+import { ZPages } from "@bubsie/zpages";
 
-import configDef from "@/config";
-
-const config = await loadConfig(configDef);
-const API_BASE = config.apiUrl.replace(/\/graphql$/, "");
+import { getConfig } from "@/lib/env";
 
 export const zpages = new ZPages().addReadinessCheck("api", async () => {
   const start = Date.now();
   try {
-    const res = await fetch(`${API_BASE}/livez`, {
+    // Loaded per check rather than at import time so `next build` doesn't
+    // need runtime config.
+    const { apiUrl } = await getConfig();
+    const res = await fetch(`${apiUrl.replace(/\/graphql$/, "")}/livez`, {
       signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) {

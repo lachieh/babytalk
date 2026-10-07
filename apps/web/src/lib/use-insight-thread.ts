@@ -7,7 +7,7 @@ import type { BabyEvent } from "./baby-context";
 
 /* ── Constants ──────────────────────────────────────────────── */
 
-const STORAGE_KEY = "babytalk_insight_thread";
+const STORAGE_KEY = "bubsie_insight_thread";
 const DEBOUNCE_MS = 5000;
 /** Don't refresh more than once per 30s */
 const MIN_REFRESH_INTERVAL = 30_000;

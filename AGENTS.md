@@ -1,8 +1,8 @@
-# Babytalk Monorepo — Agent Guide
+# Bubsie Monorepo — Agent Guide
 
 ## Overview
 
-Babytalk is a full-stack TypeScript application built as a pnpm monorepo. It
+Bubsie is a full-stack TypeScript application built as a pnpm monorepo. It
 consists of a GraphQL API backend and a Next.js frontend, backed by PostgreSQL.
 The project is in early stage — auth (magic links), user management, and basic
 infrastructure are in place, with the product domain still being built out.
@@ -10,7 +10,7 @@ infrastructure are in place, with the product domain still being built out.
 ## Monorepo Structure
 
 ```
-babytalk/
+bubsie/
 ├── apps/
 │   ├── api/              # GraphQL Yoga API (port 4000)
 │   │   ├── src/
@@ -40,7 +40,7 @@ babytalk/
 │       └── nextjs.json   # Next.js (Bundler resolution, JSX)
 ├── .github/workflows/
 │   ├── ci.yml            # Lint → type-check → migrate → build
-│   └── cd.yml            # Changesets version/tag + Docker build → GHCR → Coolify
+│   └── cd.yml            # Changesets version/tag + Docker build → GHCR
 ├── docker-compose.yml      # Local dev services (Postgres + Mailpit)
 ├── docker-compose.test.yml # Full stack from local Dockerfiles
 ├── docker-compose.prod.yml # Full stack from GHCR images
@@ -76,7 +76,7 @@ Node.js 24, TypeScript 5.
 | Releases       | @changesets/cli                                   |
 | Docker         | Multi-stage builds, GHCR registry                 |
 | Testing        | Playwright 1.56.1 (installed, not yet configured) |
-| Hosting        | Hetzner Cloud (CPX21) + Coolify                   |
+| Hosting        | Self-hosted Docker images (GHCR)                  |
 
 ## Essential Commands
 
@@ -99,8 +99,8 @@ pnpm db:studio            # open Drizzle Studio GUI
 pnpm build                # build all apps
 
 # Type checking (as CI does it)
-pnpm --filter @babytalk/api exec tsc --noEmit
-pnpm --filter @babytalk/web exec tsc --noEmit
+pnpm --filter @bubsie/api exec tsc --noEmit
+pnpm --filter @bubsie/web exec tsc --noEmit
 
 # Releases
 pnpm changeset            # create changeset for PR
@@ -256,7 +256,7 @@ Next.js 15 with App Router, React 19, Tailwind CSS 4 (PostCSS plugin).
 
 Uses urql with `@urql/next` for SSR support. The client reads
 `NEXT_PUBLIC_API_URL` and attaches JWT from `localStorage` key
-`babytalk_token` as Bearer auth header.
+`bubsie_token` as Bearer auth header.
 
 Note: The login and verify pages use raw `fetch()` for GraphQL mutations rather
 than the urql client (they are simple one-off operations).
@@ -275,7 +275,7 @@ No component library or CSS-in-JS.
 5. Frontend calls `verifyMagicLink(token)` mutation
 6. API validates token (not expired, not used), marks as used, upserts user
 7. API signs JWT with user ID + email, returns it
-8. Frontend stores JWT in `localStorage` as `babytalk_token`
+8. Frontend stores JWT in `localStorage` as `bubsie_token`
 9. Subsequent requests include `Authorization: Bearer <token>` header
 
 ## TypeScript Configuration
@@ -307,22 +307,23 @@ Runs on PRs, pushes to main, and manual dispatch:
 On push to main: uses `changesets/action` to either open a "Version Packages"
 PR or (when that PR merges) create git tags.
 
-### Deploy Pipeline (`.github/workflows/deploy.yml`)
+### Image Pipeline (`.github/workflows/cd.yml`)
 
 Two trigger paths:
 
-- **Main branch commits**: Detects changed apps via `dorny/paths-filter`, builds
+- **Main branch commits**: Detects affected apps via `turbo --affected`, builds
   only changed Docker images, tags `nightly` + `sha-<hash>`.
 - **Tag push** (from changesets): Builds tagged app, tags semver + `latest`.
 
-API image gets a smoke test (health check via GraphQL introspection query)
-before pushing. After push, triggers Coolify deployment webhook. Cleanup job
-prunes to 10 most recent images per package.
+The API image gets a smoke test (`/livez`) before the job finishes. The
+workflow only builds and pushes images; hosts pull new tags themselves
+(`nightly` for staging, `latest` for production). A cleanup job prunes
+untagged versions, keeping 10 per package.
 
 Images published to GHCR:
 
-- `ghcr.io/<owner>/babytalk-api`
-- `ghcr.io/<owner>/babytalk-web`
+- `ghcr.io/<owner>/bubsie-api`
+- `ghcr.io/<owner>/bubsie-web`
 
 ### Changesets
 
@@ -363,7 +364,7 @@ Three compose files for different environments:
 docker compose up -d
 ```
 
-- **PostgreSQL 17** — `localhost:5432` (user/pass/db: `babytalk`)
+- **PostgreSQL 17** — `localhost:5432` (user/pass/db: `bubsie`)
 - **Mailpit** — SMTP on `localhost:1025`, web UI on `localhost:8025`
 
 **`docker-compose.test.yml`** — Full stack from local Dockerfiles:
@@ -372,50 +373,50 @@ docker compose up -d
 - Postgres with health check, API depends on healthy Postgres
 - Web depends on API. Mailpit included.
 
-**`docker-compose.prod.yml`** — Full stack from GHCR images:
+**`docker-compose.selfhost.yml`** — Full stack from GHCR images, for running
+your own instance. Reads required settings from `.env`; see the README's
+Self-hosting section.
 
-- Pulls `ghcr.io/lachieh/babytalk-api` and `ghcr.io/lachieh/babytalk-web`
-- Uses `IMAGE_TAG` env var (defaults to `nightly`)
-- Requires `POSTGRES_PASSWORD` and `JWT_SECRET` to be set
+## Configuration
 
-## Infrastructure
+Apps use `@bubsie/standard-config`. Each setting can come from an environment
+variable (`BUBSIE_API_*`, `BUBSIE_WEB_*`) or a YAML file in `.config/`
+(`bubsie_api.local.yaml`, `bubsie_web.local.yaml`, gitignored). Copy the
+`.config/*.example.yaml` files to get started.
 
-See [INFRA.md](./INFRA.md) for full infrastructure documentation including
-Cloudflare DNS/tunnel configuration, Coolify applications, TLS setup, and
-operational runbooks.
+Anything that names a URL or domain has no default: the API and web servers
+exit at startup if it is missing. The web app serves its public settings at
+`/.well-known/config` at runtime, so images contain no environment-specific
+values.
 
-**Quick reference**:
+### API (`BUBSIE_API_*`)
 
-- **Server**: Hetzner CPX21, Ubuntu 24.04
-- **Coolify Dashboard**: `https://hosting.devbox.party`
-- **Domain convention**: `<app>-<env>.devbox.party` (single-level subdomains only)
-- **Tunnel**: Cloudflare Tunnel "Hetzner" with `matchSNItoHost: true`
+| Variable                  | Required | Purpose                                        |
+| ------------------------- | -------- | ---------------------------------------------- |
+| `BUBSIE_API_DATABASE_URL` | yes      | Postgres connection                            |
+| `BUBSIE_API_JWT_SECRET`   | yes      | HS256 signing key (16+ chars)                  |
+| `BUBSIE_API_WEB_URL`      | yes      | Public web URL (CORS, passkeys, email links)   |
+| `BUBSIE_API_SMTP_HOST`    | yes      | Mail server host                               |
+| `BUBSIE_API_SMTP_FROM`    | yes      | Sender address                                 |
+| `BUBSIE_API_SMTP_PORT`    | no       | Mail server port (default `1025`)              |
+| `BUBSIE_API_SMTP_USER`    | no       | SMTP username                                  |
+| `BUBSIE_API_SMTP_PASS`    | no       | SMTP password                                  |
+| `BUBSIE_API_RP_NAME`      | no       | Name shown in passkey prompts (default Bubsie) |
+| `BUBSIE_API_PORT`         | no       | API server port (default `4000`)               |
 
-## Environment Variables
+### Web (`BUBSIE_WEB_*`)
 
-### `apps/api/.env`
-
-| Variable       | Default                                                  | Purpose                        |
-| -------------- | -------------------------------------------------------- | ------------------------------ |
-| `DATABASE_URL` | `postgresql://babytalk:babytalk@localhost:5432/babytalk` | Postgres connection            |
-| `JWT_SECRET`   | `change-me-to-a-random-secret`                           | HS256 signing key              |
-| `SMTP_HOST`    | `localhost`                                              | Mail server host               |
-| `SMTP_PORT`    | `1025`                                                   | Mail server port               |
-| `SMTP_FROM`    | `noreply@babytalk.dev`                                   | Sender address                 |
-| `WEB_URL`      | `http://localhost:3000`                                  | Frontend URL (for email links) |
-| `PORT`         | `4000`                                                   | API server port                |
-
-### `apps/web/.env`
-
-| Variable              | Default                         | Purpose          |
-| --------------------- | ------------------------------- | ---------------- |
-| `NEXT_PUBLIC_API_URL` | `http://localhost:4000/graphql` | GraphQL endpoint |
+| Variable                   | Required | Purpose                     |
+| -------------------------- | -------- | --------------------------- |
+| `BUBSIE_WEB_API_URL`       | yes      | Public GraphQL endpoint     |
+| `BUBSIE_WEB_TAMBO_URL`     | yes      | Tambo API URL               |
+| `BUBSIE_WEB_TAMBO_API_KEY` | no       | Tambo API key (AI features) |
 
 ### `packages/db/.env`
 
-| Variable       | Default                                                  | Purpose     |
-| -------------- | -------------------------------------------------------- | ----------- |
-| `DATABASE_URL` | `postgresql://babytalk:babytalk@localhost:5432/babytalk` | Drizzle CLI |
+| Variable       | Purpose                        |
+| -------------- | ------------------------------ |
+| `DATABASE_URL` | Drizzle CLI (generate/migrate) |
 
 ## Code Conventions
 
@@ -462,7 +463,7 @@ operational runbooks.
 - Next.js App Router with `"use client"` directive where needed
 - `Suspense` boundaries for client components that use search params
 - Tailwind utility classes directly in JSX
-- `localStorage` for auth token storage (key: `babytalk_token`)
+- `localStorage` for auth token storage (key: `bubsie_token`)
 - Path alias: `@/*` maps to `./src/*` in `apps/web/tsconfig.json`
 
 ### Import Style
@@ -478,17 +479,17 @@ currently handled by:
 
 - **Static analysis**: Ultracite (oxlint) catches common issues
 - **Type checking**: `tsc --noEmit` in CI for both apps
-- **Docker smoke tests**: API image health check in the deploy workflow
+- **Docker smoke tests**: API image health check in the CD workflow
 - **Integration testing**: `docker-compose.test.yml` provides a full-stack
   environment for manual or future automated testing
 
 ## Quick Start for New Developers
 
 ```sh
-git clone <repo-url> && cd babytalk
+git clone <repo-url> && cd bubsie
 pnpm install
-cp apps/api/.env.example apps/api/.env
-cp apps/web/.env.example apps/web/.env
+cp .config/bubsie_api.example.yaml .config/bubsie_api.local.yaml
+cp .config/bubsie_web.example.yaml .config/bubsie_web.local.yaml
 cp packages/db/.env.example packages/db/.env
 docker compose up -d
 pnpm db:generate

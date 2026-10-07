@@ -109,8 +109,8 @@ const DevicePage = () => {
 
         if (status === "approved" && token && refreshToken) {
           stopPolling();
-          localStorage.setItem("babytalk_token", token);
-          localStorage.setItem("babytalk_refresh_token", refreshToken);
+          localStorage.setItem("bubsie_token", token);
+          localStorage.setItem("bubsie_refresh_token", refreshToken);
           enableDeviceMode();
           setPhase("approved");
           setTimeout(() => router.replace("/station"), 600);

@@ -1,11 +1,8 @@
-import { defineConfig } from "@babytalk/standard-config";
+import { defineConfig } from "@bubsie/standard-config";
 import { z } from "zod";
 
 const base = {
-  api_url: z
-    .string()
-    .default("http://localhost:4000/graphql")
-    .describe("BabyTalk GraphQL API URL"),
+  api_url: z.url().describe("Bubsie GraphQL API URL"),
   port: z.number().default(8262).describe("HTTP server port"),
 };
 
@@ -23,7 +20,7 @@ const variants = z.discriminatedUnion("mode", [
 ]);
 
 export default defineConfig({
-  prefix: "babytalk_mcp",
+  prefix: "bubsie_mcp",
   schema: z.preprocess(
     (val) =>
       typeof val === "object" && val !== null && !("mode" in val)

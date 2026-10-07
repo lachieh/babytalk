@@ -1,4 +1,4 @@
-import { createConfigHandler } from "@babytalk/standard-config/well-known/next";
+import { createConfigHandler } from "@bubsie/standard-config/well-known/next";
 
 import configDef from "@/config";
 

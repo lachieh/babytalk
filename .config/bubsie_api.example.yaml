@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=../apps/api/src/config.schema.json
+# Copy to .config/bubsie_api.local.yaml for local development.
+# Every key can also be set as an environment variable, e.g. BUBSIE_API_WEB_URL.
+
+databaseUrl: "postgresql://bubsie:bubsie@localhost:5432/bubsie"
+jwtSecret: "local-dev-secret-change-me"
+webUrl: http://localhost:3000
+smtpHost: localhost
+smtpPort: 1025
+smtpFrom: noreply@localhost
+# smtpUser: ""
+# smtpPass: ""
+# port: 4000

@@ -1,4 +1,4 @@
-# Design Audit: BabyTalk
+# Design Audit: Bubsie
 
 **Date:** 2026-03-26
 **Branch:** claude/add-impeccable-skill-Kh4vT

@@ -1,4 +1,4 @@
-import { db, refreshSessions, users } from "@babytalk/db";
+import { db, refreshSessions, users } from "@bubsie/db";
 import { and, eq, gt, isNull } from "drizzle-orm";
 
 import { signToken } from "./jwt";

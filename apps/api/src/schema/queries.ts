@@ -1,4 +1,4 @@
-import { users } from "@babytalk/db";
+import { users } from "@bubsie/db";
 import { eq } from "drizzle-orm";
 
 import { listUserPasskeys } from "../auth/passkey";

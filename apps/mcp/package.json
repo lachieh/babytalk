@@ -1,9 +1,9 @@
 {
-  "name": "@babytalk/mcp",
+  "name": "@bubsie/mcp",
   "version": "0.0.1",
   "private": true,
   "bin": {
-    "babytalk-mcp": "./dist/index.js"
+    "bubsie-mcp": "./dist/index.js"
   },
   "type": "module",
   "scripts": {
@@ -13,13 +13,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@babytalk/standard-config": "workspace:*",
-    "@babytalk/vite-config": "workspace:*",
+    "@bubsie/standard-config": "workspace:*",
+    "@bubsie/vite-config": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@babytalk/tsconfig": "workspace:*",
+    "@bubsie/tsconfig": "workspace:*",
     "@types/node": "^25.5.0",
     "typescript": "^5",
     "vite": "^8.0.10"

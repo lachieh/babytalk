@@ -28,7 +28,7 @@ interface LoaderContext {
  *   turbopack: {
  *     rules: {
  *       'config.ts': {
- *         loaders: ['@babytalk/standard-config/loader'],
+ *         loaders: ['@bubsie/standard-config/loader'],
  *         as: '*.ts',
  *       },
  *     },

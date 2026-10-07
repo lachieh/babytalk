@@ -1,4 +1,4 @@
-import { registerZPages } from "@babytalk/zpages/hono";
+import { registerZPages } from "@bubsie/zpages/hono";
 import { serve } from "@hono/node-server";
 import { createYoga } from "graphql-yoga";
 import { Hono } from "hono";
@@ -39,5 +39,5 @@ app.on(["GET", "POST"], "/graphql", async (c) => {
 });
 
 serve({ fetch: app.fetch, port: config.port }, () => {
-  console.log(`API running on http://localhost:${config.port}/graphql`);
+  console.log(`API listening on port ${config.port}`);
 });

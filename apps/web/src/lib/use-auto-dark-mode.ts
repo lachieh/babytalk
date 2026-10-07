@@ -19,7 +19,7 @@ const isDarkHour = (hour: number, start: number, end: number): boolean => {
 export const useAutoDarkMode = () => {
   useEffect(() => {
     const apply = () => {
-      const pref = localStorage.getItem("babytalk_dark_mode") ?? "auto";
+      const pref = localStorage.getItem("bubsie_dark_mode") ?? "auto";
       const html = document.documentElement;
 
       if (pref === "on") {
@@ -31,8 +31,8 @@ export const useAutoDarkMode = () => {
         return;
       }
 
-      const startStr = localStorage.getItem("babytalk_dark_start");
-      const endStr = localStorage.getItem("babytalk_dark_end");
+      const startStr = localStorage.getItem("bubsie_dark_start");
+      const endStr = localStorage.getItem("bubsie_dark_end");
       const start = startStr
         ? Number.parseInt(startStr, 10)
         : DEFAULT_DARK_START;

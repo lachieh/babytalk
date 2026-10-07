@@ -1,6 +1,7 @@
 # yaml-language-server: $schema=../apps/mcp/src/config.schema.json
+# Copy to .config/bubsie_mcp.local.yaml for local development.
 
 mode: stdio
 token: "development-token-change-me"
-# api_url: http://localhost:4000/graphql
+api_url: http://localhost:4000/graphql
 # port: 8262

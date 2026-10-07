@@ -43,7 +43,7 @@ const flatten = (
  * @example
  * ```ts
  * const env = await getNextPublicEnv(configDef);
- * // { NEXT_PUBLIC_BABYTALK_WEB_API_URL: "http://localhost:4000/graphql", ... }
+ * // { NEXT_PUBLIC_BUBSIE_WEB_API_URL: "http://localhost:4000/graphql", ... }
  * ```
  */
 export const getNextPublicEnv = async <T>(
@@ -67,7 +67,7 @@ export const getNextPublicEnv = async <T>(
  * @example
  * ```ts
  * // next.config.ts
- * import { withStandardConfig } from "@babytalk/standard-config/next";
+ * import { withStandardConfig } from "@bubsie/standard-config/next";
  * import configDef from "./src/config";
  *
  * export default withStandardConfig(configDef, {

@@ -1,4 +1,4 @@
-import { loadConfig } from "@babytalk/standard-config";
+import { loadConfig } from "@bubsie/standard-config";
 
 import configDef from "@/config";
 

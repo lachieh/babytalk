@@ -1,4 +1,4 @@
-import { babies, events, households, users } from "@babytalk/db";
+import { babies, events, households, users } from "@bubsie/db";
 import { and, eq } from "drizzle-orm";
 
 import { invitePartner } from "../auth/magic-link";

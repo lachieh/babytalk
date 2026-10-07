@@ -1,4 +1,4 @@
-# @babytalk/mcp
+# @bubsie/mcp
 
 ## 0.0.1
 
@@ -6,5 +6,5 @@
 
 - Updated dependencies [762d745]
 - Updated dependencies [b704a42]
-  - @babytalk/standard-config@0.1.0
-  - @babytalk/vite-config@0.0.1
+  - @bubsie/standard-config@0.1.0
+  - @bubsie/vite-config@0.0.1

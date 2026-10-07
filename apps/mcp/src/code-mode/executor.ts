@@ -15,7 +15,7 @@ export interface Executor {
 
 /**
  * Node.js VM-based executor. Runs LLM-generated code in an isolated V8 context.
- * Tool functions are injected as `babytalk.toolName()` globals.
+ * Tool functions are injected as `bubsie.toolName()` globals.
  */
 export class NodeVmExecutor implements Executor {
   private readonly timeout: number;
@@ -37,15 +37,14 @@ export class NodeVmExecutor implements Executor {
         logs.push(`[warn] ${args.map(String).join(" ")}`),
     };
 
-    // Create the babytalk namespace with all tool functions
-    const babytalk: Record<string, (...args: unknown[]) => Promise<unknown>> =
-      {};
+    // Create the bubsie namespace with all tool functions
+    const bubsie: Record<string, (...args: unknown[]) => Promise<unknown>> = {};
     for (const [name, fn] of Object.entries(fns)) {
-      babytalk[name] = fn;
+      bubsie[name] = fn;
     }
 
     const context = vm.createContext({
-      babytalk,
+      bubsie,
       console,
     });
 

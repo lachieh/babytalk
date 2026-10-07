@@ -4,9 +4,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: babytalk
-      POSTGRES_USER: babytalk
-      POSTGRES_PASSWORD: babytalk
+      POSTGRES_DB: bubsie
+      POSTGRES_USER: bubsie
+      POSTGRES_PASSWORD: bubsie
     volumes:
       - pgdata:/var/lib/postgresql/data
 

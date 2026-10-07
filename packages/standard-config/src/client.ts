@@ -19,7 +19,7 @@ const doFetch = async (url: string): Promise<Record<string, unknown>> => {
  *
  * Usage:
  * ```ts
- * import { fetchPublicConfig } from "@babytalk/standard-config/client";
+ * import { fetchPublicConfig } from "@bubsie/standard-config/client";
  * const config = await fetchPublicConfig<{ api_url: string }>();
  * ```
  */

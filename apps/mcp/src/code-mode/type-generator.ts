@@ -61,8 +61,8 @@ const formatParams = (schema: Record<string, unknown>): string => {
  */
 export const generateTypes = (tools: ToolDescriptor[]): string => {
   const lines = [
-    "// BabyTalk API — available via the `babytalk` namespace",
-    "declare namespace babytalk {",
+    "// Bubsie API — available via the `bubsie` namespace",
+    "declare namespace bubsie {",
   ];
 
   for (const tool of tools) {

@@ -1,5 +1,5 @@
 {
-  "name": "@babytalk/api",
+  "name": "@bubsie/api",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,10 +11,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@babytalk/db": "workspace:*",
-    "@babytalk/standard-config": "workspace:*",
-    "@babytalk/vite-config": "workspace:*",
-    "@babytalk/zpages": "workspace:*",
+    "@bubsie/db": "workspace:*",
+    "@bubsie/standard-config": "workspace:*",
+    "@bubsie/vite-config": "workspace:*",
+    "@bubsie/zpages": "workspace:*",
     "@hono/node-server": "^1.19.14",
     "@pothos/core": "^4.12.0",
     "@pothos/plugin-drizzle": "^0.17.0",
@@ -28,7 +28,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@babytalk/tsconfig": "workspace:*",
+    "@bubsie/tsconfig": "workspace:*",
     "@types/nodemailer": "^7.0.11",
     "typescript": "^5.9.3",
     "vite": "^8.0.10",

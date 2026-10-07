@@ -10,11 +10,11 @@ origin: docs/brainstorms/2026-03-18-standard-config-requirements.md
 
 ## Overview
 
-Create `@babytalk/standard-config` — a schema-validated config loading package that discovers YAML/JSON config files with a defined precedence order, deep-merges them, overlays environment variables, and validates the result against any standard-schema@1.1 compatible schema. It also generates JSON Schema and TypeScript types via a shared generation core, exposed through an unplugin (Vite, webpack, etc.) and a CLI.
+Create `@bubsie/standard-config` — a schema-validated config loading package that discovers YAML/JSON config files with a defined precedence order, deep-merges them, overlays environment variables, and validates the result against any standard-schema@1.1 compatible schema. It also generates JSON Schema and TypeScript types via a shared generation core, exposed through an unplugin (Vite, webpack, etc.) and a CLI.
 
 ## Problem Statement
 
-The babytalk monorepo uses raw `process.env` access across all apps with no validation, no defaults, and no type safety. Seven env vars in the API and one in the web app are accessed inline with ad-hoc defaults or bare `throw` checks. There is no shared convention, no schema, and no way to know at startup whether config is valid. (see origin: `docs/brainstorms/2026-03-18-standard-config-requirements.md`)
+The bubsie monorepo uses raw `process.env` access across all apps with no validation, no defaults, and no type safety. Seven env vars in the API and one in the web app are accessed inline with ad-hoc defaults or bare `throw` checks. There is no shared convention, no schema, and no way to know at startup whether config is valid. (see origin: `docs/brainstorms/2026-03-18-standard-config-requirements.md`)
 
 ## Proposed Solution
 
@@ -216,7 +216,7 @@ None — the schema library is brought by the user and accessed only through the
 **Tasks:**
 
 - [ ] Create `packages/standard-config/` with `package.json`, `tsconfig.json`
-- [ ] Set up `exports` following `@babytalk/zpages` pattern for subpaths
+- [ ] Set up `exports` following `@bubsie/zpages` pattern for subpaths
 - [ ] Add to `pnpm-workspace.yaml` (already covered by `packages/*` glob)
 - [ ] Add `turbo.json` build task dependencies if needed
 - [ ] Implement `src/loader/discover.ts` — file path generation from prefix + root, existence checks, format conflict detection
@@ -295,7 +295,7 @@ None — the schema library is brought by the user and accessed only through the
 
 ### Phase 5: Integration with Existing Apps
 
-**Goal:** Replace raw `process.env` usage in `apps/api` and `apps/web` with `@babytalk/standard-config`.
+**Goal:** Replace raw `process.env` usage in `apps/api` and `apps/web` with `@bubsie/standard-config`.
 
 **Tasks:**
 
@@ -305,7 +305,7 @@ None — the schema library is brought by the user and accessed only through the
 - [ ] Replace `apps/web/src/lib/env.ts` with standard-config
 - [ ] Add unplugin to web's Next.js config (or use CLI in build script)
 - [ ] Run generation, commit `.gen.ts` and `.schema.json` files
-- [ ] Update `apps/web/next.config.ts` `transpilePackages` to include `@babytalk/standard-config`
+- [ ] Update `apps/web/next.config.ts` `transpilePackages` to include `@bubsie/standard-config`
 
 **Files:**
 
@@ -343,7 +343,7 @@ None — the schema library is brought by the user and accessed only through the
 ### Internal References
 
 - Package exports pattern: `packages/zpages/package.json` (subpath exports with `types`/`import`/`default`)
-- Package tsconfig pattern: `packages/db/tsconfig.json` (extends `@babytalk/tsconfig/node.json`)
+- Package tsconfig pattern: `packages/db/tsconfig.json` (extends `@bubsie/tsconfig/node.json`)
 - AGENTS.md "Live Types via publishConfig" rules for new internal packages
 - Current env var usage: `apps/api/src/index.ts`, `apps/api/src/auth/jwt.ts`, `apps/api/src/email/send.ts`, `apps/web/src/lib/env.ts`
 

@@ -7,9 +7,9 @@
       "description": "PostgreSQL connection string"
     },
     "jwtSecret": {
-      "default": "dev-secret-change-me",
-      "description": "Secret key for signing JWTs",
-      "type": "string"
+      "type": "string",
+      "minLength": 16,
+      "description": "Secret key for signing JWTs"
     },
     "port": {
       "default": 4000,
@@ -22,14 +22,14 @@
       "type": "string"
     },
     "smtpFrom": {
-      "default": "noreply@babytalk.dev",
-      "description": "Sender email address",
-      "type": "string"
+      "type": "string",
+      "minLength": 1,
+      "description": "Sender email address, e.g. noreply@example.com"
     },
     "smtpHost": {
-      "default": "localhost",
-      "description": "SMTP server hostname",
-      "type": "string"
+      "type": "string",
+      "minLength": 1,
+      "description": "SMTP server hostname"
     },
     "smtpPass": {
       "default": "",
@@ -47,12 +47,16 @@
       "type": "string"
     },
     "webUrl": {
-      "default": "http://localhost:3000",
-      "description": "Frontend URL for CORS and email links",
-      "type": "string"
+      "type": "string",
+      "format": "uri",
+      "description": "Public URL of the web app, used for CORS, passkeys, and email links"
     }
   },
   "required": [
-    "databaseUrl"
+    "databaseUrl",
+    "jwtSecret",
+    "smtpFrom",
+    "smtpHost",
+    "webUrl"
   ]
 }

@@ -1,14 +1,14 @@
 "use client";
 
-import { fetchPublicConfig } from "@babytalk/standard-config/client";
+import { fetchPublicConfig } from "@bubsie/standard-config/client";
 import { createContext, useContext, useEffect, useState } from "react";
 
 import type { PublicConfig } from "@/config.gen";
 
 /**
  * Runtime config cache — shared across all client code.
- * Populated on first fetch from /.well-known/config.
- * Falls back to process.env (build-time) values until loaded.
+ * Populated on first fetch from /.well-known/config. The server refuses to
+ * start without these values, so there are no build-time fallbacks.
  */
 let runtimeConfig: PublicConfig | null = null;
 let configPromise: Promise<PublicConfig> | null = null;
@@ -28,23 +28,24 @@ export const loadRuntimeConfig = (): Promise<PublicConfig> => {
 /** Synchronous read — returns cached config or null if not yet loaded. */
 export const getRuntimeConfig = (): PublicConfig | null => runtimeConfig;
 
-/** Get the API URL, preferring runtime config over build-time env vars. */
-export const getApiUrl = (): string =>
-  runtimeConfig?.apiUrl ||
-  process.env.NEXT_PUBLIC_BABYTALK_WEB_API_URL ||
-  "http://localhost:4000/graphql";
+const requireRuntimeConfig = (): PublicConfig => {
+  if (!runtimeConfig) {
+    throw new Error(
+      "Runtime config not loaded. Await loadRuntimeConfig() before reading it."
+    );
+  }
+  return runtimeConfig;
+};
 
-/** Get the Tambo URL, preferring runtime config over build-time env vars. */
-export const getTamboUrl = (): string =>
-  runtimeConfig?.tamboUrl ||
-  process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_URL ||
-  "https://api.tambo.co";
+/** Get the API URL from the runtime config. */
+export const getApiUrl = (): string => requireRuntimeConfig().apiUrl;
 
-/** Get the Tambo API key, preferring runtime config over build-time env vars. */
+/** Get the Tambo URL from the runtime config. */
+export const getTamboUrl = (): string => requireRuntimeConfig().tamboUrl;
+
+/** Get the Tambo API key from the runtime config. */
 export const getTamboApiKey = (): string =>
-  runtimeConfig?.tamboApiKey ||
-  process.env.NEXT_PUBLIC_BABYTALK_WEB_TAMBO_API_KEY ||
-  "";
+  requireRuntimeConfig().tamboApiKey ?? "";
 
 /* ── React context for components that need to re-render on config load ── */
 

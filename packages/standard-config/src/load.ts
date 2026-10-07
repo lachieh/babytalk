@@ -33,7 +33,7 @@ const collectKeys = (obj: Record<string, unknown>, prefix = ""): string[] => {
  *
  * @example
  * ```ts
- * import { loadConfig } from "@babytalk/standard-config";
+ * import { loadConfig } from "@bubsie/standard-config";
  * import configDef from "./config";
  *
  * const config = await loadConfig(configDef);

@@ -1,4 +1,4 @@
-import { createReadyzCheckHandler } from "@babytalk/zpages/next";
+import { createReadyzCheckHandler } from "@bubsie/zpages/next";
 
 import { zpages } from "@/app/(z-pages)/_lib/zpages";
 

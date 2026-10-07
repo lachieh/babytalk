@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { db, deviceCodes, users } from "@babytalk/db";
+import { db, deviceCodes, users } from "@bubsie/db";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 
 import { issueAuthTokens } from "./session";

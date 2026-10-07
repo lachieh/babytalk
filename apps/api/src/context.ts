@@ -1,5 +1,5 @@
-import { db } from "@babytalk/db";
-import type { Database } from "@babytalk/db";
+import { db } from "@bubsie/db";
+import type { Database } from "@bubsie/db";
 import type { YogaInitialContext } from "graphql-yoga";
 
 import { verifyToken } from "./auth/jwt";

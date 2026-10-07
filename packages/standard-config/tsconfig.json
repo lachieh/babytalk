@@ -1,5 +1,5 @@
 {
-  "extends": "@babytalk/tsconfig/node.json",
+  "extends": "@bubsie/tsconfig/node.json",
   "compilerOptions": {
     "noEmit": true,
     "strictNullChecks": true,

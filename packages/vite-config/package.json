@@ -1,5 +1,5 @@
 {
-  "name": "@babytalk/vite-config",
+  "name": "@bubsie/vite-config",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -10,10 +10,10 @@
     }
   },
   "dependencies": {
-    "@babytalk/standard-config": "workspace:*",
+    "@bubsie/standard-config": "workspace:*",
     "vite": "^8.0.10"
   },
   "devDependencies": {
-    "@babytalk/tsconfig": "workspace:*"
+    "@bubsie/tsconfig": "workspace:*"
   }
 }

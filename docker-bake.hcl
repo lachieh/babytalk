@@ -3,11 +3,11 @@ variable "REGISTRY" {
 }
 
 variable "API_TAGS" {
-  default = ["babytalk-api:latest"]
+  default = ["bubsie-api:latest"]
 }
 
 variable "WEB_TAGS" {
-  default = ["babytalk-web:latest"]
+  default = ["bubsie-web:latest"]
 }
 
 variable "API_LABELS" {

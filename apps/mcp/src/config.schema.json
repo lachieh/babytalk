@@ -5,9 +5,9 @@
       "type": "object",
       "properties": {
         "api_url": {
-          "default": "http://localhost:4000/graphql",
-          "description": "BabyTalk GraphQL API URL",
-          "type": "string"
+          "type": "string",
+          "format": "uri",
+          "description": "Bubsie GraphQL API URL"
         },
         "port": {
           "default": 8262,
@@ -25,6 +25,7 @@
         }
       },
       "required": [
+        "api_url",
         "mode",
         "token"
       ]
@@ -33,9 +34,9 @@
       "type": "object",
       "properties": {
         "api_url": {
-          "default": "http://localhost:4000/graphql",
-          "description": "BabyTalk GraphQL API URL",
-          "type": "string"
+          "type": "string",
+          "format": "uri",
+          "description": "Bubsie GraphQL API URL"
         },
         "port": {
           "default": 8262,
@@ -53,6 +54,7 @@
         }
       },
       "required": [
+        "api_url",
         "mode"
       ]
     }

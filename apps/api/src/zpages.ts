@@ -1,5 +1,5 @@
-import { db } from "@babytalk/db";
-import { ZPages } from "@babytalk/zpages";
+import { db } from "@bubsie/db";
+import { ZPages } from "@bubsie/zpages";
 import { sql } from "drizzle-orm";
 
 export const zpages = new ZPages().addReadinessCheck("postgres", async () => {

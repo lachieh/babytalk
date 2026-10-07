@@ -1,5 +1,5 @@
 {
-  "name": "babytalk",
+  "name": "bubsie",
   "private": true,
   "scripts": {
     "dev": "turbo dev",
@@ -9,9 +9,9 @@
     "typecheck": "turbo typecheck",
     "test": "turbo test",
     "prepare": "lefthook install || true",
-    "db:generate": "turbo db:generate --filter=@babytalk/db",
-    "db:migrate": "turbo db:migrate --filter=@babytalk/db",
-    "db:studio": "pnpm --filter @babytalk/db drizzle-kit studio",
+    "db:generate": "turbo db:generate --filter=@bubsie/db",
+    "db:migrate": "turbo db:migrate --filter=@bubsie/db",
+    "db:studio": "pnpm --filter @bubsie/db drizzle-kit studio",
     "docker:build": "docker buildx bake -f docker-bake.hcl",
     "docker:up": "docker buildx bake -f docker-bake.hcl --load && docker compose -f docker-compose.test.yml up -d",
     "docker:down": "docker compose -f docker-compose.test.yml down",

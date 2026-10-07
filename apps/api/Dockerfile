@@ -3,7 +3,7 @@ FROM base AS installer
 # copy all source files and prune to app dependencies
 COPY packages ./packages
 COPY apps/api ./apps/api
-RUN turbo prune @babytalk/api --docker
+RUN turbo prune @bubsie/api --docker
 
 FROM base AS builder
 
@@ -16,7 +16,7 @@ COPY --from=installer /app/out/full/ .
 RUN --mount=type=secret,id=TURBO_TOKEN,env=TURBO_TOKEN \
     --mount=type=secret,id=TURBO_TEAM,env=TURBO_TEAM \
     --mount=type=cache,id=pnpm,target=/root/.local/share/pnpm/store \
-    pnpm turbo build --filter=@babytalk/api
+    pnpm turbo build --filter=@bubsie/api
 
 FROM runner
 

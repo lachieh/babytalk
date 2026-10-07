@@ -1,4 +1,4 @@
-import { babies, events, users } from "@babytalk/db";
+import { babies, events, users } from "@bubsie/db";
 import { and, asc, eq, gt, gte, inArray, isNull, lt, or } from "drizzle-orm";
 
 import { requireCurrentUser } from "../auth/require-auth";

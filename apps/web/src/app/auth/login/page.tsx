@@ -44,11 +44,11 @@ export default function LoginPage() {
         if (!available || cancelled) return;
         const result = await signInWithPasskey(null, { conditional: true });
         if (cancelled) return;
-        localStorage.setItem("babytalk_token", result.token);
-        localStorage.setItem("babytalk_refresh_token", result.refreshToken);
+        localStorage.setItem("bubsie_token", result.token);
+        localStorage.setItem("bubsie_refresh_token", result.refreshToken);
         disableDeviceMode();
-        const stored = localStorage.getItem("babytalk_auth_redirect");
-        if (stored) localStorage.removeItem("babytalk_auth_redirect");
+        const stored = localStorage.getItem("bubsie_auth_redirect");
+        if (stored) localStorage.removeItem("bubsie_auth_redirect");
         router.replace(stored ?? "/dashboard");
       } catch {
         // Autofill cancelled or unsupported — fall through silently.
@@ -65,11 +65,11 @@ export default function LoginPage() {
     setSigningInWithPasskey(true);
     try {
       const result = await signInWithPasskey(email.trim() || null);
-      localStorage.setItem("babytalk_token", result.token);
-      localStorage.setItem("babytalk_refresh_token", result.refreshToken);
+      localStorage.setItem("bubsie_token", result.token);
+      localStorage.setItem("bubsie_refresh_token", result.refreshToken);
       disableDeviceMode();
-      const stored = localStorage.getItem("babytalk_auth_redirect");
-      if (stored) localStorage.removeItem("babytalk_auth_redirect");
+      const stored = localStorage.getItem("bubsie_auth_redirect");
+      if (stored) localStorage.removeItem("bubsie_auth_redirect");
       router.replace(stored ?? "/dashboard");
     } catch (error) {
       if (error instanceof Error && error.name !== "NotAllowedError") {
@@ -85,7 +85,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
     if (redirect) {
-      localStorage.setItem("babytalk_auth_redirect", redirect);
+      localStorage.setItem("bubsie_auth_redirect", redirect);
     }
   }
 
@@ -178,11 +178,11 @@ export default function LoginPage() {
             required
             // oxlint-disable-next-line jsx-a11y/autocomplete-valid
             autoComplete="username webauthn"
-            className="min-h-[48px] rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base)] text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            className="min-h-[48px] rounded-md border border-neutral-200 bg-surface-raised px-4 py-3 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors duration-[var(--duration-fast)] focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
           />
           <button
             type="submit"
-            className="min-h-[48px] rounded-md bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98]"
+            className="min-h-[48px] rounded-md bg-primary-500 px-6 py-3 text-base font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98]"
           >
             Send magic link
           </button>

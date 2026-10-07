@@ -3,16 +3,27 @@
   "type": "object",
   "properties": {
     "apiUrl": {
-      "default": "http://localhost:4000/graphql",
-      "type": "string"
+      "type": "string",
+      "format": "uri",
+      "description": "Public URL of the GraphQL API"
+    },
+    "sourceUrl": {
+      "description": "Source code link shown on the homepage (hidden if unset)",
+      "type": "string",
+      "format": "uri"
     },
     "tamboApiKey": {
       "default": "",
       "type": "string"
     },
     "tamboUrl": {
-      "default": "https://api.tambo.co",
-      "type": "string"
+      "type": "string",
+      "format": "uri",
+      "description": "Tambo API URL"
     }
-  }
+  },
+  "required": [
+    "apiUrl",
+    "tamboUrl"
+  ]
 }

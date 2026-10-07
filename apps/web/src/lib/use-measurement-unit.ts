@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from "react";
 
 export type MeasurementUnit = "imperial" | "metric";
 
-const STORAGE_KEY = "babytalk_measurement_unit";
+const STORAGE_KEY = "bubsie_measurement_unit";
 
 function localeDefault(): MeasurementUnit {
   if (typeof navigator === "undefined") return "metric";

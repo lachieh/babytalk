@@ -97,7 +97,7 @@ if (config.mode === "stdio") {
 
   httpServer.listen(port, () => {
     console.log(
-      `BabyTalk MCP server listening on http://localhost:${String(port)}/mcp`
+      `Bubsie MCP server listening on http://localhost:${String(port)}/mcp`
     );
   });
 }

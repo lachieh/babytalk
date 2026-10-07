@@ -1,4 +1,4 @@
-import { babies, measurements, users } from "@babytalk/db";
+import { babies, measurements, users } from "@bubsie/db";
 import { and, desc, eq } from "drizzle-orm";
 
 import type { Context } from "../context";

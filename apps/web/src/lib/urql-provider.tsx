@@ -19,7 +19,7 @@ export const UrqlProvider = ({
         if (typeof window === "undefined") {
           return {};
         }
-        const token = localStorage.getItem("babytalk_token");
+        const token = localStorage.getItem("bubsie_token");
         return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       },
       url: apiUrl,

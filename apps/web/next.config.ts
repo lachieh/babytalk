@@ -1,24 +1,23 @@
-import { withStandardConfig } from "@babytalk/standard-config/next";
 import type { NextConfig } from "next";
 
-import configDefinition from "./src/config";
-
+// Public config is served at runtime from /.well-known/config, so one image
+// works for any deployment. Nothing environment-specific is baked into the build.
 const nextConfig: NextConfig = {
   output: "standalone",
   transpilePackages: [
-    "@babytalk/db",
-    "@babytalk/standard-config",
-    "@babytalk/zpages",
+    "@bubsie/db",
+    "@bubsie/standard-config",
+    "@bubsie/zpages",
   ],
   turbopack: {
     rules: {
       "**/config.ts": {
         as: "*.ts",
         condition: { not: "foreign" },
-        loaders: ["@babytalk/standard-config/loader"],
+        loaders: ["@bubsie/standard-config/loader"],
       },
     },
   },
 };
 
-export default withStandardConfig(configDefinition, nextConfig);
+export default nextConfig;

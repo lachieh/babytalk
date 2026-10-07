@@ -33,7 +33,7 @@ export const registerServiceWorker = () => {
           registration as ServiceWorkerRegistration & {
             sync: { register: (tag: string) => Promise<void> };
           }
-        ).sync.register("babytalk-sync");
+        ).sync.register("bubsie-sync");
       }
 
       navigator.serviceWorker.addEventListener("message", (event) => {

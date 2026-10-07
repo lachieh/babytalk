@@ -1,0 +1,54 @@
+# Run your own Bubsie. Put the settings below in a .env file next to this one,
+# then: docker compose -f docker-compose.selfhost.yml up -d
+#
+# The browser talks to both the web app and the API, so each needs a public
+# URL behind your reverse proxy (Caddy, Traefik, nginx, Coolify, ...).
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: bubsie
+      POSTGRES_USER: bubsie
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bubsie"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    image: ${BUBSIE_IMAGE_REPO:-ghcr.io/lachieh}/bubsie-api:${BUBSIE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      BUBSIE_API_DATABASE_URL: postgresql://bubsie:${POSTGRES_PASSWORD}@postgres:5432/bubsie
+      BUBSIE_API_JWT_SECRET: ${BUBSIE_API_JWT_SECRET:?set BUBSIE_API_JWT_SECRET}
+      BUBSIE_API_WEB_URL: ${BUBSIE_API_WEB_URL:?set BUBSIE_API_WEB_URL to the public web URL}
+      BUBSIE_API_SMTP_HOST: ${BUBSIE_API_SMTP_HOST:?set BUBSIE_API_SMTP_HOST}
+      BUBSIE_API_SMTP_PORT: ${BUBSIE_API_SMTP_PORT:-587}
+      BUBSIE_API_SMTP_USER: ${BUBSIE_API_SMTP_USER:-}
+      BUBSIE_API_SMTP_PASS: ${BUBSIE_API_SMTP_PASS:-}
+      BUBSIE_API_SMTP_FROM: ${BUBSIE_API_SMTP_FROM:?set BUBSIE_API_SMTP_FROM}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    image: ${BUBSIE_IMAGE_REPO:-ghcr.io/lachieh}/bubsie-web:${BUBSIE_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      BUBSIE_WEB_API_URL: ${BUBSIE_WEB_API_URL:?set BUBSIE_WEB_API_URL to the public API URL, ending in /graphql}
+      BUBSIE_WEB_TAMBO_URL: ${BUBSIE_WEB_TAMBO_URL:-https://api.tambo.co}
+      BUBSIE_WEB_TAMBO_API_KEY: ${BUBSIE_WEB_TAMBO_API_KEY:-}
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

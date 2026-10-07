@@ -221,7 +221,7 @@ export default function SetupPage() {
 
           <div className="mt-12 flex flex-col gap-3">
             <button
-              className="min-h-[56px] rounded-lg bg-primary-500 px-6 py-4 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+              className="min-h-[56px] rounded-lg bg-primary-500 px-6 py-4 text-base font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
               disabled={loading}
               onClick={handleCreateHousehold}
               type="button"
@@ -389,7 +389,7 @@ export default function SetupPage() {
             />
           </div>
           <button
-            className="mt-4 min-h-[56px] rounded-lg bg-primary-500 px-6 py-3 text-base)] font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
+            className="mt-4 min-h-[56px] rounded-lg bg-primary-500 px-6 py-3 text-base font-semibold text-white transition-[background-color,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 active:scale-[0.98] disabled:opacity-50"
             disabled={loading || !babyName || !birthDate}
             type="submit"
           >

@@ -4,27 +4,26 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: babytalk
-      POSTGRES_USER: babytalk
-      POSTGRES_PASSWORD: babytalk
+      POSTGRES_DB: bubsie
+      POSTGRES_USER: bubsie
+      POSTGRES_PASSWORD: bubsie
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U babytalk"]
+      test: ["CMD-SHELL", "pg_isready -U bubsie"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   api:
-    image: babytalk-api:latest
+    image: bubsie-api:latest
     ports:
       - "4000:4000"
     environment:
-      DATABASE_URL: postgresql://babytalk:babytalk@postgres:5432/babytalk
-      JWT_SECRET: test-secret-do-not-use-in-production
-      SMTP_HOST: mailpit
-      SMTP_PORT: "1025"
-      SMTP_FROM: noreply@babytalk.dev
-      WEB_URL: http://localhost:3000
-      PORT: "4000"
+      BUBSIE_API_DATABASE_URL: postgresql://bubsie:bubsie@postgres:5432/bubsie
+      BUBSIE_API_JWT_SECRET: test-secret-do-not-use-in-production
+      BUBSIE_API_SMTP_HOST: mailpit
+      BUBSIE_API_SMTP_PORT: "1025"
+      BUBSIE_API_SMTP_FROM: noreply@localhost
+      BUBSIE_API_WEB_URL: http://localhost:3000
     healthcheck:
       test:
         [
@@ -42,11 +41,13 @@ services:
         condition: service_healthy
 
   web:
-    image: babytalk-web:latest
+    image: bubsie-web:latest
     ports:
       - "3000:3000"
     environment:
-      API_URL: http://api:4000/graphql
+      # Read by the browser via /.well-known/config, so use the host-mapped port.
+      BUBSIE_WEB_API_URL: http://localhost:4000/graphql
+      BUBSIE_WEB_TAMBO_URL: https://api.tambo.co
     healthcheck:
       test:
         [

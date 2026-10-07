@@ -1,18 +1,16 @@
 name: CD
 
+# Builds and pushes images to GHCR. Deployments pull from there:
+#   nightly  ← every push to main (staging)
+#   latest   ← every release tag (production)
+
 on:
   push:
     branches: [main]
     tags:
-      - "@babytalk/api@*"
-      - "@babytalk/web@*"
+      - "@bubsie/api@*"
+      - "@bubsie/web@*"
   workflow_dispatch:
-    inputs:
-      environment:
-        description: Deploy target
-        type: choice
-        options: [staging, production]
-        default: staging
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -68,8 +66,8 @@ jobs:
 
           for pkg in $AFFECTED; do
             case "$pkg" in
-              @babytalk/api) API=true ;;
-              @babytalk/web) WEB=true ;;
+              @bubsie/api) API=true ;;
+              @bubsie/web) WEB=true ;;
             esac
           done
 
@@ -85,7 +83,7 @@ jobs:
     if: |
       always() && (
         (needs.changes.result == 'success' && needs.changes.outputs.api == 'true') ||
-        startsWith(github.ref, 'refs/tags/@babytalk/api@') ||
+        startsWith(github.ref, 'refs/tags/@bubsie/api@') ||
         github.event_name == 'workflow_dispatch'
       )
     steps:
@@ -98,12 +96,12 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/babytalk-api
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bubsie-api
           bake-target: api
           tags: |
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
-            type=match,pattern=@babytalk/api@(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=match,pattern=@bubsie/api@(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/') }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
       - uses: docker/setup-buildx-action@v4
       - uses: docker/bake-action@v7
@@ -120,8 +118,11 @@ jobs:
         run: | #shell
           IMAGE=$(echo "${{ steps.meta.outputs.tags }}" | head -1)
           docker run -d --name smoke \
-            -e BABYTALK_API_DATABASE_URL="postgresql://x:x@localhost:5432/x" \
-            -e BABYTALK_API_JWT_SECRET="ci" \
+            -e BUBSIE_API_DATABASE_URL="postgresql://x:x@localhost:5432/x" \
+            -e BUBSIE_API_JWT_SECRET="ci-smoke-test-secret" \
+            -e BUBSIE_API_WEB_URL="http://localhost:3000" \
+            -e BUBSIE_API_SMTP_HOST="localhost" \
+            -e BUBSIE_API_SMTP_FROM="noreply@localhost" \
             -e SKIP_MIGRATIONS=1 \
             -p 4000:4000 "$IMAGE"
           sleep 5
@@ -154,7 +155,7 @@ jobs:
     if: |
       always() && (
         (needs.changes.result == 'success' && needs.changes.outputs.web == 'true') ||
-        startsWith(github.ref, 'refs/tags/@babytalk/web@') ||
+        startsWith(github.ref, 'refs/tags/@bubsie/web@') ||
         github.event_name == 'workflow_dispatch'
       )
     steps:
@@ -167,12 +168,12 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/babytalk-web
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/bubsie-web
           bake-target: web
           tags: |
             type=raw,value=nightly,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=sha-,enable=${{ github.ref == 'refs/heads/main' }}
-            type=match,pattern=@babytalk/web@(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/') }}
+            type=match,pattern=@bubsie/web@(.*),group=1,enable=${{ startsWith(github.ref, 'refs/tags/') }}
             type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/') }}
       - uses: docker/setup-buildx-action@v4
       - uses: docker/bake-action@v7
@@ -185,94 +186,6 @@ jobs:
           secrets: |
             GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}
 
-  # ── Deploy API to staging ───────────────────────────────
-  deploy-api-staging:
-    name: Deploy API Staging
-    runs-on: ubuntu-latest
-    needs: [build-api]
-    if: |
-      needs.build-api.result == 'success' && (
-        github.ref == 'refs/heads/main' ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
-      )
-    environment: staging
-    env:
-      COOLIFY_API_BASE_URL: ${{ vars.COOLIFY_API_BASE_URL }}
-      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-      COOLIFY_UUID_API: ${{ vars.COOLIFY_UUID_API }}
-    steps:
-      - run: |
-          curl --fail --request POST \
-            "$COOLIFY_API_BASE_URL/api/v1/applications/$COOLIFY_UUID_API/restart" \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --retry 3 --retry-delay 5
-
-  # ── Deploy Web to staging ───────────────────────────────
-  deploy-web-staging:
-    name: Deploy Web Staging
-    runs-on: ubuntu-latest
-    needs: [build-web]
-    if: |
-      needs.build-web.result == 'success' && (
-        github.ref == 'refs/heads/main' ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'staging')
-      )
-    environment: staging
-    env:
-      COOLIFY_API_BASE_URL: ${{ vars.COOLIFY_API_BASE_URL }}
-      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-      COOLIFY_UUID_WEB: ${{ vars.COOLIFY_UUID_WEB }}
-    steps:
-      - run: |
-          curl --fail --request POST \
-            "$COOLIFY_API_BASE_URL/api/v1/applications/$COOLIFY_UUID_WEB/restart" \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --retry 3 --retry-delay 5
-
-  # ── Deploy API to production ────────────────────────────
-  deploy-api-production:
-    name: Deploy API Production
-    runs-on: ubuntu-latest
-    needs: [build-api]
-    if: |
-      needs.build-api.result == 'success' && (
-        startsWith(github.ref, 'refs/tags/@babytalk/api@') ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-      )
-    environment: production
-    env:
-      COOLIFY_API_BASE_URL: ${{ vars.COOLIFY_API_BASE_URL }}
-      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-      COOLIFY_UUID_API: ${{ vars.COOLIFY_UUID_API }}
-    steps:
-      - run: |
-          curl --fail --request POST \
-            "$COOLIFY_API_BASE_URL/api/v1/applications/$COOLIFY_UUID_API/restart" \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --retry 3 --retry-delay 5
-
-  # ── Deploy Web to production ────────────────────────────
-  deploy-web-production:
-    name: Deploy Web Production
-    runs-on: ubuntu-latest
-    needs: [build-web]
-    if: |
-      needs.build-web.result == 'success' && (
-        startsWith(github.ref, 'refs/tags/@babytalk/web@') ||
-        (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production')
-      )
-    environment: production
-    env:
-      COOLIFY_API_BASE_URL: ${{ vars.COOLIFY_API_BASE_URL }}
-      COOLIFY_API_TOKEN: ${{ secrets.COOLIFY_API_TOKEN }}
-      COOLIFY_UUID_WEB: ${{ vars.COOLIFY_UUID_WEB }}
-    steps:
-      - run: |
-          curl --fail --request POST \
-            "$COOLIFY_API_BASE_URL/api/v1/applications/$COOLIFY_UUID_WEB/restart" \
-            --header "Authorization: Bearer $COOLIFY_API_TOKEN" \
-            --retry 3 --retry-delay 5
-
   # ── Cleanup old images ──────────────────────────────────
   cleanup:
     name: Prune old images
@@ -282,7 +195,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        package: [babytalk-api, babytalk-web]
+        package: [bubsie-api, bubsie-web]
     permissions:
       packages: write
     steps:

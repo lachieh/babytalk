@@ -13,7 +13,7 @@ import { generate } from "../src/generator/core";
 
 const zodSchemaSource = `
 import { z } from "zod";
-import { defineConfig } from "@babytalk/standard-config";
+import { defineConfig } from "@bubsie/standard-config";
 
 export default defineConfig({
   prefix: "app",
@@ -39,10 +39,10 @@ describe(generate, () => {
     root = mkdtempSync(join(tmpdir(), "sc-gen-"));
     mkdirSync(join(root, "src"), { recursive: true });
     // Symlink deps so jiti can resolve them from the temp dir
-    mkdirSync(join(root, "node_modules", "@babytalk"), { recursive: true });
+    mkdirSync(join(root, "node_modules", "@bubsie"), { recursive: true });
     symlinkSync(
       pkgRoot,
-      join(root, "node_modules", "@babytalk", "standard-config")
+      join(root, "node_modules", "@bubsie", "standard-config")
     );
     symlinkSync(
       join(pkgRoot, "node_modules", "zod"),
@@ -124,9 +124,9 @@ describe(generate, () => {
       join(root, "src", "config.gen.d.ts"),
       "utf8"
     );
-    expect(envDtsContent).toContain("APP__PORT");
-    expect(envDtsContent).toContain("APP__DATABASE__URL");
-    expect(envDtsContent).toContain("NEXT_PUBLIC_APP__HOST");
+    expect(envDtsContent).toContain("APP_PORT");
+    expect(envDtsContent).toContain("APP_DATABASE__URL");
+    expect(envDtsContent).toContain("NEXT_PUBLIC_APP_HOST");
     expect(envDtsContent).toContain("ProcessEnv");
     expect(envDtsContent).toContain("ImportMetaEnv");
   });
@@ -136,7 +136,7 @@ describe(generate, () => {
       join(root, "src", "config.ts"),
       `
 import { z } from "zod";
-import { defineConfig } from "@babytalk/standard-config";
+import { defineConfig } from "@bubsie/standard-config";
 
 export default defineConfig({
   prefix: "myapp",
@@ -159,6 +159,30 @@ export default defineConfig({
 
     expect(envDtsContent).toContain("MYAPP__SERVER__PORT");
     expect(envDtsContent).toContain("MYAPP__SERVER__HOST");
+  });
+
+  it("splits camelCase keys into words in env var names", async () => {
+    writeFileSync(
+      join(root, "src", "config.ts"),
+      `
+import { z } from "zod";
+import { defineConfig } from "@bubsie/standard-config";
+
+export default defineConfig({
+  prefix: "app",
+  schema: z.object({ webUrl: z.string() }),
+});
+`
+    );
+
+    await generate({ root });
+    const envDtsContent = readFileSync(
+      join(root, "src", "config.gen.d.ts"),
+      "utf8"
+    );
+
+    expect(envDtsContent).toContain("APP_WEB_URL");
+    expect(envDtsContent).not.toContain("WEBURL");
   });
 
   it("throws for schema file without default export", async () => {

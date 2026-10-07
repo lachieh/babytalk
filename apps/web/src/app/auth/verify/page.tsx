@@ -55,9 +55,9 @@ const VerifyContent = () => {
           return;
         }
 
-        localStorage.setItem("babytalk_token", result.verifyMagicLink.token);
+        localStorage.setItem("bubsie_token", result.verifyMagicLink.token);
         localStorage.setItem(
-          "babytalk_refresh_token",
+          "bubsie_refresh_token",
           result.verifyMagicLink.refreshToken
         );
         disableDeviceMode();
@@ -76,9 +76,9 @@ const VerifyContent = () => {
         if (typeof window === "undefined") {
           storedRedirect = null;
         } else {
-          storedRedirect = localStorage.getItem("babytalk_auth_redirect");
+          storedRedirect = localStorage.getItem("bubsie_auth_redirect");
           if (storedRedirect) {
-            localStorage.removeItem("babytalk_auth_redirect");
+            localStorage.removeItem("bubsie_auth_redirect");
           }
         }
         router.push(redirectTo ?? storedRedirect ?? "/dashboard");

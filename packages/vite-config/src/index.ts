@@ -1,4 +1,4 @@
-import standardConfig from "@babytalk/standard-config/vite";
+import standardConfig from "@bubsie/standard-config/vite";
 import { defineConfig, mergeConfig } from "vite";
 import type { Plugin, UserConfig, ViteDevServer } from "vite";
 
@@ -30,7 +30,7 @@ function nodeServerPlugin(entry: string): Plugin {
   };
 
   return {
-    name: "babytalk:node-server",
+    name: "bubsie:node-server",
 
     configureServer(viteServer) {
       server = viteServer;

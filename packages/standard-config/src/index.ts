@@ -18,7 +18,7 @@ export type { GenerateOptions, GenerateResult } from "./generator/core";
  *
  * @example
  * ```ts
- * import { defineConfig } from "@babytalk/standard-config";
+ * import { defineConfig } from "@bubsie/standard-config";
  * import { z } from "zod";
  *
  * export default defineConfig({

@@ -54,19 +54,19 @@ jobs:
       postgres:
         image: postgres:17
         env:
-          POSTGRES_DB: babytalk
-          POSTGRES_USER: babytalk
-          POSTGRES_PASSWORD: babytalk
+          POSTGRES_DB: bubsie
+          POSTGRES_USER: bubsie
+          POSTGRES_PASSWORD: bubsie
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U babytalk"
+          --health-cmd="pg_isready -U bubsie"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://babytalk:babytalk@localhost:5432/babytalk
+      DATABASE_URL: postgresql://bubsie:bubsie@localhost:5432/bubsie
 
     steps:
       - uses: actions/checkout@v6
