@@ -302,18 +302,16 @@ Runs on PRs, pushes to main, and manual dispatch:
 5. `pnpm db:generate` + `pnpm db:migrate`
 6. `pnpm build`
 
-### Release Pipeline (`.github/workflows/release.yml`)
-
-On push to main: uses `changesets/action` to either open a "Version Packages"
-PR or (when that PR merges) create git tags.
-
 ### Image Pipeline (`.github/workflows/cd.yml`)
 
-Two trigger paths:
+On every push to main, `changesets/action` either opens a "Version Packages"
+PR or, when that PR merges, tags the released apps (`@bubsie/api@x.y.z`).
 
-- **Main branch commits**: Detects affected apps via `turbo --affected`, builds
+- **Every main commit**: Detects affected apps via `turbo --affected`, builds
   only changed Docker images, tags `nightly` + `sha-<hash>`.
-- **Tag push** (from changesets): Builds tagged app, tags semver + `latest`.
+- **Releases**: Apps tagged in the same run are also tagged with their version
+  and `latest`. This happens in the same run because tags pushed with
+  `GITHUB_TOKEN` don't trigger workflows.
 
 The API image gets a smoke test (`/livez`) before the job finishes. The
 workflow only builds and pushes images; hosts pull new tags themselves
