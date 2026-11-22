@@ -8,19 +8,37 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { SyncStatus } from "@/components/sync-status";
+import { takesAmount } from "@/lib/daily-totals";
+import type { BabyEvent, EventChanges, EventsAction } from "@/lib/event-outbox";
+import {
+  canRecord,
+  deriveEvents,
+  unsavedCounts,
+  unsavedTotal,
+} from "@/lib/event-outbox";
+import { currentUserId, gqlRequest } from "@/lib/gql-request";
+import { RECENT_EVENTS_LIMIT } from "@/lib/history-days";
+import {
+  adoptClosedTabs,
+  resumeOutbox,
+  dispatchOutbox as dispatch,
+  getOutboxState,
+  getServerOutboxState,
+  isOutboxDurable,
+  setOutboxBaby,
+  startOutbox,
+  subscribeOutbox,
+} from "@/lib/outbox-store";
+import { retryUntil } from "@/lib/retry-until";
+import type { ToastPhase } from "@/lib/toast-copy";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-export interface BabyEvent {
-  id: string;
-  type: string;
-  startedAt: string;
-  endedAt: string | null;
-  metadata: string;
-}
+export type { BabyEvent, SyncState } from "@/lib/event-outbox";
 
 export interface Baby {
   id: string;
@@ -29,11 +47,22 @@ export interface Baby {
   gender: string | null;
 }
 
-interface UndoableAction {
+export interface UndoableAction {
   id: string;
   label: string;
   eventId: string;
   expiresAt: number;
+  phase: ToastPhase;
+  event: BabyEvent;
+  canUndo: boolean;
+}
+
+export interface SyncSummary {
+  online: boolean;
+  queued: number;
+  failed: number;
+  /** Unsaved entries this device could not store: lost if the page closes. */
+  unstored: number;
 }
 
 interface BabyContextValue {
@@ -42,11 +71,14 @@ interface BabyContextValue {
   activeEvents: BabyEvent[];
   loading: boolean;
   refreshEvents: () => Promise<void>;
+  refreshBaby: () => Promise<void>;
   logEventDirect: (
     type: string,
     meta: Record<string, unknown>
-  ) => Promise<BabyEvent | null>;
+  ) => Promise<BabyEvent>;
   stopEvent: (id: string) => Promise<void>;
+  completeAmount: (id: string, amountMl: number | null) => void;
+  discardEvent: (id: string) => void;
   updateEventMeta: (
     id: string,
     type: string,
@@ -55,7 +87,11 @@ interface BabyContextValue {
     endedAt?: string | null
   ) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
+  retryEvent: (id: string) => Promise<void>;
+  retryFailed: () => void;
+  sync: SyncSummary;
   undoableAction: UndoableAction | null;
+  undo: () => void;
   dismissUndo: () => void;
 }
 
@@ -73,79 +109,40 @@ const GET_RECENT_EVENTS = `
   }
 `;
 
-const LOG_EVENT = `
-  mutation LogEvent(
-    $babyId: String!
-    $type: EventType!
-    $startedAt: String
-    $endedAt: String
-    $feedMeta: FeedMetadataInput
-    $sleepMeta: SleepMetadataInput
-    $diaperMeta: DiaperMetadataInput
-    $noteMeta: NoteMetadataInput
-    $pumpMeta: PumpMetadataInput
-  ) {
-    logEvent(
-      babyId: $babyId
-      type: $type
-      startedAt: $startedAt
-      endedAt: $endedAt
-      feedMeta: $feedMeta
-      sleepMeta: $sleepMeta
-      diaperMeta: $diaperMeta
-      noteMeta: $noteMeta
-      pumpMeta: $pumpMeta
-    ) {
-      id type startedAt endedAt metadata
-    }
-  }
-`;
-
-const DELETE_EVENT = `
-  mutation DeleteEvent($id: String!) {
-    deleteEvent(id: $id)
-  }
-`;
-
-const UPDATE_EVENT = `
-  mutation UpdateEvent($id: String!, $endedAt: String) {
-    updateEvent(id: $id, endedAt: $endedAt) {
-      id type startedAt endedAt metadata
-    }
-  }
-`;
-
-const UPDATE_EVENT_META = `
-  mutation UpdateEventMeta(
-    $id: String!
-    $startedAt: String
-    $endedAt: String
-    $feedMeta: FeedMetadataInput
-    $sleepMeta: SleepMetadataInput
-    $diaperMeta: DiaperMetadataInput
-    $noteMeta: NoteMetadataInput
-    $pumpMeta: PumpMetadataInput
-  ) {
-    updateEvent(
-      id: $id
-      startedAt: $startedAt
-      endedAt: $endedAt
-      feedMeta: $feedMeta
-      sleepMeta: $sleepMeta
-      diaperMeta: $diaperMeta
-      noteMeta: $noteMeta
-      pumpMeta: $pumpMeta
-    ) {
-      id type startedAt endedAt metadata
-    }
-  }
-`;
-
 /* ── Context ───────────────────────────────────────────────── */
 
 const BabyContext = createContext<BabyContextValue | null>(null);
 
-const UNDO_DURATION = 5000;
+/** Thrown when a change could not be recorded, so it will never be sent. A
+ * caller must not tell the person it was saved. */
+export class NotRecordedError extends Error {
+  constructor(id: string) {
+    super(`Change to ${id} could not be recorded`);
+    this.name = "NotRecordedError";
+  }
+}
+
+const record = (
+  action: Extract<EventsAction, { type: "update" | "delete" }>
+) => {
+  if (!canRecord(getOutboxState(), action))
+    throw new NotRecordedError(action.id);
+  dispatch(action);
+};
+
+/** Run `task`, turning a throw into a rejected promise for async callers. */
+const settled = (task: () => void): Promise<void> => {
+  try {
+    task();
+    return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
+
+export const UNDO_DURATION = 5000;
+
+const BABY_RETRY_MS = 15_000;
 
 export const BabyContextProvider = ({
   children,
@@ -153,46 +150,94 @@ export const BabyContextProvider = ({
   children: React.ReactNode;
 }) => {
   const [baby, setBaby] = useState<Baby | null>(null);
-  const [events, setEvents] = useState<BabyEvent[]>([]);
+  const state = useSyncExternalStore(
+    subscribeOutbox,
+    getOutboxState,
+    getServerOutboxState
+  );
+  const durable = useSyncExternalStore(
+    subscribeOutbox,
+    isOutboxDurable,
+    isOutboxDurable
+  );
   const [loading, setLoading] = useState(true);
+  const [online, setOnline] = useState(true);
   const [undoableAction, setUndoableAction] = useState<UndoableAction | null>(
     null
   );
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const babyRef = useRef<Baby | null>(null);
+  const babyRequestRef = useRef<Promise<Baby | null> | null>(null);
+  const pendingDiscardRef = useRef<string | null>(null);
+
+  const events = useMemo(() => deriveEvents(state), [state]);
+  const eventsRef = useRef(events);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
+
+  const loadBaby = useCallback((): Promise<Baby | null> => {
+    if (!babyRequestRef.current) {
+      babyRequestRef.current = (async () => {
+        try {
+          const data = await gqlRequest<{ myBabies: Baby[] } | null>(
+            GET_MY_BABIES
+          );
+          const first = data?.myBabies[0] ?? null;
+          if (first) {
+            babyRef.current = first;
+            setBaby(first);
+          }
+          return first ?? babyRef.current;
+        } catch {
+          return babyRef.current;
+        } finally {
+          babyRequestRef.current = null;
+          setLoading(false);
+        }
+      })();
+    }
+    return babyRequestRef.current;
+  }, []);
+
+  const refreshBaby = useCallback(async () => {
+    await loadBaby();
+  }, [loadBaby]);
+
+  // Find the baby, and keep looking through an outage: until it is known
+  // nothing can be logged and restored entries cannot be sent.
+  useEffect(() => {
+    if (baby) return;
+    return retryUntil(async () => (await loadBaby()) !== null, BABY_RETRY_MS);
+  }, [baby, loadBaby]);
 
   const refreshEvents = useCallback(async () => {
     if (!baby) return;
+    const requestedAt = Date.now();
     try {
-      const data = await gqlRequest<{ recentEvents: BabyEvent[] }>(
+      const data = await gqlRequest<{ recentEvents: BabyEvent[] } | null>(
         GET_RECENT_EVENTS,
-        { babyId: baby.id, limit: 100 }
+        { babyId: baby.id, limit: RECENT_EVENTS_LIMIT }
       );
-      setEvents(data.recentEvents);
+      if (data) {
+        dispatch({ events: data.recentEvents, requestedAt, type: "loaded" });
+        // The server answered, so whatever was waiting can go now.
+        resumeOutbox();
+      }
     } catch {
-      /* non-critical */
+      /* non-critical: polling tries again */
     }
   }, [baby]);
 
-  // Load baby on mount
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await gqlRequest<{ myBabies: Baby[] }>(GET_MY_BABIES);
-        if (data.myBabies.length > 0) {
-          setBaby(data.myBabies[0]);
-        }
-      } catch {
-        /* non-critical */
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
+    startOutbox(currentUserId());
   }, []);
 
   // Load events when baby is known
   useEffect(() => {
-    if (baby) refreshEvents();
+    if (!baby) return;
+    setOutboxBaby(baby.id);
+    refreshEvents();
   }, [baby, refreshEvents]);
 
   // Active events = in-progress timers (endedAt is null).
@@ -210,148 +255,255 @@ export const BabyContextProvider = ({
     return () => clearInterval(id);
   }, [baby, refreshEvents, activeEvents.length]);
 
-  const dismissUndo = useCallback(() => {
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
-    setUndoableAction(null);
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      adoptClosedTabs();
+      resumeOutbox();
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisible);
   }, []);
 
-  const deleteEvent = useCallback(
-    async (id: string) => {
-      // Optimistic: remove from local state
-      setEvents((prev) => prev.filter((e) => e.id !== id));
-      try {
-        await gqlRequest(DELETE_EVENT, { id });
-      } catch {
-        // Revert on failure
-        await refreshEvents();
-      }
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const handleOnline = () => {
+      setOnline(true);
+      resumeOutbox();
+      refreshEvents();
+    };
+    const handleOffline = () => setOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [refreshEvents]);
+
+  const commitDiscard = useCallback(() => {
+    const id = pendingDiscardRef.current;
+    if (!id) return;
+    pendingDiscardRef.current = null;
+    dispatch({ id, type: "delete" });
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener("pagehide", commitDiscard);
+    return () => {
+      window.removeEventListener("pagehide", commitDiscard);
+      commitDiscard();
+    };
+  }, [commitDiscard]);
+
+  const dismissUndo = useCallback(() => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    commitDiscard();
+    setUndoableAction(null);
+  }, [commitDiscard]);
+
+  const showToast = useCallback(
+    (event: BabyEvent, phase: ToastPhase, canUndo: boolean) => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      commitDiscard();
+      const action: UndoableAction = {
+        canUndo,
+        event,
+        eventId: event.id,
+        expiresAt: Date.now() + UNDO_DURATION,
+        id: crypto.randomUUID(),
+        label: event.type,
+        phase,
+      };
+      setUndoableAction(action);
+      undoTimerRef.current = setTimeout(() => {
+        commitDiscard();
+        setUndoableAction((current) =>
+          current?.id === action.id ? null : current
+        );
+      }, UNDO_DURATION);
     },
-    [refreshEvents]
+    [commitDiscard]
+  );
+
+  const undo = useCallback(() => {
+    if (!undoableAction?.canUndo) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    if (undoableAction.phase === "discarded") {
+      pendingDiscardRef.current = null;
+      dispatch({ id: undoableAction.eventId, type: "unhide" });
+    } else {
+      dispatch({ id: undoableAction.eventId, type: "delete" });
+    }
+    setUndoableAction(null);
+  }, [undoableAction]);
+
+  const update = useCallback(
+    (id: string, changes: EventChanges, eventType?: string) => {
+      record({ changes, eventType, id, type: "update" });
+    },
+    []
+  );
+
+  const deleteEvent = useCallback(
+    (id: string) => settled(() => record({ id, type: "delete" })),
+    []
   );
 
   const stopEvent = useCallback(
-    async (id: string) => {
-      const endedAt = new Date().toISOString();
-      // Optimistic: update local state
-      setEvents((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, endedAt } : e))
-      );
-      try {
-        await gqlRequest(UPDATE_EVENT, { id, endedAt });
-      } catch {
-        await refreshEvents();
+    (id: string) =>
+      settled(() => {
+        const endedAt = new Date().toISOString();
+        const current = eventsRef.current.find((e) => e.id === id);
+        update(id, { endedAt }, current?.type);
+        if (current && !takesAmount(current)) {
+          showToast({ ...current, endedAt }, "saved", false);
+        }
+      }),
+    [update, showToast]
+  );
+
+  const completeAmount = useCallback(
+    (id: string, amountMl: number | null) => {
+      const current = eventsRef.current.find((e) => e.id === id);
+      if (!current) throw new NotRecordedError(id);
+      let saved = current;
+      if (amountMl !== null) {
+        let meta: Record<string, unknown> = {};
+        try {
+          meta = JSON.parse(current.metadata) as Record<string, unknown>;
+        } catch {
+          /* record the amount alone */
+        }
+        const next = { ...meta, amountMl };
+        update(id, { meta: next }, current.type);
+        saved = { ...current, metadata: JSON.stringify(next) };
       }
+      showToast(saved, "saved", false);
     },
-    [refreshEvents]
+    [update, showToast]
+  );
+
+  const discardEvent = useCallback(
+    (id: string) => {
+      const current = eventsRef.current.find((e) => e.id === id);
+      if (!current) return;
+      showToast(current, "discarded", true);
+      pendingDiscardRef.current = id;
+      dispatch({ id, type: "hide" });
+    },
+    [showToast]
   );
 
   const updateEventMeta = useCallback(
-    async (
+    (
       id: string,
       type: string,
       meta: Record<string, unknown>,
       startedAt?: string,
       endedAt?: string | null
-    ) => {
-      const metaKey = `${type}Meta`;
-      try {
-        await gqlRequest(UPDATE_EVENT_META, {
+    ) =>
+      settled(() =>
+        update(
           id,
-          [metaKey]: meta,
-          ...(startedAt ? { startedAt } : {}),
-          ...(endedAt === undefined ? {} : { endedAt }),
-        });
-        await refreshEvents();
-      } catch {
-        await refreshEvents();
-      }
-    },
-    [refreshEvents]
+          {
+            meta,
+            ...(startedAt ? { startedAt } : {}),
+            ...(endedAt === undefined ? {} : { endedAt }),
+          },
+          type
+        )
+      ),
+    [update]
   );
 
   const logEventDirect = useCallback(
-    async (
-      type: string,
-      meta: Record<string, unknown>
-    ): Promise<BabyEvent | null> => {
-      if (!baby) return null;
-
-      const metaKey = `${type}Meta`;
+    (type: string, meta: Record<string, unknown>): Promise<BabyEvent> => {
       // Extract timing overrides from meta (set by timer flows)
       const { _startedAt, _endedAt, ...cleanMeta } = meta;
-      const variables: Record<string, unknown> = {
-        babyId: baby.id,
-        type,
+      const event: BabyEvent = {
+        endedAt: typeof _endedAt === "string" ? _endedAt : null,
+        // The event's id for good: the server stores the row under it.
+        id: crypto.randomUUID(),
+        metadata: JSON.stringify(cleanMeta),
         startedAt:
-          (typeof _startedAt === "string" ? _startedAt : null) ??
-          new Date().toISOString(),
-        ...(typeof _endedAt === "string" ? { endedAt: _endedAt } : {}),
-        [metaKey]: cleanMeta,
+          typeof _startedAt === "string"
+            ? _startedAt
+            : new Date().toISOString(),
+        type,
       };
-
-      try {
-        const data = await gqlRequest<{ logEvent: BabyEvent }>(
-          LOG_EVENT,
-          variables
-        );
-        const newEvent = data.logEvent;
-
-        // Optimistic: prepend to local state
-        setEvents((prev) => [newEvent, ...prev]);
-
-        // Set up undo
-        dismissUndo();
-        const action: UndoableAction = {
-          id: crypto.randomUUID(),
-          label: type,
-          eventId: newEvent.id,
-          expiresAt: Date.now() + UNDO_DURATION,
-        };
-        setUndoableAction(action);
-        undoTimerRef.current = setTimeout(() => {
-          setUndoableAction((current) =>
-            current?.id === action.id ? null : current
-          );
-        }, UNDO_DURATION);
-
-        return newEvent;
-      } catch {
-        return null;
-      }
+      dispatch({ event, type: "create" });
+      showToast(event, event.endedAt === null ? "started" : "saved", true);
+      return Promise.resolve({ ...event, syncState: "pending" });
     },
-    [baby, dismissUndo]
+    [showToast]
   );
+
+  const retryEvent = useCallback((id: string) => {
+    dispatch({ id, type: "retry" });
+    return Promise.resolve();
+  }, []);
+
+  const retryFailed = useCallback(() => {
+    dispatch({ type: "retry" });
+  }, []);
+
+  const sync = useMemo((): SyncSummary => {
+    const counts = unsavedCounts(state);
+    const unstored = durable ? 0 : unsavedTotal(state);
+    return { ...counts, online, unstored };
+  }, [state, online, durable]);
 
   const value = useMemo(
     (): BabyContextValue => ({
-      baby,
-      events,
       activeEvents,
-      loading,
-      refreshEvents,
-      logEventDirect,
-      stopEvent,
-      updateEventMeta,
+      baby,
+      completeAmount,
       deleteEvent,
-      undoableAction,
+      discardEvent,
       dismissUndo,
+      events,
+      loading,
+      logEventDirect,
+      refreshBaby,
+      refreshEvents,
+      retryEvent,
+      retryFailed,
+      stopEvent,
+      sync,
+      undo,
+      undoableAction,
+      updateEventMeta,
     }),
     [
-      baby,
-      events,
       activeEvents,
-      loading,
-      refreshEvents,
-      logEventDirect,
-      stopEvent,
-      updateEventMeta,
+      baby,
+      completeAmount,
       deleteEvent,
-      undoableAction,
+      discardEvent,
       dismissUndo,
+      events,
+      loading,
+      logEventDirect,
+      refreshBaby,
+      refreshEvents,
+      retryEvent,
+      retryFailed,
+      stopEvent,
+      sync,
+      undo,
+      undoableAction,
+      updateEventMeta,
     ]
   );
 
-  return <BabyContext.Provider value={value}>{children}</BabyContext.Provider>;
+  return (
+    <BabyContext.Provider value={value}>
+      {children}
+      <SyncStatus />
+    </BabyContext.Provider>
+  );
 };
 
 export const useBabyContext = (): BabyContextValue => {

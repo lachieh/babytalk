@@ -20,7 +20,8 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["DATABASE_URL"]
     },
     "check": {
       "cache": false
@@ -34,7 +35,7 @@
     },
     "//#docker:dev:up": {
       "cache": false,
-      "env": ["RESEND_API_KEY", "TAMBO_API_KEY", "NEXT_PUBLIC_*", "BUBSIE_*"]
+      "env": ["NEXT_PUBLIC_*", "BUBSIE_*"]
     },
     "//#docker:dev:down": {
       "cache": false

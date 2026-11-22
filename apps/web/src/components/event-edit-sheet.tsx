@@ -1,107 +1,334 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { parseMeta } from "@/lib/event-meta";
+import type { EventType } from "@/lib/event-styles";
+import {
+  changeTiming,
+  editShape,
+  resolveEntryTiming,
+  timingFromEvent,
+  toLocalInput,
+} from "@/lib/event-time";
+import type {
+  EntryShape,
+  EntryTiming,
+  LengthChoice,
+  TimeChoice,
+} from "@/lib/event-time";
 import { triggerFeedback } from "@/lib/haptics";
-import { useVolumeUnit, mlToDisplay, displayToMl } from "@/lib/use-volume-unit";
+import { displayToMl, mlToDisplay, useVolumeUnit } from "@/lib/use-volume-unit";
+
+import {
+  ChoiceChips,
+  FIELD_INPUT_CLASS,
+  FIELD_LABEL_CLASS,
+  FieldError,
+  Sheet,
+  ToggleChip,
+} from "./sheet";
+import type { ChipOption } from "./sheet";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-type EventType = "feed" | "sleep" | "diaper" | "pump" | "note";
+type Meta = Record<string, unknown>;
 
 interface EventFormData {
+  meta: Meta;
+  timing: EntryTiming;
   type: EventType;
-  startedAt: string;
-  endedAt: string;
-  meta: Record<string, unknown>;
 }
 
-/* ── Helpers ───────────────────────────────────────────────── */
+type FieldErrors = Partial<Record<"time" | "length" | "meta", string>>;
 
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-function toLocalDatetime(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-function parseMeta(event: BabyEvent): Record<string, unknown> {
-  try {
-    return JSON.parse(event.metadata) as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-}
-
-function hasDuration(form: EventFormData): boolean {
-  if (form.type === "diaper" || form.type === "note") return false;
-  return true;
-}
-
-function saveButtonLabel(saving: boolean, isNew: boolean): string {
-  if (saving) return "Saving...";
-  if (isNew) return "Add";
-  return "Save";
-}
-
-const EVENT_TYPES: { key: EventType; label: string }[] = [
-  { key: "feed", label: "Feed" },
-  { key: "pump", label: "Pump" },
-  { key: "diaper", label: "Diaper" },
-  { key: "sleep", label: "Sleep" },
-  { key: "note", label: "Note" },
+const EVENT_TYPES: readonly ChipOption<EventType>[] = [
+  { label: "Feed", value: "feed" },
+  { label: "Pump", value: "pump" },
+  { label: "Diaper", value: "diaper" },
+  { label: "Sleep", value: "sleep" },
+  { label: "Note", value: "note" },
 ];
 
-/* ── Meta Fields by Type ───────────────────────────────────── */
+const METHODS: readonly ChipOption<string>[] = [
+  { label: "Breast", value: "breast" },
+  { label: "Bottle", value: "bottle" },
+  { label: "Formula", value: "formula" },
+  { label: "Solid", value: "solid" },
+];
 
-const NotesField = ({
-  meta,
+const SIDES: readonly ChipOption<string>[] = [
+  { label: "Left", value: "left" },
+  { label: "Right", value: "right" },
+  { label: "Both", value: "both" },
+];
+
+const LOCATIONS: readonly ChipOption<string>[] = [
+  { label: "Crib", value: "crib" },
+  { label: "Bassinet", value: "bassinet" },
+  { label: "Held", value: "held" },
+  { label: "Carrier", value: "carrier" },
+];
+
+function lengthPresets(type: EventType): readonly number[] {
+  if (type === "sleep") return [30, 45, 60, 90, 120, 180];
+  if (type === "pump") return [10, 15, 20, 30];
+  return [5, 10, 15, 20, 30];
+}
+
+const formatMinutes = (m: number): string => {
+  if (m < 60) return `${m} min`;
+  const h = m / 60;
+  return `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
+};
+
+const DEFAULT_META: Record<EventType, Meta> = {
+  diaper: { soiled: false, wet: true },
+  feed: { method: "breast", side: "left" },
+  note: { text: "" },
+  pump: { side: "left" },
+  sleep: { location: "crib" },
+};
+
+const NOW: TimeChoice = { kind: "ago", minutes: 0 };
+
+function formFor(event: BabyEvent | null): EventFormData {
+  if (!event) {
+    return {
+      meta: DEFAULT_META.feed,
+      timing: { length: null, running: false, time: NOW },
+      type: "feed",
+    };
+  }
+  const type = event.type as EventType;
+  const meta = parseMeta(event.metadata);
+  return {
+    meta,
+    timing: timingFromEvent(
+      event,
+      editShape(event, type, meta.method),
+      lengthPresets(type)
+    ),
+    type,
+  };
+}
+
+const timeKey = (choice: TimeChoice | null): string | null => {
+  if (!choice) return null;
+  return choice.kind === "ago" ? String(choice.minutes) : "at";
+};
+
+const toPickedLocal = (choice: TimeChoice | null): string => {
+  if (choice?.kind === "at" && choice.local) return choice.local;
+  const minutes = choice?.kind === "ago" ? choice.minutes : 0;
+  return toLocalInput(Date.now() - minutes * 60_000);
+};
+
+function metaError(type: EventType, meta: Meta): string | undefined {
+  if (type === "diaper" && !meta.wet && !meta.soiled) {
+    return "Choose wet, soiled, or both.";
+  }
+  if (type === "note" && !(typeof meta.text === "string" && meta.text.trim())) {
+    return "Write a note first.";
+  }
+  return undefined;
+}
+
+function validate(form: EventFormData, shape: EntryShape) {
+  const errors: FieldErrors = {};
+  const timing = resolveEntryTiming(shape, form.timing);
+  if (!timing.ok) errors[timing.field] = timing.message;
+  const meta = metaError(form.type, form.meta);
+  if (meta) errors.meta = meta;
+  return { errors, timing };
+}
+
+const TIME_OPTIONS: readonly ChipOption<string>[] = [
+  { label: "Now", value: "0" },
+  { label: "15 min ago", value: "15" },
+  { label: "30 min ago", value: "30" },
+  { label: "Pick a time", value: "at" },
+];
+
+const RUNNING = "running";
+
+const TimeField = ({
+  legend,
+  choice,
   onChange,
+  error,
+  running,
+  onRunningChange,
 }: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
+  choice: TimeChoice | null;
+  error?: string;
+  legend: string;
+  onChange: (choice: TimeChoice) => void;
+  onRunningChange?: (running: boolean) => void;
+  running?: boolean;
 }) => {
-  const handleNotes = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) =>
-      onChange({ ...meta, notes: e.target.value || undefined }),
-    [meta, onChange]
+  const pickerId = useId();
+  const options = onRunningChange
+    ? [...TIME_OPTIONS, { label: "Still going", value: RUNNING }]
+    : TIME_OPTIONS;
+
+  const handleChoice = useCallback(
+    (key: string) => {
+      if (key === RUNNING) {
+        onRunningChange?.(true);
+        return;
+      }
+      if (running) onRunningChange?.(false);
+      onChange(
+        key === "at"
+          ? { kind: "at", local: toPickedLocal(choice) }
+          : { kind: "ago", minutes: Number(key) }
+      );
+    },
+    [choice, onChange, onRunningChange, running]
   );
 
+  const handlePicked = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      onChange({ kind: "at", local: e.target.value }),
+    [onChange]
+  );
+
+  const showPicker = !running && choice?.kind === "at";
+
   return (
-    <label className="block text-xs font-medium text-neutral-500">
-      Notes
-      <span className="ml-1 text-neutral-300">optional</span>
-      <textarea
-        className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-        onChange={handleNotes}
-        placeholder="Anything to remember?"
-        rows={2}
-        value={(meta.notes as string) || ""}
+    <div>
+      <ChoiceChips
+        error={showPicker ? undefined : (error ?? null)}
+        legend={legend}
+        onChange={handleChoice}
+        options={options}
+        value={running ? RUNNING : timeKey(choice)}
       />
-    </label>
+      {showPicker && (
+        <>
+          <label className="sr-only" htmlFor={pickerId}>
+            {legend}, date and time
+          </label>
+          <input
+            aria-describedby={`${pickerId}-error`}
+            aria-invalid={error ? true : undefined}
+            className={FIELD_INPUT_CLASS}
+            id={pickerId}
+            max={toLocalInput(Date.now())}
+            onChange={handlePicked}
+            type="datetime-local"
+            value={choice.local}
+          />
+          <FieldError id={`${pickerId}-error`} message={error} />
+        </>
+      )}
+    </div>
   );
 };
 
-const FeedFields = ({
-  meta,
+const LengthField = ({
+  type,
+  end,
+  length,
   onChange,
+  error,
 }: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
+  end: TimeChoice | null;
+  error?: string;
+  length: LengthChoice | null;
+  onChange: (length: LengthChoice) => void;
+  type: EventType;
 }) => {
+  const pickerId = useId();
+  const presets = lengthPresets(type);
+  const options: ChipOption<string>[] = [
+    ...presets.map((m) => ({ label: formatMinutes(m), value: String(m) })),
+    { label: "Pick start time", value: "start" },
+  ];
+
+  const handleChoice = useCallback(
+    (key: string) => {
+      if (key !== "start") {
+        onChange({ kind: "minutes", minutes: Number(key) });
+        return;
+      }
+      const endLocal = toPickedLocal(end);
+      const minutes = length?.kind === "minutes" ? length.minutes : 15;
+      onChange({
+        kind: "start",
+        local: toLocalInput(new Date(endLocal).getTime() - minutes * 60_000),
+      });
+    },
+    [end, length, onChange]
+  );
+
+  const handlePicked = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      onChange({ kind: "start", local: e.target.value }),
+    [onChange]
+  );
+
+  let value: string | null = null;
+  if (length)
+    value = length.kind === "start" ? "start" : String(length.minutes);
+  const showPicker = length?.kind === "start";
+
+  return (
+    <div>
+      <ChoiceChips
+        error={showPicker ? undefined : (error ?? null)}
+        legend="How long"
+        onChange={handleChoice}
+        options={options}
+        value={value}
+      />
+      {showPicker && (
+        <>
+          <label className="sr-only" htmlFor={pickerId}>
+            Started, date and time
+          </label>
+          <input
+            aria-describedby={`${pickerId}-error`}
+            aria-invalid={error ? true : undefined}
+            className={FIELD_INPUT_CLASS}
+            id={pickerId}
+            max={toLocalInput(Date.now())}
+            onChange={handlePicked}
+            type="datetime-local"
+            value={length.local}
+          />
+          <FieldError id={`${pickerId}-error`} message={error} />
+        </>
+      )}
+    </div>
+  );
+};
+
+interface MetaProps {
+  meta: Meta;
+  onChange: (m: Meta) => void;
+}
+
+const str = (v: unknown, fallback: string): string =>
+  typeof v === "string" && v ? v : fallback;
+
+function useMetaField<V>(
+  meta: Meta,
+  onChange: (m: Meta) => void,
+  key: string
+): (value: V) => void {
+  return useCallback(
+    (value: V) => onChange({ ...meta, [key]: value }),
+    [meta, onChange, key]
+  );
+}
+
+const AmountField = ({ meta, onChange }: MetaProps) => {
   const { unit } = useVolumeUnit();
-  const handleMethod = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) =>
-      onChange({ ...meta, method: e.target.value }),
-    [meta, onChange]
-  );
-  const handleSide = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) =>
-      onChange({ ...meta, side: e.target.value }),
-    [meta, onChange]
-  );
+  const amount = typeof meta.amountMl === "number" ? meta.amountMl : 0;
   const handleAmount = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) =>
       onChange({
@@ -112,52 +339,60 @@ const FeedFields = ({
       }),
     [meta, onChange, unit]
   );
+  return (
+    <label className={FIELD_LABEL_CLASS}>
+      Amount ({unit})
+      <span className="ml-1 font-normal text-neutral-400">optional</span>
+      <input
+        className={FIELD_INPUT_CLASS}
+        inputMode="decimal"
+        min="0"
+        onChange={handleAmount}
+        step="any"
+        type="number"
+        value={amount ? mlToDisplay(amount, unit) : ""}
+      />
+    </label>
+  );
+};
 
-  const displayAmount = (meta.amountMl as number)
-    ? mlToDisplay(meta.amountMl as number, unit)
-    : "";
+const FeedFields = ({ meta, onChange }: MetaProps) => {
+  const method = str(meta.method, "breast");
+  const handleSide = useMetaField<string>(meta, onChange, "side");
+  const handleMethod = useCallback(
+    (next: string) => {
+      const { side: _side, amountMl: _amount, ...rest } = meta;
+      const keepAmount = next === "bottle" || next === "formula";
+      onChange({
+        ...rest,
+        ...(keepAmount && meta.amountMl !== undefined
+          ? { amountMl: meta.amountMl }
+          : {}),
+        ...(next === "breast" ? { side: str(meta.side, "left") } : {}),
+        method: next,
+      });
+    },
+    [meta, onChange]
+  );
 
   return (
     <>
-      <label className="block text-xs font-medium text-neutral-500">
-        Method
-        <select
-          className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-          onChange={handleMethod}
-          value={(meta.method as string) || "breast"}
-        >
-          <option value="breast">Breast</option>
-          <option value="bottle">Bottle</option>
-          <option value="formula">Formula</option>
-          <option value="solid">Solid</option>
-        </select>
-      </label>
-      {(meta.method === "breast" || !meta.method) && (
-        <label className="block text-xs font-medium text-neutral-500">
-          Side
-          <select
-            className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-            onChange={handleSide}
-            value={(meta.side as string) || "left"}
-          >
-            <option value="left">Left</option>
-            <option value="right">Right</option>
-            <option value="both">Both</option>
-          </select>
-        </label>
+      <ChoiceChips
+        legend="Method"
+        onChange={handleMethod}
+        options={METHODS}
+        value={method}
+      />
+      {method === "breast" && (
+        <ChoiceChips
+          legend="Side"
+          onChange={handleSide}
+          options={SIDES}
+          value={str(meta.side, "left")}
+        />
       )}
-      {(meta.method === "bottle" || meta.method === "formula") && (
-        <label className="block text-xs font-medium text-neutral-500">
-          Amount ({unit})
-          <input
-            className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-            inputMode="decimal"
-            onChange={handleAmount}
-            step="0.01"
-            type="number"
-            value={displayAmount}
-          />
-        </label>
+      {(method === "bottle" || method === "formula") && (
+        <AmountField meta={meta} onChange={onChange} />
       )}
     </>
   );
@@ -166,158 +401,304 @@ const FeedFields = ({
 const DiaperFields = ({
   meta,
   onChange,
-}: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
-}) => {
-  const handleWet = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({ ...meta, wet: e.target.checked }),
-    [meta, onChange]
-  );
-  const handleSoiled = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({ ...meta, soiled: e.target.checked }),
-    [meta, onChange]
-  );
-
+  error,
+}: MetaProps & { error?: string }) => {
+  const errorId = useId();
+  const handleWet = useMetaField<boolean>(meta, onChange, "wet");
+  const handleSoiled = useMetaField<boolean>(meta, onChange, "soiled");
   return (
-    <div className="flex gap-4">
-      <label className="flex items-center gap-2 text-sm text-neutral-700">
-        <input
+    <fieldset aria-describedby={error ? errorId : undefined}>
+      <legend className="mb-2 text-sm font-medium text-neutral-600">
+        What was in it
+      </legend>
+      <div className="flex flex-wrap gap-2">
+        <ToggleChip
           checked={Boolean(meta.wet)}
-          className="h-5 w-5 rounded border-neutral-300"
+          label="Wet"
           onChange={handleWet}
-          type="checkbox"
         />
-        Wet
-      </label>
-      <label className="flex items-center gap-2 text-sm text-neutral-700">
-        <input
+        <ToggleChip
           checked={Boolean(meta.soiled)}
-          className="h-5 w-5 rounded border-neutral-300"
+          label="Soiled"
           onChange={handleSoiled}
-          type="checkbox"
         />
-        Soiled
-      </label>
-    </div>
+      </div>
+      <FieldError id={errorId} message={error} />
+    </fieldset>
   );
 };
 
-const SleepFields = ({
-  meta,
-  onChange,
-}: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
-}) => {
-  const handleLocation = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) =>
-      onChange({ ...meta, location: e.target.value }),
-    [meta, onChange]
-  );
-
+const SleepFields = ({ meta, onChange }: MetaProps) => {
+  const handleLocation = useMetaField<string>(meta, onChange, "location");
   return (
-    <label className="block text-xs font-medium text-neutral-500">
-      Location
-      <select
-        className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-        onChange={handleLocation}
-        value={(meta.location as string) || "crib"}
-      >
-        <option value="crib">Crib</option>
-        <option value="bassinet">Bassinet</option>
-        <option value="held">Held</option>
-        <option value="carrier">Carrier</option>
-      </select>
-    </label>
+    <ChoiceChips
+      legend="Where"
+      onChange={handleLocation}
+      options={LOCATIONS}
+      value={str(meta.location, "crib")}
+    />
   );
 };
 
-const PumpFields = ({
-  meta,
-  onChange,
-}: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
-}) => {
-  const { unit } = useVolumeUnit();
-  const handleSide = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) =>
-      onChange({ ...meta, side: e.target.value }),
-    [meta, onChange]
-  );
-  const handleAmount = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({
-        ...meta,
-        amountMl: e.target.value
-          ? displayToMl(Number(e.target.value), unit)
-          : undefined,
-      }),
-    [meta, onChange, unit]
-  );
-
-  const displayAmount = (meta.amountMl as number)
-    ? mlToDisplay(meta.amountMl as number, unit)
-    : "";
-
+const PumpFields = ({ meta, onChange }: MetaProps) => {
+  const handleSide = useMetaField<string>(meta, onChange, "side");
   return (
     <>
-      <label className="block text-xs font-medium text-neutral-500">
-        Side
-        <select
-          className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-          onChange={handleSide}
-          value={(meta.side as string) || "left"}
-        >
-          <option value="left">Left</option>
-          <option value="right">Right</option>
-          <option value="both">Both</option>
-        </select>
-      </label>
-      <label className="block text-xs font-medium text-neutral-500">
-        Amount ({unit})
-        <input
-          className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-          inputMode="numeric"
-          onChange={handleAmount}
-          type="number"
-          value={displayAmount}
-        />
-      </label>
+      <ChoiceChips
+        legend="Side"
+        onChange={handleSide}
+        options={SIDES}
+        value={str(meta.side, "left")}
+      />
+      <AmountField meta={meta} onChange={onChange} />
     </>
   );
 };
 
-const NoteFields = ({
+const TextField = ({
+  field,
+  label,
   meta,
   onChange,
-}: {
-  meta: Record<string, unknown>;
-  onChange: (m: Record<string, unknown>) => void;
+  optional,
+  rows,
+  placeholder,
+  error,
+}: MetaProps & {
+  error?: string;
+  field: "notes" | "text";
+  label: string;
+  optional?: boolean;
+  placeholder?: string;
+  rows: number;
 }) => {
-  const handleText = useCallback(
+  const errorId = useId();
+  const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) =>
-      onChange({ ...meta, text: e.target.value }),
-    [meta, onChange]
+      onChange({ ...meta, [field]: e.target.value || undefined }),
+    [meta, onChange, field]
   );
-
   return (
-    <label className="block text-xs font-medium text-neutral-500">
-      Note
-      <textarea
-        className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-        onChange={handleText}
-        rows={3}
-        value={(meta.text as string) || ""}
-      />
-    </label>
+    <div>
+      <label className={FIELD_LABEL_CLASS}>
+        {label}
+        {optional && (
+          <span className="ml-1 font-normal text-neutral-400">optional</span>
+        )}
+        <textarea
+          aria-describedby={error ? errorId : undefined}
+          aria-invalid={error ? true : undefined}
+          className={FIELD_INPUT_CLASS}
+          onChange={handleChange}
+          placeholder={placeholder}
+          rows={rows}
+          value={str(meta[field], "")}
+        />
+      </label>
+      <FieldError id={errorId} message={error} />
+    </div>
   );
 };
 
+const MetaFields = ({
+  type,
+  meta,
+  onChange,
+  error,
+}: MetaProps & { error?: string; type: EventType }) => {
+  switch (type) {
+    case "feed": {
+      return <FeedFields meta={meta} onChange={onChange} />;
+    }
+    case "pump": {
+      return <PumpFields meta={meta} onChange={onChange} />;
+    }
+    case "sleep": {
+      return <SleepFields meta={meta} onChange={onChange} />;
+    }
+    case "diaper": {
+      return <DiaperFields error={error} meta={meta} onChange={onChange} />;
+    }
+    case "note": {
+      return (
+        <TextField
+          error={error}
+          field="text"
+          label="Note"
+          meta={meta}
+          onChange={onChange}
+          rows={3}
+        />
+      );
+    }
+    default: {
+      return null;
+    }
+  }
+};
+
+function startOf(timing: EntryTiming): TimeChoice {
+  const { length, time } = timing;
+  if (length?.kind === "start") return { kind: "at", local: length.local };
+  if (length && time) {
+    const end = new Date(toPickedLocal(time)).getTime();
+    return { kind: "at", local: toLocalInput(end - length.minutes * 60_000) };
+  }
+  return NOW;
+}
+
+const TimingFields = ({
+  type,
+  shape,
+  timing,
+  errors,
+  canRun,
+  onChange,
+}: {
+  canRun: boolean;
+  errors: FieldErrors;
+  onChange: (patch: Partial<EntryTiming>) => void;
+  shape: EntryShape;
+  timing: EntryTiming;
+  type: EventType;
+}) => {
+  const handleTime = useCallback(
+    (time: TimeChoice) => onChange({ time }),
+    [onChange]
+  );
+  const handleLength = useCallback(
+    (length: LengthChoice) => onChange({ length }),
+    [onChange]
+  );
+  const handleRunning = useCallback(
+    (running: boolean) =>
+      onChange(
+        running
+          ? { length: null, running: true, time: startOf(timing) }
+          : { running: false }
+      ),
+    [onChange, timing]
+  );
+
+  if (shape === "instant") {
+    return (
+      <TimeField
+        choice={timing.time}
+        error={errors.time}
+        legend="Time"
+        onChange={handleTime}
+      />
+    );
+  }
+
+  return (
+    <>
+      <TimeField
+        choice={timing.running ? null : timing.time}
+        error={timing.running ? undefined : errors.time}
+        legend="Ended"
+        onChange={handleTime}
+        onRunningChange={canRun ? handleRunning : undefined}
+        running={timing.running}
+      />
+      {timing.running ? (
+        <TimeField
+          choice={timing.time}
+          error={errors.time}
+          legend="Started"
+          onChange={handleTime}
+        />
+      ) : (
+        <LengthField
+          end={timing.time}
+          error={errors.length}
+          length={timing.length}
+          onChange={handleLength}
+          type={type}
+        />
+      )}
+    </>
+  );
+};
+
+const SheetActions = ({
+  isNew,
+  saving,
+  saveError,
+  confirmDelete,
+  onSave,
+  onDelete,
+}: {
+  confirmDelete: boolean;
+  isNew: boolean;
+  onDelete: () => void;
+  onSave: () => void;
+  saveError: string | null;
+  saving: boolean;
+}) => {
+  let saveLabel = "Save";
+  if (saving) saveLabel = "Saving…";
+  else if (isNew) saveLabel = "Add";
+
+  return (
+    <>
+      {saveError && (
+        <p className="mb-3 text-center text-sm text-danger-500" role="alert">
+          {saveError}
+        </p>
+      )}
+      <div className={isNew ? "flex" : "grid grid-cols-2 gap-3"}>
+        {!isNew && (
+          <button
+            className="min-h-[48px] rounded-xl border border-danger-200 px-3 py-3 text-sm font-medium text-danger-500 transition-colors hover:bg-danger-50"
+            onClick={onDelete}
+            type="button"
+          >
+            {confirmDelete ? "Tap again to delete" : "Delete"}
+          </button>
+        )}
+        <button
+          className="min-h-[48px] w-full rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
+          disabled={saving}
+          onClick={onSave}
+          type="button"
+        >
+          {saveLabel}
+        </button>
+      </div>
+    </>
+  );
+};
+
+async function persist(
+  form: EventFormData,
+  timing: { endedAt: string | null; startedAt: string },
+  event: BabyEvent | null,
+  ctx: Pick<
+    ReturnType<typeof useBabyContext>,
+    "logEventDirect" | "updateEventMeta"
+  >
+): Promise<void> {
+  if (!event) {
+    await ctx.logEventDirect(form.type, {
+      ...form.meta,
+      _startedAt: timing.startedAt,
+      ...(timing.endedAt ? { _endedAt: timing.endedAt } : {}),
+    });
+    return;
+  }
+  await ctx.updateEventMeta(
+    event.id,
+    form.type,
+    form.meta,
+    timing.startedAt,
+    timing.endedAt ?? undefined
+  );
+}
+
 /* ── Event Edit Sheet ──────────────────────────────────────── */
+
+const CONFIRM_DELETE_MS = 4000;
 
 export const EventEditSheet = ({
   event,
@@ -330,140 +711,87 @@ export const EventEditSheet = ({
 }) => {
   const { logEventDirect, updateEventMeta, deleteEvent } = useBabyContext();
   const isNew = event === null;
+  const [form, setForm] = useState<EventFormData>(() => formFor(event));
+  const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
 
-  const [form, setForm] = useState<EventFormData>(() => {
-    if (event) {
-      return {
-        type: event.type as EventType,
-        startedAt: toLocalDatetime(event.startedAt),
-        endedAt: event.endedAt ? toLocalDatetime(event.endedAt) : "",
-        meta: parseMeta(event),
-      };
-    }
-    return {
-      type: "feed",
-      startedAt: toLocalDatetime(new Date().toISOString()),
-      endedAt: "",
-      meta: { method: "breast", side: "left" },
-    };
-  });
-
-  // Reset form when a different event is selected or sheet opens
   useEffect(() => {
     if (!open) return;
-    if (event) {
-      setForm({
-        type: event.type as EventType,
-        startedAt: toLocalDatetime(event.startedAt),
-        endedAt: event.endedAt ? toLocalDatetime(event.endedAt) : "",
-        meta: parseMeta(event),
-      });
-    } else {
-      setForm({
-        type: "feed",
-        startedAt: toLocalDatetime(new Date().toISOString()),
-        endedAt: "",
-        meta: { method: "breast", side: "left" },
-      });
-    }
+    setForm(formFor(event));
+    setSubmitted(false);
+    setSaveError(null);
     setConfirmDelete(false);
   }, [event, open]);
 
-  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    if (!confirmDelete) return;
+    const id = setTimeout(() => setConfirmDelete(false), CONFIRM_DELETE_MS);
+    return () => clearTimeout(id);
+  }, [confirmDelete]);
+
+  const shape = editShape(event, form.type, form.meta.method);
+  const canRun = shape === "span" && (isNew || event?.endedAt === null);
+  const errors = submitted ? validate(form, shape).errors : {};
 
   const handleTypeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      const newType = e.target.value as EventType;
-      let newMeta: Record<string, unknown> = {};
-      switch (newType) {
-        case "feed": {
-          newMeta = { method: "breast", side: "left" };
-          break;
-        }
-        case "pump": {
-          newMeta = { side: "left" };
-          break;
-        }
-        case "diaper": {
-          newMeta = { wet: true, soiled: false };
-          break;
-        }
-        case "sleep": {
-          newMeta = { location: "crib" };
-          break;
-        }
-        case "note": {
-          newMeta = { text: "" };
-          break;
-        }
-        default: {
-          break;
-        }
-      }
-      setForm((f) => ({ ...f, type: newType, meta: newMeta }));
-    },
+    (type: EventType) =>
+      setForm((f) => ({
+        meta: DEFAULT_META[type],
+        timing: changeTiming(f.timing, { running: false }),
+        type,
+      })),
     []
   );
 
-  const handleStartChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((f) => ({ ...f, startedAt: e.target.value })),
-    []
-  );
+  const handleMetaChange = useCallback((meta: Meta) => {
+    setSaveError(null);
+    setForm((f) => ({ ...f, meta }));
+  }, []);
 
-  const handleEndChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((f) => ({ ...f, endedAt: e.target.value })),
-    []
-  );
-
-  const handleMetaChange = useCallback(
-    (meta: Record<string, unknown>) => setForm((f) => ({ ...f, meta })),
-    []
-  );
+  const handleTimingChange = useCallback((patch: Partial<EntryTiming>) => {
+    setSaveError(null);
+    setForm((f) => ({ ...f, timing: changeTiming(f.timing, patch) }));
+  }, []);
 
   const handleSave = useCallback(async () => {
+    setSubmitted(true);
+    setSaveError(null);
+    const { errors: found, timing } = validate(form, shape);
+    if (!timing.ok || Object.keys(found).length > 0) {
+      requestAnimationFrame(() => {
+        formRef.current
+          ?.querySelector<HTMLElement>(
+            "[aria-invalid='true'], fieldset[aria-describedby]"
+          )
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+      return;
+    }
+
     setSaving(true);
+    let saved = false;
     try {
-      const showDuration = hasDuration(form);
-      if (isNew) {
-        const startedAt = new Date(form.startedAt).toISOString();
-        const endedAt =
-          showDuration && form.endedAt
-            ? new Date(form.endedAt).toISOString()
-            : undefined;
-        await logEventDirect(form.type, {
-          ...form.meta,
-          _startedAt: startedAt,
-          ...(endedAt ? { _endedAt: endedAt } : {}),
-        });
-      } else if (event) {
-        const startedAt = new Date(form.startedAt).toISOString();
-        // For instant event types (diaper, note, non-breast feeds) the
-        // endedAt field is hidden, but the form may still hold a stale
-        // value from the original event. Force it to null so the saved
-        // event doesn't gain a spurious end time.
-        const endedAt =
-          showDuration && form.endedAt
-            ? new Date(form.endedAt).toISOString()
-            : null;
-        await updateEventMeta(
-          event.id,
-          form.type,
-          form.meta,
-          startedAt,
-          endedAt
-        );
-      }
-      triggerFeedback("logged");
-      onClose();
+      await persist(form, timing, event, {
+        logEventDirect,
+        updateEventMeta,
+      });
+      saved = true;
     } catch (error) {
       console.error("[EventEditSheet] Save failed:", error);
     } finally {
       setSaving(false);
     }
-  }, [isNew, event, form, logEventDirect, updateEventMeta, onClose]);
+
+    if (saved) {
+      triggerFeedback("logged");
+      onClose();
+    } else {
+      setSaveError("Couldn't save. Try again.");
+    }
+  }, [form, shape, event, logEventDirect, updateEventMeta, onClose]);
 
   const handleDelete = useCallback(async () => {
     if (!event) return;
@@ -476,162 +804,60 @@ export const EventEditSheet = ({
     onClose();
   }, [event, confirmDelete, deleteEvent, onClose]);
 
-  const handleBackdrop = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-neutral-900/30"
-      onClick={handleBackdrop}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-label={isNew ? "Add event" : "Edit event"}
+    <Sheet
+      footer={
+        <SheetActions
+          confirmDelete={confirmDelete}
+          isNew={isNew}
+          onDelete={handleDelete}
+          onSave={handleSave}
+          saveError={saveError}
+          saving={saving}
+        />
+      }
+      onClose={onClose}
+      open={open}
+      title={isNew ? "Add entry" : "Edit entry"}
     >
-      <div className="w-full max-w-lg rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
-        {/* Handle */}
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-neutral-200" />
-        </div>
+      <div className="space-y-5 px-5 pb-4" ref={formRef}>
+        {isNew && (
+          <ChoiceChips
+            legend="Type"
+            onChange={handleTypeChange}
+            options={EVENT_TYPES}
+            value={form.type}
+          />
+        )}
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 pt-2 pb-4">
-          <h2 className="text-base font-semibold text-neutral-700">
-            {isNew ? "Add entry" : "Edit entry"}
-          </h2>
-          <button
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-            onClick={onClose}
-            type="button"
-            aria-label="Close"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
+        <MetaFields
+          error={errors.meta}
+          meta={form.meta}
+          onChange={handleMetaChange}
+          type={form.type}
+        />
 
-        {/* Form */}
-        <div className="space-y-4 px-5 pb-6">
-          {/* Type */}
-          {isNew && (
-            <label className="block text-xs font-medium text-neutral-500">
-              Type
-              <select
-                className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-                onChange={handleTypeChange}
-                value={form.type}
-              >
-                {EVENT_TYPES.map((t) => (
-                  <option key={t.key} value={t.key}>
-                    {t.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+        <TimingFields
+          canRun={canRun}
+          errors={errors}
+          onChange={handleTimingChange}
+          shape={shape}
+          timing={form.timing}
+          type={form.type}
+        />
 
-          {/* Timing */}
-          {hasDuration(form) ? (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block text-xs font-medium text-neutral-500">
-                Started
-                <input
-                  className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-                  onChange={handleStartChange}
-                  type="datetime-local"
-                  value={form.startedAt}
-                />
-              </label>
-              <label className="block text-xs font-medium text-neutral-500">
-                Ended
-                <input
-                  className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-                  onChange={handleEndChange}
-                  type="datetime-local"
-                  value={form.endedAt}
-                />
-              </label>
-            </div>
-          ) : (
-            <label className="block text-xs font-medium text-neutral-500">
-              Time
-              <input
-                className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-                onChange={handleStartChange}
-                type="datetime-local"
-                value={form.startedAt}
-              />
-            </label>
-          )}
-
-          {/* Type-specific fields */}
-          {form.type === "feed" && (
-            <FeedFields meta={form.meta} onChange={handleMetaChange} />
-          )}
-          {form.type === "diaper" && (
-            <DiaperFields meta={form.meta} onChange={handleMetaChange} />
-          )}
-          {form.type === "sleep" && (
-            <SleepFields meta={form.meta} onChange={handleMetaChange} />
-          )}
-          {form.type === "pump" && (
-            <PumpFields meta={form.meta} onChange={handleMetaChange} />
-          )}
-          {form.type === "note" && (
-            <NoteFields meta={form.meta} onChange={handleMetaChange} />
-          )}
-
-          {/* Notes — available on every non-note event */}
-          {form.type !== "note" && (
-            <NotesField meta={form.meta} onChange={handleMetaChange} />
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3 pt-2">
-            <button
-              className="min-h-[48px] flex-1 rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
-              disabled={saving}
-              onClick={handleSave}
-              type="button"
-            >
-              {saveButtonLabel(saving, isNew)}
-            </button>
-            {!isNew && (
-              <button
-                className="min-h-[48px] rounded-xl border border-danger-200 px-4 py-3 text-sm font-medium text-danger-500 transition-colors hover:bg-danger-50"
-                onClick={handleDelete}
-                type="button"
-              >
-                {confirmDelete ? "Tap again to confirm" : "Delete"}
-              </button>
-            )}
-          </div>
-        </div>
+        {form.type !== "note" && (
+          <TextField
+            field="notes"
+            label="Notes"
+            meta={form.meta}
+            onChange={handleMetaChange}
+            optional
+            placeholder="Anything to remember?"
+            rows={2}
+          />
+        )}
       </div>
-    </div>
+    </Sheet>
   );
 };

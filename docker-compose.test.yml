@@ -47,7 +47,6 @@ services:
     environment:
       # Read by the browser via /.well-known/config, so use the host-mapped port.
       BUBSIE_WEB_API_URL: http://localhost:4000/graphql
-      BUBSIE_WEB_TAMBO_URL: https://api.tambo.co
     healthcheck:
       test:
         [

@@ -8,6 +8,5 @@ import "./household-mutations.js";
 import "./event-range-queries.js";
 import "./measurement-types.js";
 import "./measurement-mutations.js";
-import "./agent-thread.js";
 
 export const schema = builder.toSchema();

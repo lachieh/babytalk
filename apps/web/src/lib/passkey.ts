@@ -11,7 +11,7 @@ import type {
   RegistrationResponseJSON,
 } from "@simplewebauthn/browser";
 
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { gqlRequest } from "@/lib/gql-request";
 
 const REGISTER_START = `
   mutation PasskeyRegisterStart {

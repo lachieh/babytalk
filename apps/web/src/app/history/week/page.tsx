@@ -1,15 +1,24 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { WeekChart, getWeekStart } from "@/components/week-chart";
+import { WeekChart } from "@/components/week-chart";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { startOfDay } from "@/lib/daily-totals";
+import { gqlRequest } from "@/lib/gql-request";
+import { parseYmd, ymd } from "@/lib/history-days";
 
 import { useHistorySheet } from "../_context";
-import { filterWeekEvents } from "./week-data";
+import { filterWeekEvents, getWeekStart } from "./week-data";
 import type { WeekEventsResponse } from "./week-data";
 
 const EVENTS_OVERLAPPING_RANGE_QUERY = `
@@ -19,24 +28,6 @@ const EVENTS_OVERLAPPING_RANGE_QUERY = `
     }
   }
 `;
-
-const pad2 = (n: number) => String(n).padStart(2, "0");
-
-function ymd(date: Date): string {
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
-}
-
-function parseYmd(value: string | null): Date | null {
-  if (!value) return null;
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const year = Number(match[1]);
-  const month = Number(match[2]) - 1;
-  const day = Number(match[3]);
-  const d = new Date(year, month, day);
-  if (Number.isNaN(d.getTime())) return null;
-  return d;
-}
 
 function formatRange(weekStart: Date): string {
   const weekEnd = new Date(weekStart);
@@ -77,24 +68,28 @@ const MONTH_NAMES = [
   "November",
   "December",
 ];
-const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
 
 function dayCellClass(
   inSelectedWeek: boolean,
   inMonth: boolean,
-  isToday: boolean
+  isToday: boolean,
+  isFuture: boolean
 ): string {
   let base: string;
-  if (inSelectedWeek) {
+  if (isFuture) {
+    base = inSelectedWeek
+      ? "bg-primary-500/40 text-white"
+      : "text-neutral-300 cursor-default";
+  } else if (inSelectedWeek) {
     base = "bg-primary-500 text-white";
   } else if (inMonth) {
     base = "text-neutral-700 hover:bg-neutral-100";
   } else {
-    base = "text-neutral-300 hover:bg-neutral-50";
+    base = "text-neutral-400 hover:bg-neutral-50";
   }
   const todayClass =
-    isToday && !inSelectedWeek ? "font-bold text-primary-600" : "";
-  return `flex h-9 w-full items-center justify-center text-xs tabular-nums transition-colors ${base} ${todayClass}`;
+    isToday && !inSelectedWeek ? "font-bold text-primary-ink" : "";
+  return `flex h-11 w-full items-center justify-center text-sm tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-primary-500 ${base} ${todayClass}`;
 }
 
 const DayCell = ({
@@ -113,10 +108,20 @@ const DayCell = ({
   const handleClick = useCallback(() => onSelect(date), [date, onSelect]);
   const inMonth = date.getMonth() === viewMonth;
   const isToday = date.getTime() === todayTime;
+  const isFuture = date.getTime() > todayTime;
   const inSelectedWeek = getWeekStart(date).getTime() === selectedTime;
   return (
     <button
-      className={dayCellClass(inSelectedWeek, inMonth, isToday)}
+      aria-label={date.toLocaleDateString([], {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      })}
+      aria-pressed={inSelectedWeek}
+      className={dayCellClass(inSelectedWeek, inMonth, isToday, isFuture)}
+      data-selected-week={inSelectedWeek || undefined}
+      disabled={isFuture}
       onClick={handleClick}
       type="button"
     >
@@ -141,11 +146,7 @@ const WeekPicker = ({
     [view]
   );
   // Calendar grid starts on the Sunday on or before the 1st.
-  const gridStart = useMemo(() => {
-    const d = new Date(monthStart);
-    d.setDate(d.getDate() - d.getDay());
-    return d;
-  }, [monthStart]);
+  const gridStart = useMemo(() => getWeekStart(monthStart), [monthStart]);
 
   const days = useMemo(
     () =>
@@ -166,37 +167,78 @@ const WeekPicker = ({
     []
   );
 
-  const today = useMemo(() => {
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    return t;
-  }, []);
+  const today = useMemo(() => startOfDay(new Date()), []);
+
+  const atCurrentMonth =
+    view.getFullYear() * 12 + view.getMonth() >=
+    today.getFullYear() * 12 + today.getMonth();
 
   const handleSelectDay = useCallback(
     (d: Date) => onSelect(getWeekStart(d)),
     [onSelect]
   );
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const initial =
+      dialog.querySelector<HTMLElement>("[data-selected-week]") ??
+      dialog.querySelector<HTMLElement>("button:not(:disabled)");
+    initial?.focus();
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const focusable = [
+        ...dialog.querySelectorAll<HTMLElement>("button:not(:disabled)"),
+      ];
+      const [first] = focusable;
+      const last = focusable.at(-1);
+      if (!(first && last)) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
   return (
-    <button
-      aria-label="Close week picker"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-neutral-900/40 px-4"
-      onClick={onClose}
-      type="button"
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       <button
-        className="w-full max-w-sm rounded-2xl bg-surface-raised p-5 shadow-xl"
-        onClick={stopPropagation}
+        aria-label="Close week picker"
+        className="absolute inset-0 bg-neutral-900/40"
+        onClick={onClose}
+        tabIndex={-1}
         type="button"
+      />
+      <div
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="relative w-full max-w-sm rounded-2xl bg-surface-raised p-5 shadow-xl"
+        ref={dialogRef}
+        role="dialog"
       >
         <div className="mb-4 flex items-center justify-between">
           <button
             aria-label="Previous month"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100"
             onClick={goPrevMonth}
             type="button"
           >
             <svg
+              aria-hidden="true"
               className="h-4 w-4"
               fill="none"
               stroke="currentColor"
@@ -210,16 +252,19 @@ const WeekPicker = ({
               />
             </svg>
           </button>
-          <p className="font-medium text-neutral-700 text-sm">
+          <h2 className="font-medium text-neutral-700 text-sm" id={titleId}>
+            <span className="sr-only">Choose a week, </span>
             {MONTH_NAMES[view.getMonth()]} {view.getFullYear()}
-          </p>
+          </h2>
           <button
             aria-label="Next month"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30 disabled:hover:bg-transparent"
+            disabled={atCurrentMonth}
             onClick={goNextMonth}
             type="button"
           >
             <svg
+              aria-hidden="true"
               className="h-4 w-4"
               fill="none"
               stroke="currentColor"
@@ -235,7 +280,10 @@ const WeekPicker = ({
           </button>
         </div>
 
-        <div className="mb-1 grid grid-cols-7 text-center font-medium text-[10px] text-neutral-400 uppercase tracking-wider">
+        <div
+          aria-hidden="true"
+          className="mb-1 grid grid-cols-7 text-center font-medium text-neutral-400 text-xs uppercase tracking-wider"
+        >
           <span>Sun</span>
           <span>Mon</span>
           <span>Tue</span>
@@ -257,8 +305,8 @@ const WeekPicker = ({
             />
           ))}
         </div>
-      </button>
-    </button>
+      </div>
+    </div>
   );
 };
 
@@ -307,14 +355,18 @@ export default function HistoryWeekPage() {
   }, [weekStart, setWeek]);
 
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerTriggerRef = useRef<HTMLButtonElement>(null);
   const openPicker = useCallback(() => setPickerOpen(true), []);
-  const closePicker = useCallback(() => setPickerOpen(false), []);
+  const closePicker = useCallback(() => {
+    setPickerOpen(false);
+    pickerTriggerRef.current?.focus();
+  }, []);
   const handlePick = useCallback(
     (next: Date) => {
       setWeek(next);
-      setPickerOpen(false);
+      closePicker();
     },
-    [setWeek]
+    [setWeek, closePicker]
   );
 
   const [events, setEvents] = useState<BabyEvent[]>([]);
@@ -358,11 +410,12 @@ export default function HistoryWeekPage() {
       <div className="mx-2 mb-2 flex shrink-0 items-center justify-between gap-2">
         <button
           aria-label="Previous week"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100"
           onClick={goPrev}
           type="button"
         >
           <svg
+            aria-hidden="true"
             className="h-4 w-4"
             fill="none"
             stroke="currentColor"
@@ -377,20 +430,25 @@ export default function HistoryWeekPage() {
           </svg>
         </button>
         <button
-          className="min-h-[40px] flex-1 rounded-lg px-3 text-center font-medium text-neutral-700 text-sm transition-colors hover:bg-neutral-100"
+          aria-expanded={pickerOpen}
+          aria-haspopup="dialog"
+          className="min-h-[44px] flex-1 rounded-lg px-3 text-center font-medium text-neutral-700 text-sm transition-colors hover:bg-neutral-100"
           onClick={openPicker}
+          ref={pickerTriggerRef}
           type="button"
         >
+          <span className="sr-only">Choose week: </span>
           {atCurrentWeek ? "This week" : formatRange(weekStart)}
         </button>
         <button
           aria-label="Next week"
-          className="flex h-10 w-10 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 disabled:opacity-30"
           disabled={atCurrentWeek}
           onClick={goNext}
           type="button"
         >
           <svg
+            aria-hidden="true"
             className="h-4 w-4"
             fill="none"
             stroke="currentColor"

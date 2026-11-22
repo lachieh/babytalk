@@ -1,10 +1,3 @@
-/**
- * Haptic/audio feedback system.
- * Android: navigator.vibrate()
- * iOS: Web Audio API chimes
- * All: visual feedback is handled by components
- */
-
 type FeedbackType = "logged" | "timer" | "reminder";
 
 const vibrationPatterns: Record<FeedbackType, number[]> = {
@@ -57,6 +50,25 @@ const chimeConfigs: Record<
   timer: { count: 2, dur: 0.1, freq: 660 },
 };
 
+const SOUND_KEY = "bubsie_sound";
+
+export const isSoundEnabled = (): boolean => {
+  try {
+    return localStorage.getItem(SOUND_KEY) === "on";
+  } catch {
+    return false;
+  }
+};
+
+export const setSoundEnabled = (on: boolean): void => {
+  try {
+    if (on) localStorage.setItem(SOUND_KEY, "on");
+    else localStorage.removeItem(SOUND_KEY);
+  } catch {
+    /* storage unavailable: stays off */
+  }
+};
+
 const supportsVibration = (): boolean =>
   typeof navigator !== "undefined" && "vibrate" in navigator;
 
@@ -65,7 +77,7 @@ export const triggerFeedback = (type: FeedbackType) => {
 
   if (supportsVibration()) {
     navigator.vibrate(vibrationPatterns[type]);
-  } else {
+  } else if (isSoundEnabled()) {
     const config = chimeConfigs[type];
     playChime(config.freq, config.dur, config.count);
   }

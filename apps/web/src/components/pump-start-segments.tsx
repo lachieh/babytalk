@@ -2,52 +2,57 @@
 
 import { useCallback } from "react";
 
-const SIDES = ["left", "right", "both"] as const;
-type Side = (typeof SIDES)[number];
+const SIDES = [
+  { key: "left", label: "Left" },
+  { key: "right", label: "Right" },
+  { key: "both", label: "Both" },
+] as const;
+type Side = (typeof SIDES)[number]["key"];
 
-const SegmentButton = ({
-  highlighted,
-  isFirst,
+const SideButton = ({
+  disabled,
+  label,
   onStart,
   side,
 }: {
-  highlighted: boolean;
-  isFirst: boolean;
+  disabled: boolean;
+  label: string;
   onStart: (side: Side) => void;
   side: Side;
 }) => {
   const handleClick = useCallback(() => onStart(side), [onStart, side]);
   return (
     <button
-      className={`relative min-h-[56px] flex-1 px-3 py-3 text-white transition-[background-color,transform] active:scale-[0.98] hover:bg-pump-600 ${
-        highlighted ? "bg-pump-600" : "bg-pump-500"
-      } ${isFirst ? "" : "border-l border-pump-400/50"}`}
+      aria-label={
+        side === "both"
+          ? "Start pumping, both sides"
+          : `Start pumping, ${side} side`
+      }
+      className="flex min-h-[72px] flex-col items-center justify-center rounded-2xl border-2 border-pump-500/60 bg-pump-100 px-2 font-semibold text-base text-neutral-800 shadow-sm transition-[background-color,box-shadow,transform] duration-150 hover:bg-pump-200 active:scale-[0.97] active:bg-pump-200 active:shadow-none disabled:border-dashed disabled:border-neutral-300 disabled:bg-transparent disabled:text-neutral-400 disabled:shadow-none disabled:active:scale-100"
+      disabled={disabled}
       onClick={handleClick}
       type="button"
     >
-      <span className="block text-[10px] font-medium uppercase tracking-widest opacity-80">
-        Start
-      </span>
-      <span className="block text-base font-semibold capitalize">{side}</span>
+      {label}
     </button>
   );
 };
 
 export const PumpStartSegments = ({
-  highlightSide,
+  disabled = false,
   onStart,
 }: {
-  highlightSide?: Side | null;
+  disabled?: boolean;
   onStart: (side: Side) => void;
 }) => (
-  <div className="flex w-full overflow-hidden rounded-xl shadow-sm">
-    {SIDES.map((side, idx) => (
-      <SegmentButton
-        highlighted={highlightSide === side}
-        isFirst={idx === 0}
-        key={side}
+  <div className="grid grid-cols-3 gap-2">
+    {SIDES.map(({ key, label }) => (
+      <SideButton
+        disabled={disabled}
+        key={key}
+        label={label}
         onStart={onStart}
-        side={side}
+        side={key}
       />
     ))}
   </div>

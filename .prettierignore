@@ -2,3 +2,5 @@
 *.gen.ts
 *.gen.d.ts
 *.schema.json
+CHANGELOG.md
+.impeccable/

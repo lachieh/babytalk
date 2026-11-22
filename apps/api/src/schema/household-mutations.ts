@@ -5,6 +5,7 @@ import { invitePartner } from "../auth/magic-link";
 import type { Context } from "../context";
 import { generateInviteCode } from "../utils/invite-code";
 import { builder } from "./builder";
+import { notAuthenticated, refuse } from "./errors";
 import { isInstantEventType, normalizeEventEndTime } from "./event-times";
 import {
   BabyEventType,
@@ -20,7 +21,7 @@ import {
 } from "./household-types";
 
 const requireAuth = (ctx: Context): string => {
-  if (!ctx.currentUser) throw new Error("Not authenticated");
+  if (!ctx.currentUser) throw notAuthenticated();
   return ctx.currentUser.sub;
 };
 
@@ -33,7 +34,7 @@ const requireHousehold = async (
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (!user?.householdId) throw new Error("No household");
+  if (!user?.householdId) throw refuse("No household");
   return { householdId: user.householdId, userId };
 };
 
@@ -47,7 +48,7 @@ const requireBabyAccess = async (
     .from(babies)
     .where(and(eq(babies.id, babyId), eq(babies.householdId, householdId)))
     .limit(1);
-  if (!baby) throw new Error("Baby not found in household");
+  if (!baby) throw refuse("Baby not found in household");
 };
 
 // --- Household ---
@@ -62,7 +63,7 @@ builder.mutationField("createHousehold", (t) =>
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      if (existingUser?.householdId) throw new Error("Already in a household");
+      if (existingUser?.householdId) throw refuse("Already in a household");
 
       const [household] = await ctx.db
         .insert(households)
@@ -93,14 +94,14 @@ builder.mutationField("joinHousehold", (t) =>
         .from(users)
         .where(eq(users.id, userId))
         .limit(1);
-      if (existingUser?.householdId) throw new Error("Already in a household");
+      if (existingUser?.householdId) throw refuse("Already in a household");
 
       const [household] = await ctx.db
         .select()
         .from(households)
         .where(eq(households.inviteCode, args.inviteCode))
         .limit(1);
-      if (!household) throw new Error("Invalid invite code");
+      if (!household) throw refuse("Invalid invite code");
 
       await ctx.db
         .update(users)
@@ -126,7 +127,7 @@ builder.mutationField("invitePartner", (t) =>
         .from(households)
         .where(eq(households.id, householdId))
         .limit(1);
-      if (!household) throw new Error("Household not found");
+      if (!household) throw refuse("Household not found");
 
       await invitePartner(args.email, household.inviteCode);
       return true;
@@ -210,6 +211,8 @@ builder.mutationField("updateBaby", (t) =>
 
 // --- Events ---
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const buildMetadata = (
   type: string,
   args: {
@@ -235,7 +238,7 @@ const buildMetadata = (
 ): Record<string, unknown> => {
   switch (type) {
     case "feed": {
-      if (!args.feedMeta) throw new Error("feedMeta required for feed events");
+      if (!args.feedMeta) throw refuse("feedMeta required for feed events");
       return { ...args.feedMeta };
     }
     case "sleep": {
@@ -243,19 +246,19 @@ const buildMetadata = (
     }
     case "diaper": {
       if (!args.diaperMeta)
-        throw new Error("diaperMeta required for diaper events");
+        throw refuse("diaperMeta required for diaper events");
       return { ...args.diaperMeta };
     }
     case "note": {
-      if (!args.noteMeta) throw new Error("noteMeta required for note events");
+      if (!args.noteMeta) throw refuse("noteMeta required for note events");
       return { ...args.noteMeta };
     }
     case "pump": {
-      if (!args.pumpMeta) throw new Error("pumpMeta required for pump events");
+      if (!args.pumpMeta) throw refuse("pumpMeta required for pump events");
       return { ...args.pumpMeta };
     }
     default: {
-      throw new Error(`Unknown event type: ${type}`);
+      throw refuse(`Unknown event type: ${type}`);
     }
   }
 };
@@ -267,6 +270,9 @@ builder.mutationField("logEvent", (t) =>
       diaperMeta: t.arg({ required: false, type: DiaperMetadataInput }),
       endedAt: t.arg.string({ required: false }),
       feedMeta: t.arg({ required: false, type: FeedMetadataInput }),
+      // Chosen by the client so a resent create is the same event. Optional
+      // for clients (and queued requests) from before it existed.
+      id: t.arg.string({ required: false }),
       noteMeta: t.arg({ required: false, type: NoteMetadataInput }),
       pumpMeta: t.arg({ required: false, type: PumpMetadataInput }),
       sleepMeta: t.arg({ required: false, type: SleepMetadataInput }),
@@ -274,6 +280,9 @@ builder.mutationField("logEvent", (t) =>
       type: t.arg({ required: true, type: EventTypeEnum }),
     },
     resolve: async (_root, args, ctx) => {
+      if (args.id && !UUID.test(args.id)) {
+        throw refuse("Event id must be a UUID");
+      }
       const { householdId, userId } = await requireHousehold(ctx);
       await requireBabyAccess(ctx, args.babyId, householdId);
 
@@ -285,7 +294,7 @@ builder.mutationField("logEvent", (t) =>
         args.endedAt ? new Date(args.endedAt) : null
       );
 
-      const [event] = await ctx.db
+      const [created] = await ctx.db
         .insert(events)
         .values({
           babyId: args.babyId,
@@ -294,10 +303,24 @@ builder.mutationField("logEvent", (t) =>
           metadata,
           startedAt,
           type: args.type,
+          ...(args.id ? { id: args.id } : {}),
         })
+        .onConflictDoNothing({ target: events.id })
         .returning();
+      if (created) return created;
 
-      return event;
+      // The id is taken: a resend of this person's own create returns the
+      // event as it is now, edits and all. Anything else is refused without
+      // saying whose event it is or what it holds.
+      const [existing] = await ctx.db
+        .select()
+        .from(events)
+        .where(eq(events.id, args.id as string))
+        .limit(1);
+      const ownResend =
+        existing?.babyId === args.babyId && existing.loggedById === userId;
+      if (!ownResend) throw refuse("Event could not be saved");
+      return existing;
     },
     type: BabyEventType,
   })
@@ -324,7 +347,7 @@ builder.mutationField("updateEvent", (t) =>
         .from(events)
         .where(eq(events.id, args.id))
         .limit(1);
-      if (!existing) throw new Error("Event not found");
+      if (!existing) throw refuse("Event not found");
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       const updates: Record<string, unknown> = {};
@@ -381,7 +404,8 @@ builder.mutationField("deleteEvent", (t) =>
         .from(events)
         .where(eq(events.id, args.id))
         .limit(1);
-      if (!existing) throw new Error("Event not found");
+      // Already gone: a resent delete has nothing left to do.
+      if (!existing) return true;
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       await ctx.db.delete(events).where(eq(events.id, args.id));

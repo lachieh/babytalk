@@ -4,32 +4,43 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { Icon } from "@/components/icons";
 import { loadRuntimeConfig } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
+import type { VolumeUnit } from "@/lib/use-volume-unit";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 const HOW_IT_WORKS = [
   {
-    body: "Feed, sleep, or diaper. Your usual bottle, side, or nap spot is already picked, so one tap is enough.",
+    body: "Feed, sleep, or diaper. Your usual bottle, the next breast side, or the last nap spot is already picked, so one tap starts it.",
     number: "01",
     title: "Tap what happened",
   },
   {
-    body: "Adjust a time or amount afterwards, or add the feed you forgot to log. No forms to finish.",
+    body: "Adjust a time or amount afterwards, or add the feed you forgot to log. The tap counts on its own; the details can wait.",
     number: "02",
     title: "Fix the details later",
   },
   {
-    body: "Feeds, sleep, diapers, and pumping stay in one timeline your household can check.",
+    body: "Feeds, sleep, diapers, and pumping stay in one timeline, kept up to date on every phone in your household.",
     number: "03",
     title: "Everyone stays caught up",
   },
 ];
 
-const SUMMARY_ITEMS = [
+const BOTTLE = { ml: 120, oz: 4 };
+const FED_TODAY = { ml: 480, oz: 16 };
+
+const formatMockVolume = (
+  amount: Record<VolumeUnit, number>,
+  unit: VolumeUnit
+) => `${amount[unit]}${unit}`;
+
+const summaryItems = (unit: VolumeUnit) => [
   {
     color: "bg-feed-500",
-    detail: "120 ml · Bottle",
+    detail: `${formatMockVolume(BOTTLE, unit)} · Bottle`,
     label: "Feed",
     time: "2:10 am",
   },
@@ -41,87 +52,20 @@ const SUMMARY_ITEMS = [
   },
   {
     color: "bg-sleep-500",
-    detail: "1h 18m · Bassinet",
+    detail: "1h 18m",
     label: "Sleep",
     time: "12:16 am",
   },
 ];
 
-const SummaryIcon = ({ type }: { type: "feed" | "sleep" | "diaper" }) => {
-  if (type === "feed") {
-    return (
-      <svg
-        aria-hidden="true"
-        className="mx-auto h-5 w-5 text-neutral-500"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M8 4h8M9 2h6v4H9zM8 6h8l1 3v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9l1-3Z"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.6"
-        />
-      </svg>
-    );
-  }
-
-  if (type === "sleep") {
-    return (
-      <svg
-        aria-hidden="true"
-        className="mx-auto h-5 w-5 text-neutral-500"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M20 15.2A8 8 0 0 1 8.8 4 8 8 0 1 0 20 15.2Z"
-          stroke="currentColor"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth="1.6"
-        />
-      </svg>
-    );
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="mx-auto h-5 w-5 text-neutral-500"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        d="M6 7.5c1.7 1 3.7 1.5 6 1.5s4.3-.5 6-1.5M7 5v8.5a5 5 0 0 0 10 0V5M8 18.5l-2 2M16 18.5l2 2"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="1.6"
-      />
-    </svg>
-  );
-};
-
-const SELF_HOST_POINTS = [
-  {
-    body: "Postgres, the API, and the web app, from one Docker Compose file.",
-    title: "One command to run",
-  },
-  {
-    body: "Your URLs, email, and secrets are environment variables. Nothing is baked into the image.",
-    title: "Configured, not forked",
-  },
-  {
-    body: "Read it, change it, run it for your family or your friends.",
-    title: "MIT licensed",
-  },
-];
+const SummaryIcon = ({ type }: { type: "feed" | "sleep" | "diaper" }) => (
+  <Icon className="mx-auto h-5 w-5 text-neutral-500" name={type} />
+);
 
 export default function Home() {
   useRedirectIfLoggedIn();
   useAutoDarkMode();
+  const { unit } = useVolumeUnit();
   const [sourceUrl, setSourceUrl] = useState<string | undefined>();
 
   useEffect(() => {
@@ -137,7 +81,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="h-svh overflow-y-auto overflow-x-hidden bg-surface text-neutral-800 scroll-smooth">
+    <main className="h-svh overflow-y-auto overflow-x-hidden bg-surface text-neutral-800 motion-safe:scroll-smooth">
       <header className="relative z-20 border-neutral-200/80 border-b">
         <div className="mx-auto flex min-h-20 max-w-7xl items-center justify-between px-5 sm:px-8 lg:px-12">
           <Link
@@ -193,20 +137,20 @@ export default function Home() {
 
       <section className="relative mx-auto grid max-w-7xl gap-16 px-5 pt-16 pb-24 sm:px-8 sm:pt-24 lg:grid-cols-[1.08fr_0.92fr] lg:items-center lg:px-12 lg:pt-20 lg:pb-28">
         <div className="relative z-10 animate-fade-up">
-          <p className="flex items-center gap-3 text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
+          <p className="flex items-center gap-3 text-xs font-semibold tracking-[0.18em] text-primary-ink uppercase">
             <span className="h-px w-8 bg-primary-400" />
             Shared baby tracking
           </p>
-          <h1 className="mt-6 max-w-[10ch] font-serif text-[clamp(3.6rem,6vw,5.5rem)] leading-[0.88] tracking-[-0.045em] text-neutral-900">
-            Log every feed in a single tap.
+          <h1 className="mt-6 max-w-[11ch] text-balance font-serif text-[clamp(3.6rem,6vw,5.5rem)] leading-[0.88] tracking-[-0.045em] text-neutral-900">
+            Start every feed with one tap.
           </h1>
-          <p className="mt-8 max-w-xl text-lg leading-8 text-neutral-600 sm:text-xl sm:leading-9">
+          <p className="mt-8 max-w-xl text-pretty text-lg leading-8 text-neutral-600 sm:text-xl sm:leading-9">
             Bubsie keeps a clear, shared record of feeds, sleep, diapers, and
             pumping. So no one has to remember what happened at 3am.
           </p>
           <div className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center">
             <Link
-              className="inline-flex min-h-14 items-center justify-center rounded-full bg-primary-500 px-8 text-base font-semibold text-[oklch(97%_0.012_75)] shadow-[0_12px_30px_oklch(48%_0.06_100/0.2)] transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 hover:shadow-[0_16px_36px_oklch(48%_0.06_100/0.28)] active:scale-[0.98]"
+              className="inline-flex min-h-14 items-center justify-center rounded-full bg-primary-600 px-8 text-base font-semibold text-white shadow-[0_12px_30px_oklch(48%_0.06_100/0.2)] transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-700 hover:shadow-[0_16px_36px_oklch(48%_0.06_100/0.28)] active:scale-[0.98]"
               href="/auth/login"
             >
               Start tracking
@@ -236,13 +180,13 @@ export default function Home() {
           <div className="absolute -top-12 -right-24 h-64 w-64 rounded-[47%_53%_61%_39%/44%_42%_58%_56%] bg-sleep-100" />
           <div className="absolute -bottom-16 -left-20 h-56 w-56 rounded-[61%_39%_35%_65%/45%_56%_44%_55%] bg-feed-100" />
 
-          <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-surface-raised p-5 shadow-[0_28px_80px_oklch(18%_0.008_50/0.12)] sm:p-7">
+          <div className="relative overflow-hidden rounded-[2rem] border border-neutral-200 bg-surface-raised p-5 pb-14 shadow-[0_28px_80px_oklch(18%_0.008_50/0.12)] sm:p-7 sm:pb-20">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-serif text-2xl text-neutral-900">
                   Milo today
                 </p>
-                <p className="mt-1 text-[11px] font-medium tracking-[0.16em] text-neutral-400 uppercase">
+                <p className="mt-1 text-xs font-medium tracking-[0.16em] text-neutral-400 uppercase">
                   Tuesday, August 18
                 </p>
               </div>
@@ -253,9 +197,9 @@ export default function Home() {
               <div className="rounded-[45%_55%_51%_49%/54%_43%_57%_46%] bg-feed-100 px-2 py-5 text-center">
                 <SummaryIcon type="feed" />
                 <p className="mt-2 font-serif text-xl text-neutral-800">
-                  560 ml
+                  {formatMockVolume(FED_TODAY, unit)}
                 </p>
-                <p className="mt-0.5 text-[9px] font-semibold tracking-[0.13em] text-neutral-500 uppercase">
+                <p className="mt-0.5 text-xs font-semibold tracking-[0.13em] text-neutral-600 uppercase">
                   Fed
                 </p>
               </div>
@@ -264,25 +208,25 @@ export default function Home() {
                 <p className="mt-2 font-serif text-xl text-neutral-800">
                   4h 20m
                 </p>
-                <p className="mt-0.5 text-[9px] font-semibold tracking-[0.13em] text-neutral-500 uppercase">
+                <p className="mt-0.5 text-xs font-semibold tracking-[0.13em] text-neutral-600 uppercase">
                   Sleep
                 </p>
               </div>
               <div className="rounded-[50%_50%_60%_40%/56%_43%_57%_44%] bg-diaper-100 px-2 py-5 text-center">
                 <SummaryIcon type="diaper" />
                 <p className="mt-2 font-serif text-xl text-neutral-800">5</p>
-                <p className="mt-0.5 text-[9px] font-semibold tracking-[0.13em] text-neutral-500 uppercase">
+                <p className="mt-0.5 text-xs font-semibold tracking-[0.13em] text-neutral-600 uppercase">
                   Diapers
                 </p>
               </div>
             </div>
 
             <div className="mt-7 border-neutral-200 border-t pt-6">
-              <p className="text-[10px] font-semibold tracking-[0.16em] text-neutral-400 uppercase">
+              <p className="text-xs font-semibold tracking-[0.16em] text-neutral-600 uppercase">
                 Latest
               </p>
               <div className="mt-4 space-y-4">
-                {SUMMARY_ITEMS.map((item) => (
+                {summaryItems(unit).map((item) => (
                   <div className="flex items-center gap-3" key={item.label}>
                     <span
                       aria-hidden="true"
@@ -303,7 +247,7 @@ export default function Home() {
 
           <div className="relative -mt-7 ml-5 rounded-[1.5rem] border border-primary-200 bg-primary-50 p-4 shadow-[0_16px_40px_oklch(18%_0.008_50/0.12)] sm:-mt-10 sm:ml-12 sm:p-5">
             <div className="flex items-start gap-4">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-500 text-[oklch(97%_0.012_75)]">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
                 <svg
                   aria-hidden="true"
                   className="h-5 w-5"
@@ -321,10 +265,10 @@ export default function Home() {
               </span>
               <div>
                 <p className="font-serif text-lg leading-snug text-neutral-800">
-                  Bottle · 120 ml
+                  Bottle · {formatMockVolume(BOTTLE, unit)}
                 </p>
-                <p className="mt-2 text-xs font-medium text-primary-600">
-                  Logged in one tap. That’s four feeds today.
+                <p className="mt-2 text-xs font-medium text-neutral-600">
+                  Saved. That’s four feeds today.
                 </p>
               </div>
             </div>
@@ -333,21 +277,12 @@ export default function Home() {
       </section>
 
       <div className="border-neutral-200 border-y bg-surface-raised">
-        <div className="mx-auto flex max-w-7xl flex-wrap justify-center gap-x-8 gap-y-3 px-5 py-5 text-xs font-semibold tracking-[0.12em] text-neutral-500 uppercase sm:px-8 lg:px-12">
-          <span>Log a feed</span>
-          <span aria-hidden="true" className="text-primary-300">
-            ·
-          </span>
-          <span>Start a nap</span>
-          <span aria-hidden="true" className="text-primary-300">
-            ·
-          </span>
-          <span>Record a diaper</span>
-          <span aria-hidden="true" className="text-primary-300">
-            ·
-          </span>
-          <span>Check the last feed</span>
-        </div>
+        <ul className="mx-auto grid max-w-7xl grid-cols-2 gap-x-6 gap-y-3 px-5 py-5 text-center text-xs font-semibold tracking-[0.12em] text-neutral-600 uppercase sm:grid-cols-4 sm:px-8 lg:px-12">
+          <li>Start a feed</li>
+          <li>Start a nap</li>
+          <li>Record a diaper</li>
+          <li>Check the last feed</li>
+        </ul>
       </div>
 
       <section
@@ -355,13 +290,10 @@ export default function Home() {
         id="how-it-works"
       >
         <div>
-          <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
-            How it works
-          </p>
-          <h2 className="mt-5 max-w-[10ch] font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
-            Tap once. It stays remembered.
+          <h2 className="max-w-[14ch] text-balance font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
+            <span className="block">Tap once.</span> It stays remembered.
           </h2>
-          <p className="mt-6 max-w-md text-base leading-7 text-neutral-500">
+          <p className="mt-6 max-w-md text-pretty text-base leading-7 text-neutral-500">
             Baby tracking should take less attention than the baby. One tap
             gives your whole household the useful version of what happened.
           </p>
@@ -380,7 +312,7 @@ export default function Home() {
                 <h3 className="text-lg font-semibold text-neutral-800">
                   {item.title}
                 </h3>
-                <p className="mt-2 max-w-xl text-sm leading-6 text-neutral-500">
+                <p className="mt-2 max-w-xl text-pretty text-sm leading-6 text-neutral-500">
                   {item.body}
                 </p>
               </div>
@@ -395,47 +327,44 @@ export default function Home() {
       >
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
-              Why Bubsie
-            </p>
-            <h2 className="mt-5 font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
+            <h2 className="text-balance font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
               Less admin. More knowing.
             </h2>
           </div>
 
           <div className="mt-16 grid gap-px overflow-hidden rounded-[2rem] border border-neutral-200 bg-neutral-200 lg:grid-cols-2">
             <article className="bg-surface-raised p-7 sm:p-10 lg:p-12">
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">
+              <p className="text-xs font-semibold tracking-[0.18em] text-neutral-400 uppercase">
                 When your hands are full
               </p>
-              <h3 className="mt-5 max-w-md font-serif text-4xl leading-tight text-neutral-900">
+              <h3 className="mt-5 max-w-md text-balance font-serif text-4xl leading-tight text-neutral-900">
                 One thumb is enough.
               </h3>
-              <p className="mt-5 max-w-md text-sm leading-7 text-neutral-500">
-                Big buttons, sensible defaults, and nothing to type. Log a feed,
-                start a nap, or record a change without putting the baby down.
+              <p className="mt-5 max-w-md text-pretty text-sm leading-7 text-neutral-500">
+                Big buttons and sensible defaults. Start a feed, start a nap, or
+                record a change without putting the baby down.
               </p>
               <div className="mt-10 rounded-[1.5rem] bg-feed-100 p-6">
                 <p className="font-serif text-2xl leading-snug text-neutral-800">
-                  Feed · Breast · Left
+                  Feed · Breast · Right
                 </p>
                 <div className="mt-5 flex items-center gap-3 border-feed-200 border-t pt-4">
                   <span className="h-2 w-2 rounded-full bg-feed-500" />
-                  <p className="text-xs font-semibold text-feed-600">
-                    Left feed · 15 min · Logged now
+                  <p className="text-xs font-semibold text-neutral-700">
+                    Next side, picked for you · Tap to start
                   </p>
                 </div>
               </div>
             </article>
 
             <article className="bg-surface-raised p-7 sm:p-10 lg:p-12">
-              <p className="text-[10px] font-semibold tracking-[0.18em] text-neutral-400 uppercase">
+              <p className="text-xs font-semibold tracking-[0.18em] text-neutral-400 uppercase">
                 When your brain is tired
               </p>
-              <h3 className="mt-5 max-w-md font-serif text-4xl leading-tight text-neutral-900">
+              <h3 className="mt-5 max-w-md text-balance font-serif text-4xl leading-tight text-neutral-900">
                 See the answer, not a spreadsheet.
               </h3>
-              <p className="mt-5 max-w-md text-sm leading-7 text-neutral-500">
+              <p className="mt-5 max-w-md text-pretty text-sm leading-7 text-neutral-500">
                 Today’s totals, the most recent event, and a clear timeline
                 answer the questions that come up most. The history is there
                 when you need it.
@@ -454,7 +383,7 @@ export default function Home() {
                     Fed today
                   </span>
                   <span className="font-serif text-lg text-neutral-800">
-                    560 ml
+                    {formatMockVolume(FED_TODAY, unit)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-full bg-diaper-100 px-5 py-3.5">
@@ -466,31 +395,52 @@ export default function Home() {
               </div>
             </article>
 
-            <article className="bg-primary-600 p-7 text-[oklch(97%_0.012_75)] sm:p-10 lg:col-span-2 lg:p-12">
+            <article className="bg-primary-600 p-7 text-white sm:p-10 lg:col-span-2 lg:p-12">
               <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-end lg:gap-20">
                 <div>
-                  <p className="text-[10px] font-semibold tracking-[0.18em] text-[oklch(90%_0.03_100)] uppercase">
+                  <p className="text-xs font-semibold tracking-[0.18em] text-white/85 uppercase">
                     When someone else takes over
                   </p>
-                  <h3 className="mt-5 max-w-lg font-serif text-4xl leading-tight sm:text-5xl">
+                  <h3 className="mt-5 max-w-lg text-balance font-serif text-4xl leading-tight sm:text-5xl">
                     Your partner shouldn’t need a handover meeting.
                   </h3>
-                  <p className="mt-5 max-w-lg text-sm leading-7 text-[oklch(90%_0.025_100)]">
-                    Everyone in the family sees the same record, so the next
-                    person knows what happened and what may be coming next.
+                  <p className="mt-5 max-w-lg text-pretty text-sm leading-7 text-white/90">
+                    Everyone in the family sees the same record, kept up to date
+                    on every phone, so whoever picks up the baby next knows what
+                    has already been done.
                   </p>
                 </div>
-                <div className="rounded-[1.75rem] bg-[oklch(97%_0.012_75)] p-6 text-neutral-800 shadow-[0_24px_50px_oklch(25%_0.04_100/0.18)] sm:p-8">
-                  <p className="text-[10px] font-semibold tracking-[0.16em] text-primary-500 uppercase">
-                    While you were asleep
+                <div className="rounded-[1.75rem] bg-surface-raised p-6 text-neutral-800 shadow-[0_24px_50px_oklch(25%_0.04_100/0.18)] sm:p-8">
+                  <p className="text-xs font-semibold text-neutral-600">
+                    What your partner sees on opening Bubsie
                   </p>
-                  <p className="mt-4 font-serif text-2xl leading-snug text-neutral-800 sm:text-3xl">
-                    3 feeds, 2 diapers, and a 1h 20m nap. Last feed was 45
-                    minutes ago.
+                  <p className="mt-4 text-balance font-serif text-2xl leading-snug text-neutral-800 sm:text-3xl">
+                    {formatMockVolume(FED_TODAY, unit)} fed, 4h 20m of sleep,
+                    and 5 diapers today.
                   </p>
-                  <p className="mt-5 text-xs font-medium text-neutral-400">
-                    Everything since your last check-in, in one glance.
-                  </p>
+                  <ul className="mt-5 space-y-2 border-neutral-200 border-t pt-4 text-sm text-neutral-600">
+                    <li className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 shrink-0 rounded-full bg-feed-500"
+                      />
+                      Fed 45m ago · {formatMockVolume(BOTTLE, unit)} · Bottle
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 shrink-0 rounded-full bg-sleep-500"
+                      />
+                      Woke 1h 18m ago
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 shrink-0 rounded-full bg-diaper-500"
+                      />
+                      Changed 1h 42m ago · Wet
+                    </li>
+                  </ul>
                 </div>
               </div>
             </article>
@@ -498,94 +448,48 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="px-5 py-24 sm:px-8 sm:py-32 lg:px-12" id="self-host">
-        <div className="mx-auto grid max-w-7xl gap-14 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:gap-20">
-          <div>
-            <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
-              Yours to run
-            </p>
-            <h2 className="mt-5 font-serif text-5xl leading-[0.98] tracking-[-0.03em] text-neutral-900 sm:text-6xl">
-              Keep your family’s records on your own server.
-            </h2>
-            <p className="mt-6 max-w-xl text-base leading-7 text-neutral-500">
-              Bubsie is open source. Run it on a home server or a small VPS and
-              every feed, nap, and change stays in a database you own.
-            </p>
-            <ul className="mt-10 space-y-6">
-              {SELF_HOST_POINTS.map((point) => (
-                <li className="flex gap-4" key={point.title}>
-                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary-400" />
-                  <div>
-                    <p className="font-semibold text-neutral-800">
-                      {point.title}
-                    </p>
-                    <p className="mt-1 text-sm leading-6 text-neutral-500">
-                      {point.body}
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            {sourceUrl ? (
-              <a
-                className="mt-10 inline-flex min-h-12 items-center justify-center rounded-full border border-neutral-300 px-6 text-sm font-semibold text-neutral-700 transition-[background-color,border-color,transform] duration-[var(--duration-normal)] hover:border-neutral-400 hover:bg-surface-raised active:scale-[0.98]"
-                href={sourceUrl}
-                rel="noopener"
-              >
-                Read the self-hosting guide
-              </a>
-            ) : null}
-          </div>
-
-          <div className="overflow-hidden rounded-[1.75rem] border border-neutral-200 bg-surface-raised shadow-[0_24px_50px_oklch(25%_0.04_100/0.08)]">
-            <div className="flex items-center gap-2 border-neutral-200 border-b px-6 py-4">
-              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-              <span className="h-2.5 w-2.5 rounded-full bg-neutral-200" />
-              <span className="ml-3 text-xs font-medium text-neutral-400">
-                Self-hosting
-              </span>
-            </div>
-            <pre className="overflow-x-auto px-6 py-6 font-mono text-[13px] leading-7 text-neutral-600">
-              <code>
-                <span className="text-neutral-400">
-                  # Where your family will find it
-                </span>
-                {"\n"}BUBSIE_API_WEB_URL=https://bubsie.example.com
-                {"\n"}BUBSIE_WEB_API_URL=https://api.bubsie.example.com/graphql
-                {"\n\n"}
-                <span className="text-neutral-400"># Sign-in emails</span>
-                {"\n"}BUBSIE_API_SMTP_HOST=smtp.example.com
-                {"\n"}BUBSIE_API_SMTP_FROM=hello@example.com
-                {"\n\n"}
-                <span className="text-neutral-400">$ </span>
-                <span className="text-neutral-800">
-                  docker compose -f docker-compose.selfhost.yml up -d
-                </span>
-              </code>
-            </pre>
-          </div>
-        </div>
-      </section>
-
       <section className="relative overflow-hidden px-5 py-28 text-center sm:px-8 sm:py-36 lg:px-12">
         <div className="absolute top-1/2 left-1/2 h-[32rem] w-[32rem] -translate-x-1/2 -translate-y-1/2 rounded-[43%_57%_64%_36%/52%_39%_61%_48%] bg-primary-50" />
         <div className="relative mx-auto max-w-3xl">
-          <p className="text-xs font-semibold tracking-[0.18em] text-primary-600 uppercase">
-            Ready when the next feed is
-          </p>
-          <h2 className="mt-6 font-serif text-5xl leading-[0.96] tracking-[-0.03em] text-neutral-900 sm:text-7xl">
+          <h2 className="text-balance font-serif text-5xl leading-[0.96] tracking-[-0.03em] text-neutral-900 sm:text-7xl">
             Keep the memory. Lose the mental load.
           </h2>
-          <p className="mx-auto mt-7 max-w-xl text-base leading-7 text-neutral-500">
+          <p className="mx-auto mt-7 max-w-xl text-pretty text-base leading-7 text-neutral-500">
             Start a shared baby log you can update with one thumb, even at 3am.
           </p>
           <Link
-            className="mt-9 inline-flex min-h-14 items-center justify-center rounded-full bg-primary-500 px-8 text-base font-semibold text-[oklch(97%_0.012_75)] shadow-[0_12px_30px_oklch(48%_0.06_100/0.2)] transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-600 hover:shadow-[0_16px_36px_oklch(48%_0.06_100/0.28)] active:scale-[0.98]"
+            className="mt-9 inline-flex min-h-14 items-center justify-center rounded-full bg-primary-600 px-8 text-base font-semibold text-white shadow-[0_12px_30px_oklch(48%_0.06_100/0.2)] transition-[background-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-out)] hover:bg-primary-700 hover:shadow-[0_16px_36px_oklch(48%_0.06_100/0.28)] active:scale-[0.98]"
             href="/auth/login"
           >
             Start tracking
           </Link>
+        </div>
+      </section>
+
+      <section
+        className="border-neutral-200 border-t bg-surface-sunken px-5 py-14 sm:px-8 lg:px-12"
+        id="self-host"
+      >
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-16">
+          <div className="max-w-2xl">
+            <h2 className="font-serif text-3xl tracking-[-0.02em] text-neutral-900 sm:text-4xl">
+              Yours to run
+            </h2>
+            <p className="mt-3 text-pretty text-base leading-7 text-neutral-600">
+              Bubsie is open source and MIT licensed, so you can run it on your
+              own server and keep every feed, nap, and change in a database you
+              own.
+            </p>
+          </div>
+          {sourceUrl ? (
+            <a
+              className="inline-flex min-h-12 shrink-0 items-center justify-center self-start rounded-full border border-neutral-300 px-6 text-sm font-semibold text-neutral-700 transition-[background-color,border-color,transform] duration-[var(--duration-normal)] hover:border-neutral-400 hover:bg-surface-raised active:scale-[0.98] lg:self-auto"
+              href={sourceUrl}
+              rel="noopener"
+            >
+              Read the self-hosting guide
+            </a>
+          ) : null}
         </div>
       </section>
 

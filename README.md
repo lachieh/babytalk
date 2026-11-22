@@ -139,20 +139,18 @@ one for the API), and an SMTP account for sign-in emails.
 The API runs database migrations when it starts. Both servers refuse to start
 if a required URL or setting is missing, and print which one.
 
-| Variable                   | Required | Purpose                                            |
-| -------------------------- | -------- | -------------------------------------------------- |
-| `BUBSIE_API_WEB_URL`       | yes      | Public web URL, used for CORS, passkeys, and email |
-| `BUBSIE_API_JWT_SECRET`    | yes      | Signs sessions (16+ characters)                    |
-| `BUBSIE_API_SMTP_HOST`     | yes      | Mail server                                        |
-| `BUBSIE_API_SMTP_FROM`     | yes      | Sender address for sign-in emails                  |
-| `BUBSIE_API_SMTP_PORT`     | no       | Mail server port                                   |
-| `BUBSIE_API_SMTP_USER`     | no       | SMTP username                                      |
-| `BUBSIE_API_SMTP_PASS`     | no       | SMTP password                                      |
-| `BUBSIE_API_RP_NAME`       | no       | Name shown in passkey prompts                      |
-| `BUBSIE_WEB_API_URL`       | yes      | Public GraphQL URL, ending in `/graphql`           |
-| `BUBSIE_WEB_TAMBO_URL`     | yes      | Tambo API URL (defaults in the compose file)       |
-| `BUBSIE_WEB_TAMBO_API_KEY` | no       | Enables the AI insights                            |
-| `BUBSIE_WEB_SOURCE_URL`    | no       | Shows a source link on the homepage                |
+| Variable                | Required | Purpose                                            |
+| ----------------------- | -------- | -------------------------------------------------- |
+| `BUBSIE_API_WEB_URL`    | yes      | Public web URL, used for CORS, passkeys, and email |
+| `BUBSIE_API_JWT_SECRET` | yes      | Signs sessions (16+ characters)                    |
+| `BUBSIE_API_SMTP_HOST`  | yes      | Mail server                                        |
+| `BUBSIE_API_SMTP_FROM`  | yes      | Sender address for sign-in emails                  |
+| `BUBSIE_API_SMTP_PORT`  | no       | Mail server port                                   |
+| `BUBSIE_API_SMTP_USER`  | no       | SMTP username                                      |
+| `BUBSIE_API_SMTP_PASS`  | no       | SMTP password                                      |
+| `BUBSIE_API_RP_NAME`    | no       | Name shown in passkey prompts                      |
+| `BUBSIE_WEB_API_URL`    | yes      | Public GraphQL URL, ending in `/graphql`           |
+| `BUBSIE_WEB_SOURCE_URL` | no       | Shows a source link on the homepage                |
 
 Images are published to GHCR: `latest` follows releases and `nightly` follows
 `main`. Set `BUBSIE_IMAGE_TAG` to pin a version.

@@ -12,10 +12,10 @@
   --color-neutral-100: oklch(94% 0.012 75);
   --color-neutral-200: oklch(88% 0.015 70);
   --color-neutral-300: oklch(78% 0.012 65);
-  --color-neutral-400: oklch(62% 0.01 60);
-  --color-neutral-500: oklch(50% 0.01 55);
-  --color-neutral-600: oklch(40% 0.012 50);
-  --color-neutral-700: oklch(32% 0.012 50);
+  --color-neutral-400: oklch(48% 0.01 60);
+  --color-neutral-500: oklch(41% 0.01 55);
+  --color-neutral-600: oklch(34% 0.012 50);
+  --color-neutral-700: oklch(28% 0.012 50);
   --color-neutral-800: oklch(24% 0.01 50);
   --color-neutral-900: oklch(18% 0.008 50);
   --color-neutral-950: oklch(12% 0.006 50);
@@ -24,11 +24,12 @@
   --color-primary-50: oklch(95% 0.02 100);
   --color-primary-100: oklch(90% 0.03 100);
   --color-primary-200: oklch(82% 0.05 100);
-  --color-primary-300: oklch(70% 0.06 100);
-  --color-primary-400: oklch(58% 0.07 100);
+  --color-primary-300: oklch(63% 0.06 100);
+  --color-primary-400: oklch(52% 0.07 100);
   --color-primary-500: oklch(48% 0.06 100);
   --color-primary-600: oklch(42% 0.06 100);
   --color-primary-700: oklch(36% 0.05 100);
+  --color-primary-ink: oklch(42% 0.06 100);
 
   /* --- Event type accents (distinct per-type) --- */
   /* Feed: sage green */
@@ -56,8 +57,9 @@
   --color-pump-50: oklch(92% 0.035 350);
   --color-pump-100: oklch(90% 0.045 350);
   --color-pump-200: oklch(85% 0.06 350);
-  --color-pump-500: oklch(55% 0.08 350);
-  --color-pump-600: oklch(47% 0.08 350);
+  --color-pump-500: oklch(50% 0.08 350);
+  --color-pump-600: oklch(43% 0.08 350);
+  --color-pump-700: oklch(38% 0.07 350);
 
   /* Note: warm stone */
   --color-note-50: oklch(96% 0.008 75);
@@ -126,7 +128,9 @@
   /* --- Font family --- */
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-serif: "Instrument Serif", "Georgia", serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-mono:
+    ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono",
+    monospace;
 }
 
 /* --- Dark mode overrides ---
@@ -145,11 +149,11 @@
     --color-neutral-100: oklch(18% 0.014 80);
     --color-neutral-200: oklch(24% 0.016 80);
     --color-neutral-300: oklch(34% 0.014 75);
-    --color-neutral-400: oklch(48% 0.012 70);
-    --color-neutral-500: oklch(58% 0.01 70);
-    --color-neutral-600: oklch(68% 0.008 70);
-    --color-neutral-700: oklch(78% 0.007 70);
-    --color-neutral-800: oklch(87% 0.006 75);
+    --color-neutral-400: oklch(62% 0.012 70);
+    --color-neutral-500: oklch(69% 0.01 70);
+    --color-neutral-600: oklch(76% 0.008 70);
+    --color-neutral-700: oklch(82% 0.007 70);
+    --color-neutral-800: oklch(88% 0.006 75);
     --color-neutral-900: oklch(93% 0.004 75);
     --color-neutral-950: oklch(96% 0.003 75);
 
@@ -157,36 +161,38 @@
     --color-primary-50: oklch(18% 0.02 100);
     --color-primary-100: oklch(23% 0.03 100);
     --color-primary-200: oklch(30% 0.04 100);
-    --color-primary-300: oklch(40% 0.05 100);
-    --color-primary-400: oklch(52% 0.06 100);
-    --color-primary-500: oklch(58% 0.06 100);
-    --color-primary-600: oklch(50% 0.06 100);
+    --color-primary-300: oklch(50% 0.05 100);
+    --color-primary-400: oklch(64% 0.06 100);
+    --color-primary-500: oklch(54% 0.06 100);
+    --color-primary-600: oklch(48% 0.06 100);
     --color-primary-700: oklch(42% 0.05 100);
+    --color-primary-ink: oklch(68% 0.06 100);
 
     /* Event accents: distinct per-type for dark */
     --color-feed-50: oklch(18% 0.02 145);
     --color-feed-100: oklch(23% 0.035 145);
     --color-feed-200: oklch(30% 0.05 145);
     --color-feed-500: oklch(58% 0.07 145);
-    --color-feed-600: oklch(50% 0.06 145);
+    --color-feed-600: oklch(64% 0.06 145);
 
     --color-sleep-50: oklch(18% 0.015 240);
     --color-sleep-100: oklch(23% 0.025 240);
     --color-sleep-200: oklch(30% 0.04 240);
     --color-sleep-500: oklch(58% 0.07 240);
-    --color-sleep-600: oklch(50% 0.06 240);
+    --color-sleep-600: oklch(64% 0.06 240);
 
     --color-diaper-50: oklch(18% 0.025 90);
     --color-diaper-100: oklch(23% 0.04 90);
     --color-diaper-200: oklch(30% 0.06 90);
     --color-diaper-500: oklch(58% 0.08 90);
-    --color-diaper-600: oklch(50% 0.07 90);
+    --color-diaper-600: oklch(64% 0.07 90);
 
     --color-pump-50: oklch(18% 0.02 350);
     --color-pump-100: oklch(23% 0.03 350);
     --color-pump-200: oklch(30% 0.05 350);
-    --color-pump-500: oklch(58% 0.07 350);
-    --color-pump-600: oklch(50% 0.06 350);
+    --color-pump-500: oklch(54% 0.07 350);
+    --color-pump-600: oklch(64% 0.06 350);
+    --color-pump-700: oklch(46% 0.06 350);
 
     --color-note-50: oklch(18% 0.012 80);
     --color-note-100: oklch(23% 0.015 80);
@@ -228,46 +234,48 @@
   --color-neutral-100: oklch(18% 0.014 80);
   --color-neutral-200: oklch(24% 0.016 80);
   --color-neutral-300: oklch(34% 0.014 75);
-  --color-neutral-400: oklch(48% 0.012 70);
-  --color-neutral-500: oklch(58% 0.01 70);
-  --color-neutral-600: oklch(68% 0.008 70);
-  --color-neutral-700: oklch(78% 0.007 70);
-  --color-neutral-800: oklch(87% 0.006 75);
+  --color-neutral-400: oklch(62% 0.012 70);
+  --color-neutral-500: oklch(69% 0.01 70);
+  --color-neutral-600: oklch(76% 0.008 70);
+  --color-neutral-700: oklch(82% 0.007 70);
+  --color-neutral-800: oklch(88% 0.006 75);
   --color-neutral-900: oklch(93% 0.004 75);
   --color-neutral-950: oklch(96% 0.003 75);
 
   --color-primary-50: oklch(18% 0.02 100);
   --color-primary-100: oklch(23% 0.03 100);
   --color-primary-200: oklch(30% 0.04 100);
-  --color-primary-300: oklch(40% 0.05 100);
-  --color-primary-400: oklch(52% 0.06 100);
-  --color-primary-500: oklch(58% 0.06 100);
-  --color-primary-600: oklch(50% 0.06 100);
+  --color-primary-300: oklch(50% 0.05 100);
+  --color-primary-400: oklch(64% 0.06 100);
+  --color-primary-500: oklch(54% 0.06 100);
+  --color-primary-600: oklch(48% 0.06 100);
   --color-primary-700: oklch(42% 0.05 100);
+  --color-primary-ink: oklch(68% 0.06 100);
 
   --color-feed-50: oklch(18% 0.02 145);
   --color-feed-100: oklch(23% 0.035 145);
   --color-feed-200: oklch(30% 0.05 145);
   --color-feed-500: oklch(58% 0.07 145);
-  --color-feed-600: oklch(50% 0.06 145);
+  --color-feed-600: oklch(64% 0.06 145);
 
   --color-sleep-50: oklch(18% 0.015 240);
   --color-sleep-100: oklch(23% 0.025 240);
   --color-sleep-200: oklch(30% 0.04 240);
   --color-sleep-500: oklch(58% 0.07 240);
-  --color-sleep-600: oklch(50% 0.06 240);
+  --color-sleep-600: oklch(64% 0.06 240);
 
   --color-diaper-50: oklch(18% 0.025 90);
   --color-diaper-100: oklch(23% 0.04 90);
   --color-diaper-200: oklch(30% 0.06 90);
   --color-diaper-500: oklch(58% 0.08 90);
-  --color-diaper-600: oklch(50% 0.07 90);
+  --color-diaper-600: oklch(64% 0.07 90);
 
   --color-pump-50: oklch(18% 0.02 350);
   --color-pump-100: oklch(23% 0.03 350);
   --color-pump-200: oklch(30% 0.05 350);
-  --color-pump-500: oklch(58% 0.07 350);
-  --color-pump-600: oklch(50% 0.06 350);
+  --color-pump-500: oklch(54% 0.07 350);
+  --color-pump-600: oklch(64% 0.06 350);
+  --color-pump-700: oklch(46% 0.06 350);
 
   --color-note-50: oklch(18% 0.012 80);
   --color-note-100: oklch(23% 0.015 80);
@@ -308,6 +316,13 @@ body {
   overscroll-behavior: none;
 }
 
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-primary-ink);
+    outline-offset: 2px;
+  }
+}
+
 /* --- Reduced motion --- */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -316,6 +331,7 @@ body {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -350,23 +366,6 @@ body {
   animation: fade-up var(--duration-slow) var(--ease-out) both;
 }
 
-/* --- Gentle pulse for recording --- */
-@keyframes gentle-pulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.06);
-    opacity: 0.85;
-  }
-}
-
-.animate-gentle-pulse {
-  animation: gentle-pulse 1.8s var(--ease-in-out) infinite;
-}
-
 /* --- Bottom sheet slide-up --- */
 @keyframes slide-up {
   from {
@@ -381,22 +380,6 @@ body {
 
 .animate-slide-up {
   animation: slide-up var(--duration-normal) var(--ease-out) both;
-}
-
-/* --- Voice waveform: alternating bar heights --- */
-@keyframes waveform {
-  0%,
-  100% {
-    height: 4px;
-  }
-  50% {
-    height: 18px;
-  }
-}
-
-.animate-waveform {
-  animation: waveform 800ms var(--ease-in-out) infinite;
-  height: 4px;
 }
 
 /* --- Safe area utilities for notched devices --- */

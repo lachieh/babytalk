@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function HistoryIndex() {
-  redirect("/history/days");
+  redirect("/history/list");
 }

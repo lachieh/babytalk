@@ -3,10 +3,10 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { PebbleLoading } from "@/components/icons";
 import { BabyContextProvider } from "@/lib/baby-context";
+import { gqlRequest, restoreSession } from "@/lib/gql-request";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { gqlRequest, restoreSession } from "@/lib/tambo/graphql";
-import { BabyTamboProvider } from "@/lib/tambo/provider";
 
 const CHECK_HOUSEHOLD = `
   query { myHousehold { id } myBabies { id } }
@@ -58,18 +58,12 @@ export default function DashboardLayout({
   }, [router, pathname]);
 
   if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
-      </div>
-    );
+    return <PebbleLoading />;
   }
 
   return (
     <RuntimeConfigProvider>
-      <BabyTamboProvider>
-        <BabyContextProvider>{children}</BabyContextProvider>
-      </BabyTamboProvider>
+      <BabyContextProvider>{children}</BabyContextProvider>
     </RuntimeConfigProvider>
   );
 }

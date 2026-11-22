@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 
+import { Sheet } from "@/components/sheet";
 import { STATION_ACTIONS } from "@/lib/station-config";
 import type { StationActionKey } from "@/lib/station-config";
 import { disableDeviceMode } from "@/lib/use-device-mode";
@@ -28,7 +29,7 @@ const ToggleRow = ({
   return (
     <button
       aria-pressed={isOn}
-      className="flex w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100"
+      className="flex min-h-[56px] w-full items-center gap-3 rounded-xl bg-neutral-50 px-4 py-3 text-left transition-colors hover:bg-neutral-100"
       onClick={handleClick}
       type="button"
     >
@@ -70,127 +71,68 @@ export const StationSettingsSheet = ({
   const router = useRouter();
   const { unit, toggle: toggleUnit } = useVolumeUnit();
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent | React.KeyboardEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose]
-  );
-
-  const handleBackdropKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
-
   const handleExitStation = useCallback(() => {
     disableDeviceMode();
     router.push("/dashboard");
   }, [router]);
 
-  if (!open) return null;
-
   return (
-    <div
-      aria-label="Station settings"
-      aria-modal="true"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-neutral-900/40"
-      onClick={handleBackdropClick}
-      onKeyDown={handleBackdropKeyDown}
-      role="dialog"
-    >
-      <div className="animate-slide-up w-full max-w-lg rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-neutral-200" />
-        </div>
+    <Sheet onClose={onClose} open={open} title="Station settings">
+      <div className="space-y-5 px-5 pb-6">
+        <section>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+            Visible actions
+          </h3>
+          <p className="mb-3 text-xs text-neutral-500">
+            Pick which buttons appear on this device. Settings stay on this
+            device only.
+          </p>
+          <ul className="space-y-2">
+            {STATION_ACTIONS.map((action) => {
+              const isOn = visible.includes(action.key);
+              return (
+                <li key={action.key}>
+                  <ToggleRow action={action} isOn={isOn} onToggle={onToggle} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
 
-        <div className="flex items-center justify-between px-5 pt-2 pb-4">
-          <h2 className="text-base font-semibold text-neutral-700">
-            Station settings
-          </h2>
-          <button
-            aria-label="Close"
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-            onClick={onClose}
-            type="button"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              viewBox="0 0 24 24"
+        <section>
+          <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
+            Preferences
+          </h3>
+          <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
+            <span className="text-sm text-neutral-700">Volume unit</span>
+            <button
+              aria-label={`Volume unit: ${unit === "oz" ? "fluid ounces" : "millilitres"}. Switch unit`}
+              className="flex rounded-lg border border-neutral-200 text-xs"
+              onClick={toggleUnit}
+              type="button"
             >
-              <path
-                d="M6 18L18 6M6 6l12 12"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="space-y-5 px-5 pb-6">
-          <section>
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
-              Visible actions
-            </h3>
-            <p className="mb-3 text-xs text-neutral-500">
-              Pick which buttons appear on this device. Settings stay on this
-              device only.
-            </p>
-            <ul className="space-y-2">
-              {STATION_ACTIONS.map((action) => {
-                const isOn = visible.includes(action.key);
-                return (
-                  <li key={action.key}>
-                    <ToggleRow
-                      action={action}
-                      isOn={isOn}
-                      onToggle={onToggle}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <section>
-            <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
-              Preferences
-            </h3>
-            <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
-              <span className="text-sm text-neutral-700">Volume unit</span>
-              <button
-                aria-label="Toggle volume unit"
-                className="flex rounded-lg border border-neutral-200 text-xs"
-                onClick={toggleUnit}
-                type="button"
+              <span
+                className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-l-lg px-3 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white" : "text-neutral-500"}`}
               >
-                <span
-                  className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-                >
-                  fl oz
-                </span>
-                <span
-                  className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-                >
-                  ml
-                </span>
-              </button>
-            </div>
-          </section>
+                fl oz
+              </span>
+              <span
+                className={`flex min-h-[44px] min-w-[44px] items-center justify-center rounded-r-lg px-3 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-500"}`}
+              >
+                ml
+              </span>
+            </button>
+          </div>
+        </section>
 
-          <button
-            className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
-            onClick={handleExitStation}
-            type="button"
-          >
-            Exit station mode
-          </button>
-        </div>
+        <button
+          className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+          onClick={handleExitStation}
+          type="button"
+        >
+          Exit station mode
+        </button>
       </div>
-    </div>
+    </Sheet>
   );
 };

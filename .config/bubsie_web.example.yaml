@@ -3,5 +3,3 @@
 # Every key can also be set as an environment variable, e.g. BUBSIE_WEB_API_URL.
 
 apiUrl: http://localhost:4000/graphql
-tamboUrl: https://api.tambo.co
-tamboApiKey: ""

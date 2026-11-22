@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 
-import { gqlRequest } from "@/lib/tambo/graphql";
+import { gqlRequest, storeSession } from "@/lib/gql-request";
+import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { disableDeviceMode } from "@/lib/use-device-mode";
 
 const VERIFY_MAGIC_LINK = `
@@ -26,17 +27,39 @@ const JOIN_HOUSEHOLD = `
   }
 `;
 
+type Failure = "incomplete" | "expired" | "network";
+
+const FAILURE_COPY: Record<Failure, { title: string; body: string }> = {
+  expired: {
+    body: "Sign-in links work once and last 15 minutes. Send yourself a new one.",
+    title: "This link has expired",
+  },
+  incomplete: {
+    body: "Part of the link is missing. Try opening it from the email again, or send a new one.",
+    title: "This link didn't open properly",
+  },
+  network: {
+    body: "We couldn't reach Bubsie to sign you in. Check your connection and try again.",
+    title: "We couldn't sign you in",
+  },
+};
+
+const primaryButton =
+  "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-primary-500 px-6 py-3 text-base font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.98]";
+
 const VerifyContent = () => {
+  useAutoDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<Failure | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const joinCode = searchParams.get("join");
 
   useEffect(() => {
     const token = searchParams.get("token");
-    const joinCode = searchParams.get("join");
     const redirectTo = searchParams.get("redirect");
     if (!token) {
-      setError("Missing token");
+      setFailure("incomplete");
       return;
     }
 
@@ -51,13 +74,12 @@ const VerifyContent = () => {
         }>(VERIFY_MAGIC_LINK, { token });
 
         if (!result.verifyMagicLink) {
-          setError("Invalid or expired link");
+          setFailure("expired");
           return;
         }
 
-        localStorage.setItem("bubsie_token", result.verifyMagicLink.token);
-        localStorage.setItem(
-          "bubsie_refresh_token",
+        storeSession(
+          result.verifyMagicLink.token,
           result.verifyMagicLink.refreshToken
         );
         disableDeviceMode();
@@ -83,34 +105,66 @@ const VerifyContent = () => {
         }
         router.push(redirectTo ?? storedRedirect ?? "/dashboard");
       } catch {
-        setError("Something went wrong");
+        setFailure("network");
       }
     };
 
+    setFailure(null);
     verify();
-  }, [searchParams, router]);
+  }, [searchParams, router, joinCode, attempt]);
 
-  if (error) {
+  const handleRetry = useCallback(() => setAttempt((n) => n + 1), []);
+
+  if (failure) {
+    const copy =
+      failure === "expired" && joinCode
+        ? {
+            body: "Invite links work once and last 24 hours. Send yourself a sign-in link and you'll join the family straight after.",
+            title: "This invite link has expired",
+          }
+        : FAILURE_COPY[failure];
+    const loginHref = joinCode
+      ? `/auth/login?redirect=${encodeURIComponent(`/dashboard/join?code=${joinCode}`)}`
+      : "/auth/login";
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
-        <div className="animate-fade-up max-w-sm text-center">
-          <h1 className="text-xl font-bold text-danger-500">
-            Something went wrong
-          </h1>
-          <p className="mt-2 text-base text-neutral-500">{error}</p>
-          <Link
-            href="/auth/login"
-            className="mt-8 inline-flex min-h-[44px] items-center text-base font-medium text-primary-500 transition-colors hover:text-primary-600"
-          >
-            Try again
-          </Link>
+      <main className="h-dvh overflow-y-auto bg-surface">
+        <div className="flex min-h-full flex-col items-center justify-center px-6 safe-bottom safe-top">
+          <div className="animate-fade-up w-full max-w-sm text-center">
+            <h1 className="font-serif text-2xl text-neutral-900">
+              {copy.title}
+            </h1>
+            <p className="mt-2 text-base text-neutral-500">{copy.body}</p>
+            <div className="mt-8 flex flex-col gap-3">
+              {failure === "network" ? (
+                <>
+                  <button
+                    className={primaryButton}
+                    onClick={handleRetry}
+                    type="button"
+                  >
+                    Try again
+                  </button>
+                  <Link
+                    className="inline-flex min-h-[44px] items-center justify-center text-base font-medium text-primary-ink transition-colors hover:text-primary-ink"
+                    href={loginHref}
+                  >
+                    Send a new link
+                  </Link>
+                </>
+              ) : (
+                <Link className={primaryButton} href={loginHref}>
+                  Send a new link
+                </Link>
+              )}
+            </div>
+          </div>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
+    <main className="flex h-dvh flex-col items-center justify-center bg-surface px-6 safe-bottom safe-top">
       <div className="text-center">
         <div className="mx-auto h-8 w-8 animate-breathe rounded-full bg-primary-200" />
         <p className="mt-6 text-base text-neutral-500">Signing you in...</p>
@@ -122,7 +176,7 @@ const VerifyContent = () => {
 const VerifyPage = () => (
   <Suspense
     fallback={
-      <main className="flex min-h-svh flex-col items-center justify-center bg-surface">
+      <main className="flex h-dvh flex-col items-center justify-center bg-surface">
         <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
       </main>
     }

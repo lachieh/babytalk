@@ -1,9 +1,11 @@
 import type { BabyEvent } from "./baby-context";
-import { formatVolume, getVolumeUnit } from "./use-volume-unit";
+import { capitalize, eventTypeLabel, parseMeta } from "./event-meta";
+import { isDurationEvent } from "./event-time";
+import { getVolumeUnit, mlToDisplay } from "./use-volume-unit";
 
 /* ── Duration ───────────────────────────────────────────────── */
 
-const INSTANT_TYPES = new Set(["diaper"]);
+const INSTANT_TYPES = new Set(["diaper", "note"]);
 
 export function formatDuration(
   start: string,
@@ -15,8 +17,8 @@ export function formatDuration(
   if (start === end) return null;
   const ms = new Date(end).getTime() - new Date(start).getTime();
   const mins = Math.round(ms / 60_000);
-  if (mins <= 0) return null;
-  if (mins < 60) return `${mins}m`;
+  if (!(mins > 0)) return null;
+  if (mins < 60) return `${mins} min`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
@@ -43,40 +45,54 @@ const METHOD_LABELS: Record<string, string> = {
   solid: "Solid",
 };
 
-function feedDetail(meta: ParsedMeta, duration: string | null): string {
-  const parts: string[] = [];
-  if (duration) parts.push(duration);
-  if (meta.amountMl) parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
-  const label = METHOD_LABELS[meta.method ?? ""] ?? "Feed";
-  parts.push(label);
-  if (meta.method === "breast" && meta.side) parts.push(`- ${meta.side}`);
-  if (meta.method === "solid" && meta.foodDesc)
-    parts.push(`- ${meta.foodDesc}`);
-  return parts.join(" ");
+const SEPARATOR = " · ";
+
+const clean = (s: unknown): string | null =>
+  typeof s === "string" && s.trim() ? s.trim() : null;
+
+function formatAmount(ml: number | undefined): string | null {
+  if (!(typeof ml === "number" && ml > 0)) return null;
+  const unit = getVolumeUnit();
+  return `${mlToDisplay(ml, unit)} ${unit}`;
 }
 
-function sleepDetail(meta: ParsedMeta, duration: string | null): string {
-  const parts: string[] = [];
-  if (duration) parts.push(duration);
-  if (meta.location) parts.push(`- ${meta.location}`);
-  return parts.length > 0 ? parts.join(" ") : "started";
+function joinParts(parts: (string | null | undefined)[]): string | null {
+  const present = parts.filter(
+    (p): p is string => typeof p === "string" && p !== ""
+  );
+  return present.length > 0 ? present.join(SEPARATOR) : null;
+}
+
+function feedDetail(meta: ParsedMeta, duration: string | null): string | null {
+  const method = METHOD_LABELS[meta.method ?? ""] ?? null;
+  let qualifier: string | null = null;
+  if (meta.method === "breast") qualifier = clean(meta.side);
+  if (meta.method === "solid") qualifier = clean(meta.foodDesc);
+  const head =
+    method && qualifier ? `${method}, ${qualifier.toLowerCase()}` : method;
+  return joinParts([head, formatAmount(meta.amountMl), duration]);
+}
+
+function sleepDetail(meta: ParsedMeta, duration: string | null): string | null {
+  const location = clean(meta.location);
+  return joinParts([location && capitalize(location), duration]);
 }
 
 function diaperDetail(meta: ParsedMeta): string {
-  const parts: string[] = [];
-  if (meta.wet && meta.soiled) parts.push("Wet + Soiled");
-  else if (meta.soiled) parts.push("Soiled");
-  else parts.push("Wet");
-  if (meta.color) parts.push(`- ${meta.color}`);
-  return parts.join(" ");
+  let kind = "Wet";
+  if (meta.wet && meta.soiled) kind = "Wet and soiled";
+  else if (meta.soiled) kind = "Soiled";
+  const color = clean(meta.color);
+  return color ? `${kind}, ${color.toLowerCase()}` : kind;
 }
 
-function pumpDetail(meta: ParsedMeta, duration: string | null): string {
-  const parts: string[] = [];
-  if (duration) parts.push(duration);
-  if (meta.amountMl) parts.push(formatVolume(meta.amountMl, getVolumeUnit()));
-  if (meta.side) parts.push(`- ${meta.side}`);
-  return parts.join(" ");
+function pumpDetail(meta: ParsedMeta, duration: string | null): string | null {
+  const side = clean(meta.side);
+  return joinParts([
+    side && capitalize(side),
+    formatAmount(meta.amountMl),
+    duration,
+  ]);
 }
 
 /* ── Summary (first line) ───────────────────────────────────── */
@@ -105,18 +121,17 @@ export function formatEventParts(event: BabyEvent): {
         return { label: "Diaper", detail: diaperDetail(meta) };
       }
       case "pump": {
-        const detail = pumpDetail(meta, duration);
-        return { label: "Pump", detail: detail || null };
+        return { label: "Pump", detail: pumpDetail(meta, duration) };
       }
       case "note": {
-        return { label: "Note", detail: meta.text || null };
+        return { label: "Note", detail: clean(meta.text) };
       }
       default: {
-        return { label: event.type, detail: null };
+        return { label: capitalize(event.type), detail: null };
       }
     }
   } catch {
-    return { label: event.type, detail: null };
+    return { label: capitalize(event.type), detail: null };
   }
 }
 
@@ -126,6 +141,33 @@ export function formatEventParts(event: BabyEvent): {
 export function formatEventSummary(event: BabyEvent): string {
   const { label, detail } = formatEventParts(event);
   return detail ? `${label} • ${detail}` : label;
+}
+
+function timerDetail(type: string, meta: Record<string, unknown>): string {
+  const side = typeof meta.side === "string" ? meta.side : "";
+  if (type === "feed") {
+    const method = typeof meta.method === "string" ? meta.method : "";
+    if (method === "breast") {
+      return side ? `${capitalize(side)} breast` : "Breast";
+    }
+    return capitalize(method);
+  }
+  if (type === "sleep") {
+    return typeof meta.location === "string" ? capitalize(meta.location) : "";
+  }
+  if (type === "pump") {
+    if (side === "both") return "Both sides";
+    return capitalize(side);
+  }
+  return "";
+}
+
+export function timerLabel(
+  event: Pick<BabyEvent, "metadata" | "type">
+): string {
+  const typeLabel = eventTypeLabel(event.type);
+  const detail = timerDetail(event.type, parseMeta(event.metadata));
+  return detail ? `${typeLabel} · ${detail}` : typeLabel;
 }
 
 /* ── Notes (second line) ────────────────────────────────────── */
@@ -143,4 +185,26 @@ export function formatEventNotes(event: BabyEvent): string | null {
   } catch {
     return null;
   }
+}
+
+export interface EventTimes {
+  distinctEnd: string | null;
+  inProgress: boolean;
+  start: string;
+}
+
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+
+export function formatEventTimes(event: BabyEvent): EventTimes {
+  const start = formatTime(event.startedAt);
+  const inProgress = isDurationEvent(event) && event.endedAt === null;
+  const spanMs = event.endedAt
+    ? new Date(event.endedAt).getTime() - new Date(event.startedAt).getTime()
+    : 0;
+  const end =
+    event.endedAt && Math.abs(spanMs) >= 60_000
+      ? formatTime(event.endedAt)
+      : null;
+  return { distinctEnd: end === start ? null : end, inProgress, start };
 }
