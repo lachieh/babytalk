@@ -21,9 +21,9 @@ const route = vi.hoisted(() => ({
 }));
 
 vi.mock(import("./gql-request"), () => {
-  class GraphQLResponseError extends Error {}
+  class RequestRefusedError extends Error {}
   return {
-    GraphQLResponseError,
+    RequestRefusedError,
     // The page's gqlRequest contract: data, a refusal, or a network error.
     gqlRequest: async (query: string, variables?: Record<string, unknown>) => {
       const response = await (
@@ -37,7 +37,7 @@ vi.mock(import("./gql-request"), () => {
         data?: unknown;
         errors?: { message: string }[];
       };
-      if (body.errors) throw new GraphQLResponseError(body.errors[0].message);
+      if (body.errors) throw new RequestRefusedError(body.errors[0].message);
       return body.data as never;
     },
   } as never;

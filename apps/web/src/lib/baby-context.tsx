@@ -1,6 +1,5 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -34,6 +33,7 @@ import {
   startOutbox,
   subscribeOutbox,
 } from "@/lib/outbox-store";
+import { retryUntil } from "@/lib/retry-until";
 import type { ToastPhase } from "@/lib/toast-copy";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -142,12 +142,13 @@ const settled = (task: () => void): Promise<void> => {
 
 export const UNDO_DURATION = 5000;
 
+const BABY_RETRY_MS = 15_000;
+
 export const BabyContextProvider = ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const pathname = usePathname();
   const [baby, setBaby] = useState<Baby | null>(null);
   const state = useSyncExternalStore(
     subscribeOutbox,
@@ -203,11 +204,12 @@ export const BabyContextProvider = ({
     await loadBaby();
   }, [loadBaby]);
 
+  // Find the baby, and keep looking through an outage: until it is known
+  // nothing can be logged and restored entries cannot be sent.
   useEffect(() => {
-    if (babyRef.current) return;
-    setLoading(true);
-    loadBaby();
-  }, [pathname, loadBaby]);
+    if (baby) return;
+    return retryUntil(async () => (await loadBaby()) !== null, BABY_RETRY_MS);
+  }, [baby, loadBaby]);
 
   const refreshEvents = useCallback(async () => {
     if (!baby) return;

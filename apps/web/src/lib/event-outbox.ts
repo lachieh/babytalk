@@ -193,26 +193,23 @@ const settle = (
   return saved ? { ...next, server: upsert(next.server, saved) } : next;
 };
 
-/** The request did not confirm anything: its changes go back into the next
- * one. */
+/** The request confirmed nothing: its changes go back into the next one. */
+const unsent = (entry: OutboxEntry, status: OutboxStatus): OutboxEntry => ({
+  ...entry,
+  patch: { ...entry.sentPatch, ...entry.patch },
+  requestId: null,
+  sentPatch: {},
+  status,
+});
+
+/** A failure never lowers `exists`: a refusal of this request says nothing
+ * about an earlier one that went unanswered and may have been stored. */
 const fail = (
   state: EventsState,
   entry: OutboxEntry,
-  definite: boolean
-): EventsState => {
-  const exists = definite && entry.sentOp === "create" ? "no" : entry.exists;
-  if (entry.op === "delete" && exists === "no") {
-    return dropEntry(state, entry.id);
-  }
-  return putEntry(state, {
-    ...entry,
-    exists,
-    patch: { ...entry.sentPatch, ...entry.patch },
-    requestId: null,
-    sentPatch: {},
-    status: definite ? "failed" : "waiting",
-  });
-};
+  refused: boolean
+): EventsState =>
+  putEntry(state, unsent(entry, refused ? "failed" : "waiting"));
 
 const update = (
   state: EventsState,
@@ -251,8 +248,9 @@ const remove = (state: EventsState, id: string): EventsState => {
       newEntry(current ?? placeholder(id), "delete", { detached: !current })
     );
   }
+  if (entry.op === "delete") return state;
   const sending = entry.status === "sending";
-  // Never sent, or the server refused it: there is nothing to delete.
+  // Never sent: there is nothing to delete.
   if (entry.exists === "no" && !sending) return dropEntry(state, id);
   return putEntry(state, {
     ...entry,
@@ -306,18 +304,33 @@ export const toPersisted = (state: EventsState): PersistedOutbox => ({
 export const isEmptyOutbox = (persisted: PersistedOutbox) =>
   Object.keys(persisted.outbox).length === 0 && persisted.hidden.length === 0;
 
+const STATUSES = new Set<unknown>(["ready", "sending", "waiting", "failed"]);
+const OPS = new Set<unknown>(["create", "update", "delete"]);
+
+const isEntry = (value: unknown): value is OutboxEntry => {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Partial<OutboxEntry>;
+  return (
+    typeof entry.id === "string" &&
+    STATUSES.has(entry.status) &&
+    OPS.has(entry.op) &&
+    typeof entry.event === "object" &&
+    entry.event !== null
+  );
+};
+
 /** Take over entries written by an earlier page (a reload, a closed tab). A
  * request that was in flight has no reply coming, so its changes go into the
  * next one; a discard whose undo window was cut short is committed. */
 const adopt = (state: EventsState, persisted: PersistedOutbox): EventsState => {
   let next = state;
-  for (const entry of Object.values(persisted.outbox)) {
-    if (next.outbox[entry.id]) continue;
-    next = putEntry(next, entry);
-    if (entry.status === "sending") {
-      next = fail(next, entry, false);
-      next = putEntry(next, { ...next.outbox[entry.id], status: "ready" });
-    }
+  for (const [key, entry] of Object.entries(persisted.outbox)) {
+    if (!isEntry(entry) || entry.id !== key || next.outbox[key]) continue;
+    // A request in flight when the page went has no reply coming.
+    next = putEntry(
+      next,
+      entry.status === "sending" ? unsent(entry, "ready") : entry
+    );
   }
   for (const id of persisted.hidden) next = remove(next, id);
   return next;
@@ -456,12 +469,18 @@ export const unsavedCounts = (state: EventsState) => {
   let failed = 0;
   let queued = 0;
   for (const entry of Object.values(state.outbox)) {
+    // A ready entry is normally sent within a tick; one that stays ready is
+    // blocked (no baby known yet) and is as unsaved as a waiting one.
     if (entry.status === "failed") failed += 1;
-    else if (entry.status === "waiting") queued += 1;
+    else if (entry.status === "waiting" || entry.status === "ready") {
+      queued += 1;
+    }
   }
   return { failed, queued };
 };
 
-/** Entries the person would lose if this page closed right now. */
+/** Changes the person would lose if this page closed right now, pending
+ * discards included. */
 export const unsavedTotal = (state: EventsState) =>
-  Object.keys(state.outbox).length;
+  Object.keys(state.outbox).length +
+  state.hidden.filter((id) => !state.outbox[id]).length;

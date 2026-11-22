@@ -18,6 +18,7 @@ import {
 } from "../auth/passkey";
 import { rotateRefreshToken } from "../auth/session";
 import { builder } from "./builder";
+import { notAuthenticated } from "./errors";
 import {
   AuthPayloadType,
   DeviceCodePollPayloadType,
@@ -107,7 +108,7 @@ builder.mutationField("approveDeviceCode", (t) =>
       code: t.arg.string({ required: true }),
     },
     resolve: (_root, args, ctx) => {
-      if (!ctx.currentUser) throw new Error("Not authenticated");
+      if (!ctx.currentUser) throw notAuthenticated();
       return approveDeviceCode(args.code, ctx.currentUser.sub);
     },
     type: "Boolean",
@@ -142,7 +143,7 @@ builder.mutationField("pollDeviceCode", (t) =>
 builder.mutationField("passkeyRegisterStart", (t) =>
   t.field({
     resolve: async (_root, _args, ctx) => {
-      if (!ctx.currentUser) throw new Error("Not authenticated");
+      if (!ctx.currentUser) throw notAuthenticated();
       const options = await startPasskeyRegistration(
         ctx.currentUser.sub,
         ctx.currentUser.email
@@ -161,7 +162,7 @@ builder.mutationField("passkeyRegisterFinish", (t) =>
     },
     nullable: true,
     resolve: (_root, args, ctx) => {
-      if (!ctx.currentUser) throw new Error("Not authenticated");
+      if (!ctx.currentUser) throw notAuthenticated();
       const parsed = JSON.parse(args.response) as RegistrationResponseJSON;
       return finishPasskeyRegistration(parsed, args.nickname ?? null);
     },
@@ -213,7 +214,7 @@ builder.mutationField("passkeyRevoke", (t) =>
       id: t.arg.string({ required: true }),
     },
     resolve: (_root, args, ctx) => {
-      if (!ctx.currentUser) throw new Error("Not authenticated");
+      if (!ctx.currentUser) throw notAuthenticated();
       return revokePasskey(ctx.currentUser.sub, args.id);
     },
     type: "Boolean",

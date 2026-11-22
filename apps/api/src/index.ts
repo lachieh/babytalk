@@ -1,12 +1,11 @@
 import { registerZPages } from "@bubsie/zpages/hono";
 import { serve } from "@hono/node-server";
-import { createYoga } from "graphql-yoga";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { createContext } from "./context";
 import { config } from "./env";
-import { schema } from "./schema/index";
+import { createApiYoga } from "./yoga";
 import { zpages } from "./zpages";
 
 const app = new Hono();
@@ -24,11 +23,7 @@ app.use(
 
 registerZPages(app, zpages);
 
-const yoga = createYoga({
-  context: createContext,
-  maskedErrors: false,
-  schema,
-});
+const yoga = createApiYoga(createContext);
 
 app.on(["GET", "POST"], "/graphql", async (c) => {
   const response = await yoga.fetch(c.req.raw, {});

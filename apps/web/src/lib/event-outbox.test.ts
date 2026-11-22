@@ -6,6 +6,7 @@ import {
   initialEventsState,
   toPersisted,
   unsavedCounts,
+  unsavedTotal,
 } from "./event-outbox";
 
 const run = (actions: EventsAction[], from = initialEventsState) => {
@@ -141,14 +142,14 @@ describe("changes while a request is outstanding", () => {
     expect(shown(state)).toStrictEqual([]);
   });
 
-  it("needs no request to delete a create the server refused", () => {
+  it("sends a delete for a refused create, since a refusal proves nothing was stored only for that request", () => {
     const state = run([
       { event: feed("e1"), type: "create" },
       start("e1", "r1"),
       failed("e1", "r1", true),
       { id: "e1", type: "delete" },
     ]);
-    expect(state.outbox).toStrictEqual({});
+    expect(state.outbox.e1).toMatchObject({ op: "delete", status: "ready" });
   });
 
   it("needs no request to delete a create that was never sent", () => {
@@ -493,5 +494,76 @@ describe("a poll that started before a change was confirmed", () => {
       { events: [feed("e2")], requestedAt: 2000, type: "loaded" },
     ]);
     expect(shown(state).map((e) => e.id)).toStrictEqual(["e2"]);
+  });
+});
+
+describe("a refusal after an unanswered attempt", () => {
+  it("still deletes a create that an earlier attempt may have stored", () => {
+    const state = run([
+      { event: feed("e1"), type: "create" },
+      start("e1", "r1"),
+      failed("e1", "r1"),
+      { type: "resume" },
+      start("e1", "r2"),
+      failed("e1", "r2", true),
+      { id: "e1", type: "delete" },
+    ]);
+    expect(state.outbox.e1).toMatchObject({ op: "delete", status: "ready" });
+  });
+});
+
+describe("deleting twice", () => {
+  it("leaves nothing behind once the delete is confirmed", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      { id: "e1", type: "delete" },
+      start("e1", "r1"),
+      { id: "e1", type: "delete" },
+      ok("e1", "r1", null),
+    ]);
+    expect(state.outbox).toStrictEqual({});
+  });
+
+  it("survives a reload with the second delete outstanding", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      { id: "e1", type: "delete" },
+      start("e1", "r1"),
+      { id: "e1", type: "delete" },
+      ok("e1", "r1", null),
+      start("e1", "r2"),
+    ]);
+    const after = reload(state);
+    expect(Object.keys(after.outbox)).not.toContain("undefined");
+    for (const [key, entry] of Object.entries(after.outbox)) {
+      expect(entry.id).toBe(key);
+    }
+  });
+
+  it("never adopts an entry stored under a key that is not its id", () => {
+    const after = eventsReducer(initialEventsState, {
+      persisted: {
+        hidden: [],
+        outbox: { undefined: { status: "ready" } as never },
+        v: 1,
+      },
+      type: "adopt",
+    });
+    expect(after.outbox).toStrictEqual({});
+  });
+});
+
+describe("what the sync status counts", () => {
+  it("counts a restored entry that cannot be sent yet as waiting", () => {
+    const state = run([{ event: feed("e1"), type: "create" }]);
+    expect(unsavedCounts(state)).toStrictEqual({ failed: 0, queued: 1 });
+  });
+
+  it("counts a pending discard as unsaved", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      { id: "e1", type: "hide" },
+    ]);
+    expect(unsavedTotal(state)).toBe(1);
   });
 });

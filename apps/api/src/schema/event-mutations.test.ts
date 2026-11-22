@@ -4,7 +4,6 @@ import { randomUUID } from "node:crypto";
 
 import { babies, db, events, households, users } from "@bubsie/db";
 import { eq, inArray } from "drizzle-orm";
-import { createYoga } from "graphql-yoga";
 
 /* Runs the real resolvers against Postgres. Needs DATABASE_URL pointing at a
  * migrated database (CI's test job provides one). */
@@ -90,14 +89,14 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
     process.env.BUBSIE_API_WEB_URL ??= "http://localhost:3000";
     process.env.BUBSIE_API_SMTP_HOST ??= "localhost";
     process.env.BUBSIE_API_SMTP_FROM ??= "test@bubsie.test";
-    const { schema } = await import("./index");
-    const yoga = createYoga({
-      context: ({ request }) => ({
-        currentUser: { email: "", sub: request.headers.get("x-user") ?? "" },
+    // The server's own Yoga setup, with the session taken from a test header.
+    const { createApiYoga } = await import("../yoga");
+    const yoga = createApiYoga(({ request }) => {
+      const sub = request.headers.get("x-user");
+      return Promise.resolve({
+        currentUser: sub ? { email: "", sub } : null,
         db,
-      }),
-      maskedErrors: false,
-      schema,
+      });
     });
     post = (body, user) =>
       yoga.fetch("http://test/graphql", {
@@ -121,6 +120,21 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
       await db.delete(households).where(eq(households.id, family.householdId));
     }
   });
+
+  const errorsOf = async (
+    source: string,
+    variables: Record<string, unknown>,
+    user: string | null = home.parent
+  ) => {
+    const response = await post(
+      JSON.stringify({ query: source, variables }),
+      user ?? ""
+    );
+    const result = (await response.json()) as {
+      errors?: { message: string; extensions?: { code?: string } }[];
+    };
+    return { errors: result.errors ?? [], status: response.status };
+  };
 
   const run = async (
     source: string,
@@ -240,6 +254,43 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
     await run(DELETE_EVENT, { id });
     await expect(run(DELETE_EVENT, { id })).resolves.toStrictEqual({
       deleteEvent: true,
+    });
+  });
+
+  describe("how a client can tell a refusal from a failure", () => {
+    it("marks a refusal, so the client knows a resend will not help", async () => {
+      const { errors } = await errorsOf(LOG_EVENT, {
+        babyId: home.babyId,
+        feedMeta: { method: "breast", side: "left" },
+        id: "local-123",
+      });
+      expect(errors[0]).toMatchObject({
+        extensions: { code: "REFUSED" },
+        message: "Event id must be a UUID",
+      });
+    });
+
+    it("marks a missing session, so the client refreshes it", async () => {
+      const { errors } = await errorsOf(
+        DELETE_EVENT,
+        { id: randomUUID() },
+        null
+      );
+      expect(errors[0]?.extensions?.code).toBe("UNAUTHENTICATED");
+    });
+
+    it("marks a malformed request as a refusal", async () => {
+      const { errors } = await errorsOf(
+        "mutation { logEvent(babyId: 1) { id } }",
+        {}
+      );
+      expect(errors[0]?.extensions?.code).toBe("GRAPHQL_VALIDATION_FAILED");
+    });
+
+    it("hides an unexpected error's details and does not call it a refusal", async () => {
+      const { errors } = await errorsOf(DELETE_EVENT, { id: "not-a-uuid" });
+      expect(errors[0]?.message).toBe("Unexpected error.");
+      expect(errors[0]?.extensions?.code).toBe("INTERNAL_SERVER_ERROR");
     });
   });
 });

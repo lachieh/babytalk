@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { listUserPasskeys } from "../auth/passkey";
 import { builder } from "./builder";
+import { notAuthenticated } from "./errors";
 import { PasskeyType, UserType } from "./types";
 
 builder.queryField("me", (t) =>
@@ -28,7 +29,7 @@ builder.queryField("me", (t) =>
 builder.queryField("myPasskeys", (t) =>
   t.field({
     resolve: (_root, _args, ctx) => {
-      if (!ctx.currentUser) throw new Error("Not authenticated");
+      if (!ctx.currentUser) throw notAuthenticated();
       return listUserPasskeys(ctx.currentUser.sub);
     },
     type: [PasskeyType],

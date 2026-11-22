@@ -2,7 +2,7 @@ import {
   getApiUrl,
   getRuntimeConfig,
   loadRuntimeConfig,
-} from "@/lib/runtime-config";
+} from "./runtime-config";
 
 const getToken = () =>
   typeof window === "undefined" ? null : localStorage.getItem("bubsie_token");
@@ -23,11 +23,36 @@ const REFRESH_TOKEN_MUTATION = `
 
 let refreshPromise: Promise<boolean> | null = null;
 
-/** The server answered and refused the operation, so nothing was applied.
- * A network failure or session problem is never one of these. */
-export class GraphQLResponseError extends Error {
-  override name = "GraphQLResponseError";
+/** The server understood the request and refused it, so sending it again
+ * will not help. Decided by the error's code (see apps/api/src/schema/
+ * errors.ts), never by its message. Network failures, server errors and
+ * session problems are plain `Error`s: worth sending again. */
+export class RequestRefusedError extends Error {
+  override name = "RequestRefusedError";
 }
+
+const REFUSAL_CODES = new Set([
+  "REFUSED",
+  "BAD_USER_INPUT",
+  "GRAPHQL_PARSE_FAILED",
+  "GRAPHQL_VALIDATION_FAILED",
+]);
+
+interface GraphQLErrorShape {
+  message?: unknown;
+  extensions?: { code?: unknown };
+}
+
+const readJson = async (
+  res: Response
+): Promise<{ data?: unknown; errors?: GraphQLErrorShape[] } | null> => {
+  try {
+    const body: unknown = await res.json();
+    return body && typeof body === "object" ? body : null;
+  } catch {
+    return null;
+  }
+};
 
 const tokenPayload = (token: string): { exp?: number; sub?: string } | null => {
   try {
@@ -50,12 +75,13 @@ export const currentAuthorization = (): string | null => {
   return token ? `Bearer ${token}` : null;
 };
 
-function isAuthError(message: string, status: number): boolean {
-  if (status === 401) return true;
-  if (message === "Not authenticated") return true;
-  if (message.includes("jwt")) return true;
-  return false;
-}
+const isAuthFailure = (status: number, errors: GraphQLErrorShape[]) =>
+  status === 401 ||
+  errors.some(
+    (e) =>
+      e.extensions?.code === "UNAUTHENTICATED" ||
+      e.message === "Not authenticated"
+  );
 
 const refreshSession = (apiUrl: string): Promise<boolean> => {
   const refreshToken = getRefreshToken();
@@ -121,29 +147,26 @@ export const gqlRequest = async <T = unknown>(
     method: "POST",
   });
 
-  const json = await res.json();
-  if (json.errors) {
-    const [firstError] = json.errors;
-    const { message } = firstError;
+  const json = await readJson(res);
+  const errors = Array.isArray(json?.errors) ? json.errors : [];
 
-    if (
-      !hasRetried &&
-      typeof window !== "undefined" &&
-      isAuthError(message, res.status) &&
-      (await refreshSession(apiUrl))
-    ) {
+  if (typeof window !== "undefined" && isAuthFailure(res.status, errors)) {
+    if (!hasRetried && (await refreshSession(apiUrl))) {
       return gqlRequest<T>(query, variables, true);
     }
-
-    if (typeof window !== "undefined" && isAuthError(message, res.status)) {
-      localStorage.removeItem("bubsie_token");
-      localStorage.removeItem("bubsie_refresh_token");
-      const returnTo = window.location.pathname + window.location.search;
-      window.location.href = `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
-      throw new Error("Session expired — redirecting to login");
-    }
-
-    throw new GraphQLResponseError(message);
+    localStorage.removeItem("bubsie_token");
+    localStorage.removeItem("bubsie_refresh_token");
+    const returnTo = window.location.pathname + window.location.search;
+    window.location.href = `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
+    throw new Error("Session expired — redirecting to login");
   }
+
+  const [first] = errors;
+  const message =
+    typeof first?.message === "string" ? first.message : `HTTP ${res.status}`;
+  if (errors.some((e) => REFUSAL_CODES.has(String(e.extensions?.code)))) {
+    throw new RequestRefusedError(message);
+  }
+  if (!res.ok || !json || errors.length > 0) throw new Error(message);
   return json.data as T;
 };

@@ -3,10 +3,11 @@ import { and, desc, eq } from "drizzle-orm";
 
 import type { Context } from "../context";
 import { builder } from "./builder";
+import { notAuthenticated, refuse } from "./errors";
 import { MeasurementType } from "./measurement-types";
 
 const requireAuth = (ctx: Context): string => {
-  if (!ctx.currentUser) throw new Error("Not authenticated");
+  if (!ctx.currentUser) throw notAuthenticated();
   return ctx.currentUser.sub;
 };
 
@@ -19,7 +20,7 @@ const requireHousehold = async (
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (!user?.householdId) throw new Error("No household");
+  if (!user?.householdId) throw refuse("No household");
   return { householdId: user.householdId, userId };
 };
 
@@ -33,7 +34,7 @@ const requireBabyAccess = async (
     .from(babies)
     .where(and(eq(babies.id, babyId), eq(babies.householdId, householdId)))
     .limit(1);
-  if (!baby) throw new Error("Baby not found in household");
+  if (!baby) throw refuse("Baby not found in household");
 };
 
 // --- Queries ---
@@ -112,7 +113,7 @@ builder.mutationField("updateMeasurement", (t) =>
         .from(measurements)
         .where(eq(measurements.id, args.id))
         .limit(1);
-      if (!existing) throw new Error("Measurement not found");
+      if (!existing) throw refuse("Measurement not found");
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       const updates: Record<string, unknown> = {};
@@ -149,7 +150,7 @@ builder.mutationField("deleteMeasurement", (t) =>
         .from(measurements)
         .where(eq(measurements.id, args.id))
         .limit(1);
-      if (!existing) throw new Error("Measurement not found");
+      if (!existing) throw refuse("Measurement not found");
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       await ctx.db.delete(measurements).where(eq(measurements.id, args.id));

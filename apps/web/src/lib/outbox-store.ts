@@ -13,11 +13,17 @@
  * working for this page and `isOutboxDurable()` turns false, so the sync
  * status can tell the person their unsaved entries are not stored.
  *
- * Each tab writes only its own key (`bubsie_outbox:<user>:<tab>`) and holds a
- * Web Lock named after it while open. A tab adopts another tab's key only when
- * that lock is free, i.e. the other tab has gone, and only removes it once
- * its own copy is safely written. Without Web Locks a tab cannot tell a
- * closed tab from an open one, so it adopts nothing.
+ * Each tab keeps its own key (`bubsie_outbox:<user>:<tab>`) and holds the
+ * Web Lock of the same name for as long as it is open. Ownership is never
+ * inferred, always held:
+ * - a tab reads or writes its own key only once it holds that key's lock,
+ *   so a tab duplicated from this one (which copies the tab id) cannot get
+ *   it and starts a key of its own;
+ * - a tab adopts another tab's key only while holding that key's lock, which
+ *   it can only get once that tab has gone, so a discard still inside its
+ *   undo window in a live tab is never committed elsewhere.
+ * Without Web Locks a closed tab cannot be told from an open one, so nothing
+ * is adopted.
  */
 
 import type {
@@ -32,13 +38,14 @@ import {
   initialEventsState,
   isEmptyOutbox,
   toPersisted,
+  unsavedTotal,
 } from "./event-outbox";
-import { GraphQLResponseError, gqlRequest } from "./gql-request";
+import { RequestRefusedError, gqlRequest } from "./gql-request";
 
 const KEY_PREFIX = "bubsie_outbox:";
 const TAB_ID_KEY = "bubsie_outbox_tab";
-const ADOPT_LOCK = "bubsie-outbox-adopt";
-const tabLock = (tab: string) => `bubsie-outbox-tab:${tab}`;
+/** The lock that owns a key: named after the person and the tab. */
+const lockFor = (user: string, tab: string) => `bubsie-outbox:${user}:${tab}`;
 
 const LOG_EVENT = `
   mutation LogEvent(
@@ -152,7 +159,7 @@ const sendEntry = async (
     );
     return data ? { event: data.updateEvent, kind: "ok" } : { kind: "unsent" };
   } catch (error) {
-    return { definite: error instanceof GraphQLResponseError, kind: "failed" };
+    return { definite: error instanceof RequestRefusedError, kind: "failed" };
   }
 };
 
@@ -168,6 +175,8 @@ let releaseTab: (() => void) | null = null;
 let flushScheduled = false;
 /** Whether the last write of this tab's outbox reached storage. */
 let durable = true;
+/** Whether this tab owns its key yet (holds its lock, or has no locks). */
+let ownsKey = false;
 
 const storageKey = (user = owner, tab = tabId) =>
   user && tab ? `${KEY_PREFIX}${user}:${tab}` : null;
@@ -195,7 +204,9 @@ const readPersisted = (key: string): PersistedOutbox | null => {
 /** Write this tab's outbox. Returns whether it reached storage. */
 const write = (): boolean => {
   const key = storageKey();
-  if (!key) return true;
+  // Until this tab owns its key, changes wait in memory (a few milliseconds
+  // at start-up) and are written as soon as it does.
+  if (!key || !ownsKey) return true;
   const persisted = toPersisted(state);
   try {
     if (isEmptyOutbox(persisted)) localStorage.removeItem(key);
@@ -360,24 +371,29 @@ const adoptKey = (key: string) => {
   }
 };
 
-/** Adopt every outbox of this user whose tab no longer holds its lock. The
- * shared lock stops two new tabs from adopting the same orphan. */
-const adoptOrphans = (locks: LockManager, user: string) =>
-  locks.request(ADOPT_LOCK, async () => {
-    const snapshot = await locks.query();
-    const held = new Set((snapshot.held ?? []).map((lock) => lock.name));
-    for (const { key, tab } of ownerKeys(user)) {
-      if (tab !== tabId && !held.has(tabLock(tab))) adoptKey(key);
-    }
-  });
+/** Adopt every outbox of this user whose tab has gone, holding each one's
+ * lock while doing so: a lock that cannot be had means its tab is open. */
+const adoptOrphans = async (locks: LockManager, user: string) => {
+  const adoptIfFree = (key: string) => (lock: Lock | null) => {
+    if (lock && owner === user) adoptKey(key);
+  };
+  for (const { key, tab } of ownerKeys(user)) {
+    if (tab === tabId) continue;
+    await locks.request(
+      lockFor(user, tab),
+      { ifAvailable: true },
+      adoptIfFree(key)
+    );
+  }
+};
 
-/** Hold this tab's lock for as long as the page lives. Resolves `false` if a
+/** Hold a key's lock for as long as the page lives. Resolves `false` if a
  * live tab already holds it (a duplicated tab copies sessionStorage). */
 // Promise.withResolvers would read better but needs Safari 17.4.
 // oxlint-disable promise/avoid-new -- a lock is held until a promise settles
-const holdTabLock = (locks: LockManager, tab: string) =>
+const holdLock = (locks: LockManager, name: string) =>
   new Promise<boolean>((resolve) => {
-    void locks.request(tabLock(tab), { ifAvailable: true }, (lock) => {
+    void locks.request(name, { ifAvailable: true }, (lock) => {
       resolve(lock !== null);
       if (!lock) return;
       return new Promise<null>((_resolve) => {
@@ -387,19 +403,28 @@ const holdTabLock = (locks: LockManager, tab: string) =>
   });
 // oxlint-enable promise/avoid-new
 
-const claimTab = async (user: string) => {
+/** This tab now owns its key: merge what an earlier page left in it with
+ * what this page has recorded since, and write the result. */
+const loadOwnKey = () => {
+  ownsKey = true;
+  const key = storageKey();
+  const own = key ? readPersisted(key) : null;
+  if (own) state = eventsReducer(state, { persisted: own, type: "adopt" });
+  write();
+  notify();
+};
+
+/** Take ownership of this tab's key, then of any key whose tab has gone. */
+const claimKeys = async (user: string) => {
   const { locks } = navigator;
-  // Without Web Locks a closed tab cannot be told from an open one, and
-  // adopting an open tab's outbox would commit its pending discards.
-  if (!locks) return;
-  if (!(await holdTabLock(locks, tabId as string))) {
-    // Another live tab owns this outbox. Start a fresh one of our own.
+  if (locks && !(await holdLock(locks, lockFor(user, tabId as string)))) {
+    // A live tab owns this key: it was copied with the tab. Use our own.
     tabId = newTabId();
-    state = { ...initialEventsState, server: state.server };
-    notify();
-    await holdTabLock(locks, tabId);
+    await holdLock(locks, lockFor(user, tabId));
   }
-  await adoptOrphans(locks, user);
+  if (owner !== user) return;
+  loadOwnKey();
+  if (locks) await adoptOrphans(locks, user);
 };
 
 /** Load this tab's outbox for the signed-in user and start sending. Safe to
@@ -409,20 +434,18 @@ export const startOutbox = (user: string | null) => {
   releaseTab?.();
   releaseTab = null;
   sendingAllowed = false;
+  ownsKey = false;
   owner = user;
   tabId = readTabId();
   state = initialEventsState;
-  const key = storageKey();
-  const own = key ? readPersisted(key) : null;
-  if (own) state = eventsReducer(state, { persisted: own, type: "adopt" });
   durable = true;
-  write();
   notify();
   void (async () => {
     try {
-      await claimTab(user);
+      await claimKeys(user);
     } catch {
-      /* locks refused: this tab still sends its own entries */
+      // Locks refused: behave as a browser without them.
+      if (!ownsKey) loadOwnKey();
     }
     if (owner !== user) return;
     sendingAllowed = true;
@@ -443,4 +466,66 @@ export const adoptClosedTabs = () => {
       /* tried again on the next visit */
     }
   })();
+};
+
+/* ── Signing out ───────────────────────────────────────────── */
+
+/** Before the person signs out: commit pending discards (the undo window
+ * ends with the session), try to send everything, and resolve with how many
+ * changes are still unsent once nothing is in flight, or after `withinMs`. */
+export const sendBeforeSignOut = (withinMs: number): Promise<number> => {
+  for (const id of state.hidden) dispatchOutbox({ id, type: "delete" });
+  dispatchOutbox({ type: "retry" });
+  // oxlint-disable-next-line promise/avoid-new -- resolves on a store change or a timeout
+  return new Promise((resolve) => {
+    // Filled in below: finish() and check() refer to each other's handles.
+    const handles: {
+      timer?: ReturnType<typeof setTimeout>;
+      unsubscribe?: () => void;
+    } = {};
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(handles.timer);
+      handles.unsubscribe?.();
+      // oxlint-disable-next-line promise/no-multiple-resolved -- `done` makes this run once
+      resolve(unsavedTotal(state));
+    };
+    const check = () => {
+      // After the flush that follows every change, so ready entries that can
+      // be sent are already sending.
+      queueMicrotask(() => {
+        const inFlight = Object.values(state.outbox).some(
+          (entry) => entry.status === "sending"
+        );
+        if (!inFlight) finish();
+      });
+    };
+    handles.timer = setTimeout(finish, withinMs);
+    handles.unsubscribe = subscribeOutbox(check);
+    check();
+  });
+};
+
+/** The person chose to sign out with changes unsent: remove them, and every
+ * other outbox of theirs, from this device. */
+export const forgetOutbox = () => {
+  const user = owner;
+  releaseTab?.();
+  releaseTab = null;
+  owner = null;
+  ownsKey = false;
+  sendingAllowed = false;
+  state = initialEventsState;
+  if (user) {
+    for (const { key } of ownerKeys(user)) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        /* nothing more can be done for it */
+      }
+    }
+  }
+  notify();
 };

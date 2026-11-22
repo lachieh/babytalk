@@ -14,6 +14,7 @@ import { AddDeviceSheet } from "./add-device-sheet";
 import { EditBabySheet } from "./edit-baby-sheet";
 import { PasskeysSheet } from "./passkeys-sheet";
 import { Sheet } from "./sheet";
+import { SignOutButton } from "./sign-out-button";
 
 const InstallAppSection = () => {
   const { canInstall, install, isInstalled } = useInstallPrompt();
@@ -689,14 +690,7 @@ const ProfileContent = ({
         </div>
       </section>
 
-      {/* Sign Out */}
-      <button
-        className="flex min-h-[44px] w-full items-center justify-center rounded-xl border border-neutral-200 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
-        onClick={onSignOut}
-        type="button"
-      >
-        Sign out
-      </button>
+      <SignOutButton onSignOut={onSignOut} />
     </div>
   );
 };
