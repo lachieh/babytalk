@@ -19,9 +19,7 @@
     "docker:dev:down": "docker compose -f docker-compose.yml down",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "icons": "node scripts/render-icons.mjs",
-    "icons:variations": "node scripts/render-icons.mjs variations",
-    "icons:all": "node scripts/render-icons.mjs all"
+    "icons": "node scripts/render-icons.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.30.0",
