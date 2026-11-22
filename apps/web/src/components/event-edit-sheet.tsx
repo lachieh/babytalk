@@ -7,7 +7,8 @@ import { useBabyContext } from "@/lib/baby-context";
 import { parseMeta } from "@/lib/event-meta";
 import type { EventType } from "@/lib/event-styles";
 import {
-  entryShape,
+  changeTiming,
+  editShape,
   resolveEntryTiming,
   timingFromEvent,
   toLocalInput,
@@ -107,7 +108,7 @@ function formFor(event: BabyEvent | null): EventFormData {
     meta,
     timing: timingFromEvent(
       event,
-      entryShape(type, meta.method),
+      editShape(event, type, meta.method),
       lengthPresets(type)
     ),
     type,
@@ -731,7 +732,7 @@ export const EventEditSheet = ({
     return () => clearTimeout(id);
   }, [confirmDelete]);
 
-  const shape = entryShape(form.type, form.meta.method);
+  const shape = editShape(event, form.type, form.meta.method);
   const canRun = shape === "span" && (isNew || event?.endedAt === null);
   const errors = submitted ? validate(form, shape).errors : {};
 
@@ -739,7 +740,7 @@ export const EventEditSheet = ({
     (type: EventType) =>
       setForm((f) => ({
         meta: DEFAULT_META[type],
-        timing: { ...f.timing, running: false },
+        timing: changeTiming(f.timing, { running: false }),
         type,
       })),
     []
@@ -752,7 +753,7 @@ export const EventEditSheet = ({
 
   const handleTimingChange = useCallback((patch: Partial<EntryTiming>) => {
     setSaveError(null);
-    setForm((f) => ({ ...f, timing: { ...f.timing, ...patch } }));
+    setForm((f) => ({ ...f, timing: changeTiming(f.timing, patch) }));
   }, []);
 
   const handleSave = useCallback(async () => {

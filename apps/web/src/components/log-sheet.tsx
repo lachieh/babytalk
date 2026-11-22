@@ -5,7 +5,7 @@ import { useCallback, useId, useState } from "react";
 import { AmountInput } from "@/components/amount-input";
 import { ChoiceChips, Sheet } from "@/components/sheet";
 import type { BabyEvent } from "@/lib/baby-context";
-import { methodTakesAmount } from "@/lib/daily-totals";
+import { logSheetPrimary } from "@/lib/daily-totals";
 import { EVENT_TYPE_LABELS, parseMeta } from "@/lib/event-meta";
 import { BACKDATE_MINUTES, logTimes } from "@/lib/event-time";
 import type { StationActionKey } from "@/lib/station-config";
@@ -241,8 +241,7 @@ export const LogSheet = ({
 
   const selectedVariant =
     variants.find((v) => v.key === selected) ?? variants[0];
-  const takesAmount = methodTakesAmount(selectedVariant.meta);
-  const isInstant = type === "diaper";
+  const primary = logSheetPrimary(type, selectedVariant.meta);
   const typeLabel = EVENT_TYPE_LABELS[type];
 
   const handleWhen = useCallback(
@@ -251,16 +250,17 @@ export const LogSheet = ({
   );
 
   const handlePrimary = useCallback(() => {
-    onLog({ finished: isInstant, minutesAgo });
-  }, [isInstant, minutesAgo, onLog]);
-
-  const handleFinished = useCallback(() => {
-    if (takesAmount) {
+    if (primary.action === "amount") {
       setAskingAmount(true);
       return;
     }
-    onLog({ finished: true, minutesAgo });
-  }, [minutesAgo, onLog, takesAmount]);
+    onLog({ finished: primary.action === "instant", minutesAgo });
+  }, [primary.action, minutesAgo, onLog]);
+
+  const handleFinished = useCallback(
+    () => onLog({ finished: true, minutesAgo }),
+    [minutesAgo, onLog]
+  );
 
   const handleAmountConfirm = useCallback(
     (amountMl: number) => onLog({ amountMl, finished: true, minutesAgo }),
@@ -308,7 +308,7 @@ export const LogSheet = ({
     <Sheet
       footer={
         <div className="flex gap-2">
-          {type === "feed" && (
+          {type === "feed" && primary.action === "timer" && (
             <button
               className="min-h-[52px] flex-1 rounded-xl border border-neutral-300 px-3 font-medium text-neutral-700 text-sm leading-tight transition-colors hover:bg-neutral-100 active:bg-neutral-200"
               onClick={handleFinished}
@@ -322,7 +322,7 @@ export const LogSheet = ({
             onClick={handlePrimary}
             type="button"
           >
-            {isInstant ? `Log ${typeLabel.toLowerCase()}` : "Start timer"}
+            {primary.label}
           </button>
         </div>
       }

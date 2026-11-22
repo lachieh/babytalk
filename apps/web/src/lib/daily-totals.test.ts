@@ -4,9 +4,11 @@ import {
   formatSleepDuration,
   lastAmountMl,
   lastEventDetails,
+  logSheetPrimary,
   oneTapAction,
   totalFeeds,
 } from "./daily-totals";
+import { entryShape } from "./event-time";
 
 const NOW = Date.parse("2026-09-26T12:00:00Z");
 
@@ -208,4 +210,45 @@ describe("one tap on a log button", () => {
     expect(oneTapAction("sleep", { location: "crib" })).toBe("timer");
     expect(oneTapAction("pump", { side: "both" })).toBe("timer");
   });
+
+  const EVERY_VARIANT: [string, Record<string, unknown>, string][] = [
+    ["feed", { method: "breast", side: "left" }, "timer"],
+    ["feed", { method: "breast", side: "right" }, "timer"],
+    ["feed", { method: "bottle" }, "amount"],
+    ["feed", { method: "formula" }, "amount"],
+    ["feed", { method: "solid" }, "instant"],
+    ["diaper", { soiled: false, wet: true }, "instant"],
+    ["diaper", { soiled: true, wet: false }, "instant"],
+    ["diaper", { soiled: true, wet: true }, "instant"],
+    ["sleep", { location: "crib" }, "timer"],
+    ["sleep", { location: "bassinet" }, "timer"],
+    ["sleep", { location: "held" }, "timer"],
+    ["sleep", { location: "carrier" }, "timer"],
+    ["pump", { side: "both" }, "timer"],
+    ["pump", { side: "left" }, "timer"],
+    ["pump", { side: "right" }, "timer"],
+    ["note", {}, "instant"],
+  ];
+
+  it.each(EVERY_VARIANT)(
+    "%s %o: %s, and only timers are entered as a span",
+    (type, meta, expected) => {
+      const action = oneTapAction(type, meta);
+      expect(action).toBe(expected);
+      expect(entryShape(type, meta.method)).toBe(
+        action === "timer" ? "span" : "instant"
+      );
+    }
+  );
+
+  it.each(EVERY_VARIANT)(
+    "the log sheet's main button for %s %o follows the same rule",
+    (type, meta, expected) => {
+      const primary = logSheetPrimary(type, meta);
+      expect(primary.action).toBe(expected);
+      expect(primary.label).toBe(
+        expected === "timer" ? "Start timer" : `Log ${type}`
+      );
+    }
+  );
 });

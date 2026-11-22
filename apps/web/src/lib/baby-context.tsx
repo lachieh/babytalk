@@ -7,23 +7,26 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useReducer,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 
 import { SyncStatus } from "@/components/sync-status";
 import { takesAmount } from "@/lib/daily-totals";
-import type { BabyEvent, EventChanges, OutboxEntry } from "@/lib/event-outbox";
-import {
-  deriveEvents,
-  eventsReducer,
-  initialEventsState,
-  unsavedCounts,
-} from "@/lib/event-outbox";
-import { gqlRequest } from "@/lib/gql-request";
+import type { BabyEvent, EventChanges, EventsAction } from "@/lib/event-outbox";
+import { canRecord, deriveEvents, unsavedCounts } from "@/lib/event-outbox";
+import { currentUserId, gqlRequest } from "@/lib/gql-request";
 import { RECENT_EVENTS_LIMIT } from "@/lib/history-days";
-import { onSyncMessage } from "@/lib/register-sw";
+import {
+  adoptClosedTabs,
+  dispatchOutbox as dispatch,
+  getOutboxState,
+  getServerOutboxState,
+  setOutboxBaby,
+  startOutbox,
+  subscribeOutbox,
+} from "@/lib/outbox-store";
 import type { ToastPhase } from "@/lib/toast-copy";
 
 /* ── Types ─────────────────────────────────────────────────── */
@@ -97,120 +100,36 @@ const GET_RECENT_EVENTS = `
   }
 `;
 
-const LOG_EVENT = `
-  mutation LogEvent(
-    $babyId: String!
-    $type: EventType!
-    $startedAt: String
-    $endedAt: String
-    $feedMeta: FeedMetadataInput
-    $sleepMeta: SleepMetadataInput
-    $diaperMeta: DiaperMetadataInput
-    $noteMeta: NoteMetadataInput
-    $pumpMeta: PumpMetadataInput
-  ) {
-    logEvent(
-      babyId: $babyId
-      type: $type
-      startedAt: $startedAt
-      endedAt: $endedAt
-      feedMeta: $feedMeta
-      sleepMeta: $sleepMeta
-      diaperMeta: $diaperMeta
-      noteMeta: $noteMeta
-      pumpMeta: $pumpMeta
-    ) {
-      id type startedAt endedAt metadata
-    }
-  }
-`;
-
-const DELETE_EVENT = `
-  mutation DeleteEvent($id: String!) {
-    deleteEvent(id: $id)
-  }
-`;
-
-const UPDATE_EVENT = `
-  mutation UpdateEvent(
-    $id: String!
-    $startedAt: String
-    $endedAt: String
-    $feedMeta: FeedMetadataInput
-    $sleepMeta: SleepMetadataInput
-    $diaperMeta: DiaperMetadataInput
-    $noteMeta: NoteMetadataInput
-    $pumpMeta: PumpMetadataInput
-  ) {
-    updateEvent(
-      id: $id
-      startedAt: $startedAt
-      endedAt: $endedAt
-      feedMeta: $feedMeta
-      sleepMeta: $sleepMeta
-      diaperMeta: $diaperMeta
-      noteMeta: $noteMeta
-      pumpMeta: $pumpMeta
-    ) {
-      id type startedAt endedAt metadata
-    }
-  }
-`;
-
-type SendResult =
-  | { kind: "ok"; event: BabyEvent | null }
-  | { kind: "queued" }
-  | { kind: "failed" };
-
-const sendEntry = async (
-  entry: OutboxEntry,
-  requestId: string,
-  babyId: string | null
-): Promise<SendResult> => {
-  const { event } = entry;
-  try {
-    if (entry.op === "delete") {
-      if (!entry.serverId) return { event: null, kind: "ok" };
-      const data = await gqlRequest<{ deleteEvent: boolean } | null>(
-        DELETE_EVENT,
-        { clientMutationId: requestId, id: entry.serverId }
-      );
-      return data ? { event: null, kind: "ok" } : { kind: "queued" };
-    }
-
-    if (entry.op === "create") {
-      if (!babyId) return { kind: "failed" };
-      const data = await gqlRequest<{ logEvent: BabyEvent } | null>(LOG_EVENT, {
-        babyId,
-        clientMutationId: requestId,
-        startedAt: event.startedAt,
-        type: event.type,
-        ...(event.endedAt ? { endedAt: event.endedAt } : {}),
-        [`${event.type}Meta`]: JSON.parse(event.metadata),
-      });
-      return data ? { event: data.logEvent, kind: "ok" } : { kind: "queued" };
-    }
-
-    const { patch } = entry;
-    const data = await gqlRequest<{ updateEvent: BabyEvent } | null>(
-      UPDATE_EVENT,
-      {
-        clientMutationId: requestId,
-        id: entry.serverId,
-        ...(patch.meta ? { [`${event.type}Meta`]: patch.meta } : {}),
-        ...(patch.startedAt ? { startedAt: patch.startedAt } : {}),
-        ...(patch.endedAt === undefined ? {} : { endedAt: patch.endedAt }),
-      }
-    );
-    return data ? { event: data.updateEvent, kind: "ok" } : { kind: "queued" };
-  } catch {
-    return { kind: "failed" };
-  }
-};
-
 /* ── Context ───────────────────────────────────────────────── */
 
 const BabyContext = createContext<BabyContextValue | null>(null);
+
+/** Thrown when a change could not be recorded, so it will never be sent. A
+ * caller must not tell the person it was saved. */
+export class NotRecordedError extends Error {
+  constructor(id: string) {
+    super(`Change to ${id} could not be recorded`);
+    this.name = "NotRecordedError";
+  }
+}
+
+const record = (
+  action: Extract<EventsAction, { type: "update" | "delete" }>
+) => {
+  if (!canRecord(getOutboxState(), action))
+    throw new NotRecordedError(action.id);
+  dispatch(action);
+};
+
+/** Run `task`, turning a throw into a rejected promise for async callers. */
+const settled = (task: () => void): Promise<void> => {
+  try {
+    task();
+    return Promise.resolve();
+  } catch (error) {
+    return Promise.reject(error);
+  }
+};
 
 export const UNDO_DURATION = 5000;
 
@@ -221,7 +140,11 @@ export const BabyContextProvider = ({
 }) => {
   const pathname = usePathname();
   const [baby, setBaby] = useState<Baby | null>(null);
-  const [state, dispatch] = useReducer(eventsReducer, initialEventsState);
+  const state = useSyncExternalStore(
+    subscribeOutbox,
+    getOutboxState,
+    getServerOutboxState
+  );
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(true);
   const [undoableAction, setUndoableAction] = useState<UndoableAction | null>(
@@ -230,7 +153,6 @@ export const BabyContextProvider = ({
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const babyRef = useRef<Baby | null>(null);
   const babyRequestRef = useRef<Promise<Baby | null> | null>(null);
-  const sendingRef = useRef(new Set<string>());
   const pendingDiscardRef = useRef<string | null>(null);
 
   const events = useMemo(() => deriveEvents(state), [state]);
@@ -289,9 +211,15 @@ export const BabyContextProvider = ({
     }
   }, [baby]);
 
+  useEffect(() => {
+    startOutbox(currentUserId());
+  }, []);
+
   // Load events when baby is known
   useEffect(() => {
-    if (baby) refreshEvents();
+    if (!baby) return;
+    setOutboxBaby(baby.id);
+    refreshEvents();
   }, [baby, refreshEvents]);
 
   // Active events = in-progress timers (endedAt is null).
@@ -310,54 +238,13 @@ export const BabyContextProvider = ({
   }, [baby, refreshEvents, activeEvents.length]);
 
   useEffect(() => {
-    for (const entry of Object.values(state.outbox)) {
-      if (entry.status !== "ready" || sendingRef.current.has(entry.key)) {
-        continue;
-      }
-      const { key } = entry;
-      const requestId = crypto.randomUUID();
-      sendingRef.current.add(key);
-      dispatch({ key, requestId, type: "send-start" });
-      (async () => {
-        const babyId =
-          entry.op === "create"
-            ? ((babyRef.current ?? (await loadBaby()))?.id ?? null)
-            : null;
-        const result = await sendEntry(entry, requestId, babyId);
-        sendingRef.current.delete(key);
-        if (result.kind === "ok") {
-          dispatch({
-            at: Date.now(),
-            key,
-            requestId,
-            result: result.event,
-            type: "send-ok",
-          });
-        } else if (result.kind === "queued") {
-          dispatch({ key, requestId, type: "send-queued" });
-        } else {
-          dispatch({ key, requestId, type: "send-failed" });
-        }
-      })();
-    }
-  }, [state.outbox, loadBaby]);
-
-  useEffect(
-    () =>
-      onSyncMessage((message) => {
-        if (message.type === "MUTATION_SYNCED") {
-          dispatch({
-            at: Date.now(),
-            requestId: message.id,
-            type: "worker-synced",
-          });
-          refreshEvents();
-        } else {
-          dispatch({ requestId: message.id, type: "worker-failed" });
-        }
-      }),
-    [refreshEvents]
-  );
+    const handleVisible = () => {
+      if (document.visibilityState === "visible") adoptClosedTabs();
+    };
+    document.addEventListener("visibilitychange", handleVisible);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisible);
+  }, []);
 
   useEffect(() => {
     setOnline(navigator.onLine);
@@ -432,32 +319,35 @@ export const BabyContextProvider = ({
     setUndoableAction(null);
   }, [undoableAction]);
 
-  const update = useCallback((id: string, changes: EventChanges) => {
-    dispatch({ changes, id, type: "update" });
-  }, []);
+  const update = useCallback(
+    (id: string, changes: EventChanges, eventType?: string) => {
+      record({ changes, eventType, id, type: "update" });
+    },
+    []
+  );
 
-  const deleteEvent = useCallback((id: string) => {
-    dispatch({ id, type: "delete" });
-    return Promise.resolve();
-  }, []);
+  const deleteEvent = useCallback(
+    (id: string) => settled(() => record({ id, type: "delete" })),
+    []
+  );
 
   const stopEvent = useCallback(
-    (id: string) => {
-      const endedAt = new Date().toISOString();
-      update(id, { endedAt });
-      const current = eventsRef.current.find((e) => e.id === id);
-      if (current && !takesAmount(current)) {
-        showToast({ ...current, endedAt }, "saved", false);
-      }
-      return Promise.resolve();
-    },
+    (id: string) =>
+      settled(() => {
+        const endedAt = new Date().toISOString();
+        const current = eventsRef.current.find((e) => e.id === id);
+        update(id, { endedAt }, current?.type);
+        if (current && !takesAmount(current)) {
+          showToast({ ...current, endedAt }, "saved", false);
+        }
+      }),
     [update, showToast]
   );
 
   const completeAmount = useCallback(
     (id: string, amountMl: number | null) => {
       const current = eventsRef.current.find((e) => e.id === id);
-      if (!current) return;
+      if (!current) throw new NotRecordedError(id);
       let saved = current;
       if (amountMl !== null) {
         let meta: Record<string, unknown> = {};
@@ -467,7 +357,7 @@ export const BabyContextProvider = ({
           /* record the amount alone */
         }
         const next = { ...meta, amountMl };
-        update(id, { meta: next });
+        update(id, { meta: next }, current.type);
         saved = { ...current, metadata: JSON.stringify(next) };
       }
       showToast(saved, "saved", false);
@@ -489,18 +379,22 @@ export const BabyContextProvider = ({
   const updateEventMeta = useCallback(
     (
       id: string,
-      _type: string,
+      type: string,
       meta: Record<string, unknown>,
       startedAt?: string,
       endedAt?: string | null
-    ) => {
-      update(id, {
-        meta,
-        ...(startedAt ? { startedAt } : {}),
-        ...(endedAt === undefined ? {} : { endedAt }),
-      });
-      return Promise.resolve();
-    },
+    ) =>
+      settled(() =>
+        update(
+          id,
+          {
+            meta,
+            ...(startedAt ? { startedAt } : {}),
+            ...(endedAt === undefined ? {} : { endedAt }),
+          },
+          type
+        )
+      ),
     [update]
   );
 

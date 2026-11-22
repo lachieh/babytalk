@@ -31,12 +31,11 @@ export interface GrowthPoint {
 
 const DAY_MS = 86_400_000;
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
-const LEGACY_UTC_MIDNIGHT_TIMESTAMP =
-  /^(\d{4})-(\d{2})-(\d{2})T00:00:00(?:\.0+)?Z$/;
+const CALENDAR_DAY_TIMESTAMP =
+  /^(\d{4})-(\d{2})-(\d{2})T(?:00|12):00:00(?:\.0+)?Z$/;
 
 export function parseCalendarDay(value: string): Date {
-  const named =
-    DATE_ONLY.exec(value) ?? LEGACY_UTC_MIDNIGHT_TIMESTAMP.exec(value);
+  const named = DATE_ONLY.exec(value) ?? CALENDAR_DAY_TIMESTAMP.exec(value);
   if (named) {
     return new Date(Number(named[1]), Number(named[2]) - 1, Number(named[3]));
   }
@@ -47,10 +46,7 @@ export function parseCalendarDay(value: string): Date {
 export function dateInputToIso(value: string): string {
   const day = parseCalendarDay(value);
   return new Date(
-    day.getFullYear(),
-    day.getMonth(),
-    day.getDate(),
-    12
+    Date.UTC(day.getFullYear(), day.getMonth(), day.getDate(), 12)
   ).toISOString();
 }
 

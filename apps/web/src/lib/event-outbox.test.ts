@@ -1,8 +1,12 @@
 import type { BabyEvent, EventsAction, EventsState } from "./event-outbox";
 import {
+  canRecord,
+  createPayload,
   deriveEvents,
   eventsReducer,
   initialEventsState,
+  opToSend,
+  toPersisted,
   unsavedCounts,
 } from "./event-outbox";
 
@@ -175,7 +179,7 @@ describe("changes while a create is in flight", () => {
     const state = run([
       { event: feed("local-1"), type: "create" },
       { key: "local-1", requestId: "r1", type: "send-start" },
-      { key: "local-1", requestId: "r1", type: "send-failed" },
+      { definite: true, key: "local-1", requestId: "r1", type: "send-failed" },
       { id: "local-1", type: "delete" },
     ]);
     expect(state.outbox).toStrictEqual({});
@@ -392,5 +396,341 @@ describe("a poll that started before a change was confirmed", () => {
       { events: [feed("srv-2")], requestedAt: 2000, type: "loaded" },
     ]);
     expect(shown(state).map((e) => e.id)).toStrictEqual(["srv-2"]);
+  });
+});
+
+describe("events outside the recent cache", () => {
+  const edit = {
+    changes: {
+      endedAt: "2026-10-01T04:00:00.000Z",
+      meta: { method: "bottle" },
+    },
+    eventType: "feed",
+    id: "srv-old",
+    type: "update",
+  } as const;
+
+  it("records an edit to an event the cache has never loaded", () => {
+    const state = run([{ events: [feed("srv-1")], type: "loaded" }, edit]);
+    expect(canRecord(initialEventsState, edit)).toBeTruthy();
+    expect(state.outbox["srv-old"]).toMatchObject({
+      op: "update",
+      patch: edit.changes,
+      serverId: "srv-old",
+      status: "ready",
+    });
+    expect(opToSend(state.outbox["srv-old"])).toBe("update");
+    expect(state.outbox["srv-old"].event.type).toBe("feed");
+    expect(shown(state).map((e) => e.id)).toStrictEqual(["srv-1"]);
+  });
+
+  it("records a delete of an event the cache has never loaded", () => {
+    const state = run([{ id: "srv-old", type: "delete" }]);
+    expect(
+      canRecord(initialEventsState, { id: "srv-old", type: "delete" })
+    ).toBeTruthy();
+    expect(state.outbox["srv-old"]).toMatchObject({
+      op: "delete",
+      serverId: "srv-old",
+    });
+  });
+
+  it("does not put a placeholder in the list once the edit is confirmed", () => {
+    const state = run([
+      edit,
+      { key: "srv-old", requestId: "r1", type: "send-start" },
+      { requestId: "r1", type: "send-queued", key: "srv-old" },
+      { requestId: "r1", type: "worker-synced" },
+    ]);
+    expect(state.outbox).toStrictEqual({});
+    expect(state.server).toStrictEqual([]);
+  });
+
+  it("refuses a change to a temporary id it knows nothing about", () => {
+    const action = {
+      changes: { endedAt: "2026-11-21T04:00:00.000Z" },
+      id: "local-gone",
+      type: "update",
+    } as const;
+    expect(canRecord(initialEventsState, action)).toBeFalsy();
+    expect(
+      canRecord(initialEventsState, { id: "local-gone", type: "delete" })
+    ).toBeFalsy();
+    expect(eventsReducer(initialEventsState, action)).toBe(initialEventsState);
+  });
+
+  it("refuses an edit to an event that is already being deleted", () => {
+    const deleting = run([
+      { events: [feed("srv-1")], type: "loaded" },
+      { id: "srv-1", type: "delete" },
+    ]);
+    expect(
+      canRecord(deleting, {
+        changes: { endedAt: "2026-11-21T04:00:00.000Z" },
+        id: "srv-1",
+        type: "update",
+      })
+    ).toBeFalsy();
+  });
+});
+
+describe("outbox that outlives the page", () => {
+  const reload = (state: EventsState) =>
+    eventsReducer(initialEventsState, {
+      persisted: structuredClone(toPersisted(state)),
+      type: "adopt",
+    });
+  const stoppedAt = "2026-11-21T03:18:00.000Z";
+
+  it("keeps a stop made offline after a reload and sends it once the create lands", () => {
+    const before = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      { key: "local-1", requestId: "r1", type: "send-queued" },
+      { changes: { endedAt: stoppedAt }, id: "local-1", type: "update" },
+    ]);
+    const after = run(
+      [{ requestId: "r1", result: feed("srv-1"), type: "worker-synced" }],
+      reload(before)
+    );
+    expect(after.outbox["local-1"]).toMatchObject({
+      op: "update",
+      patch: { endedAt: stoppedAt },
+      serverId: "srv-1",
+      status: "ready",
+    });
+    expect(shown(after)).toStrictEqual([
+      { endedAt: stoppedAt, id: "srv-1", syncState: "pending" },
+    ]);
+  });
+
+  it("keeps an undo of a queued create after a reload", () => {
+    const before = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      { key: "local-1", requestId: "r1", type: "send-queued" },
+      { id: "local-1", type: "delete" },
+    ]);
+    const after = run(
+      [{ requestId: "r1", result: feed("srv-1"), type: "worker-synced" }],
+      reload(before)
+    );
+    expect(after.outbox["local-1"]).toMatchObject({
+      op: "delete",
+      serverId: "srv-1",
+      status: "ready",
+    });
+    expect(shown(after)).toStrictEqual([]);
+  });
+
+  it("keeps failed entries so they can still be retried", () => {
+    const before = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      { key: "local-1", requestId: "r1", type: "send-failed" },
+    ]);
+    const after = reload(before);
+    expect(shown(after)).toStrictEqual([
+      { endedAt: null, id: "local-1", syncState: "failed" },
+    ]);
+    expect(unsavedCounts(after).failed).toBe(1);
+  });
+
+  it("resends a request whose answer was lost with the page", () => {
+    const before = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+    ]);
+    const entry = reload(before).outbox["local-1"];
+    expect(entry).toMatchObject({ requestId: null, status: "ready" });
+    expect(opToSend(entry)).toBe("create");
+  });
+
+  it("commits a pending discard that the departing page could not send", () => {
+    const before = run([
+      { events: [feed("srv-1")], type: "loaded" },
+      { id: "srv-1", type: "hide" },
+    ]);
+    const after = run(
+      [{ events: [feed("srv-1")], type: "loaded" }],
+      reload(before)
+    );
+    expect(after.hidden).toStrictEqual([]);
+    expect(after.outbox["srv-1"]).toMatchObject({
+      op: "delete",
+      status: "ready",
+    });
+    expect(shown(after)).toStrictEqual([]);
+  });
+
+  it("keeps the temporary id linked to the server id for a pending discard", () => {
+    const before = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      {
+        key: "local-1",
+        requestId: "r1",
+        result: feed("srv-1"),
+        type: "send-ok",
+      },
+      { id: "local-1", type: "hide" },
+    ]);
+    expect(Object.keys(toPersisted(before).aliases)).toStrictEqual(["local-1"]);
+    const after = reload(before);
+    expect(after.outbox["srv-1"]).toMatchObject({
+      op: "delete",
+      serverId: "srv-1",
+      status: "ready",
+    });
+  });
+
+  it("does not carry links nothing refers to any more", () => {
+    const settled = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      {
+        key: "local-1",
+        requestId: "r1",
+        result: feed("srv-1"),
+        type: "send-ok",
+      },
+    ]);
+    expect(toPersisted(settled).aliases).toStrictEqual({});
+  });
+
+  it("does not let an adopted copy overwrite this page's newer entry", () => {
+    const mine = run([
+      { event: feed("local-1", { endedAt: stoppedAt }), type: "create" },
+    ]);
+    const old = run([{ event: feed("local-1"), type: "create" }]);
+    const merged = eventsReducer(mine, {
+      persisted: toPersisted(old),
+      type: "adopt",
+    });
+    expect(merged.outbox["local-1"].event.endedAt).toBe(stoppedAt);
+  });
+});
+
+describe("worker results that arrive with no page listening", () => {
+  const queued = run([
+    { event: feed("local-1"), type: "create" },
+    { key: "local-1", requestId: "r1", type: "send-start" },
+    { key: "local-1", requestId: "r1", type: "send-queued" },
+  ]);
+
+  it("resends a queued entry the worker no longer holds", () => {
+    const state = eventsReducer(queued, { pending: [], type: "worker-report" });
+    expect(state.outbox["local-1"]).toMatchObject({
+      requestId: null,
+      status: "ready",
+    });
+  });
+
+  it("leaves an entry the worker still holds", () => {
+    const state = eventsReducer(queued, {
+      pending: ["r1"],
+      type: "worker-report",
+    });
+    expect(state).toBe(queued);
+  });
+});
+
+describe("reconciling a queued create by request identity", () => {
+  const queued = run([
+    { event: feed("local-1"), type: "create" },
+    { key: "local-1", requestId: "r1", type: "send-start" },
+    { key: "local-1", requestId: "r1", type: "send-queued" },
+    {
+      changes: { startedAt: "2026-11-21T02:45:00.000Z" },
+      id: "local-1",
+      type: "update",
+    },
+  ]);
+
+  it("links the replayed create by the id the worker returns, then sends the edit", () => {
+    const state = run(
+      [
+        { requestId: "r1", result: feed("srv-9"), type: "worker-synced" },
+        { events: [feed("srv-9")], type: "loaded" },
+      ],
+      queued
+    );
+    expect(state.aliases["local-1"]).toBe("srv-9");
+    expect(state.outbox["local-1"]).toMatchObject({
+      op: "update",
+      patch: { startedAt: "2026-11-21T02:45:00.000Z" },
+      serverId: "srv-9",
+      status: "ready",
+    });
+    expect(shown(state)).toStrictEqual([
+      { endedAt: null, id: "srv-9", syncState: "pending" },
+    ]);
+    expect(unsavedCounts(state)).toStrictEqual({ failed: 0, queued: 0 });
+  });
+
+  it("matches a legacy worker reply by the request that was sent, not the edited time", () => {
+    const state = run(
+      [
+        { requestId: "r1", type: "worker-synced" },
+        { events: [feed("srv-9")], type: "loaded" },
+      ],
+      queued
+    );
+    expect(state.outbox["local-1"]).toMatchObject({
+      op: "update",
+      serverId: "srv-9",
+      status: "ready",
+    });
+    expect(shown(state).map((e) => e.id)).toStrictEqual(["srv-9"]);
+  });
+
+  it("resends the create exactly as first sent so the server can recognise it", () => {
+    const failed = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      { key: "local-1", requestId: "r1", type: "send-failed" },
+      {
+        changes: { startedAt: "2026-11-21T02:45:00.000Z" },
+        id: "local-1",
+        type: "update",
+      },
+    ]);
+    const resent = eventsReducer(failed, {
+      key: "local-1",
+      requestId: "r2",
+      type: "send-start",
+    }).outbox["local-1"];
+    expect(createPayload(resent).startedAt).toBe(feed("x").startedAt);
+    const confirmed = eventsReducer(
+      { ...failed, outbox: { "local-1": resent } },
+      {
+        key: "local-1",
+        requestId: "r2",
+        result: feed("srv-1"),
+        type: "send-ok",
+      }
+    );
+    expect(confirmed.outbox["local-1"]).toMatchObject({
+      op: "update",
+      patch: { startedAt: "2026-11-21T02:45:00.000Z" },
+      status: "ready",
+    });
+  });
+});
+
+describe("undoing a create whose fate is unknown", () => {
+  it("keeps the delete when the create may have reached the server", () => {
+    const state = run([
+      { event: feed("local-1"), type: "create" },
+      { key: "local-1", requestId: "r1", type: "send-start" },
+      { key: "local-1", requestId: "r1", type: "send-failed" },
+      { id: "local-1", type: "delete" },
+    ]);
+    expect(state.outbox["local-1"]).toMatchObject({
+      op: "delete",
+      status: "ready",
+    });
+    expect(opToSend(state.outbox["local-1"])).toBe("create");
+    expect(shown(state)).toStrictEqual([]);
   });
 });

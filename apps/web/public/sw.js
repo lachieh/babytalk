@@ -5,9 +5,12 @@
 // content-hashed JS chunks that no longer exist after a deploy — leaving
 // returning users with a blank page until they hard-refreshed.
 const CACHE_NAME = "bubsie-v2";
-const OFFLINE_QUEUE_KEY = "bubsie_offline_queue";
+const QUEUE_CACHE = "bubsie-queue";
+const QUEUE_PATH = "/queue";
+const RESULTS_PATH = "/results";
 const MAX_QUEUE_SIZE = 100;
-const MAX_RETRIES = 3;
+const MAX_RESULTS = 200;
+const RESULT_TTL_MS = 7 * 86_400_000;
 const STALE_DAYS = 7;
 
 // API URL — set by the main thread via postMessage from the runtime config.
@@ -23,15 +26,22 @@ self.addEventListener("install", () => {
 });
 
 // Carry queued offline mutations over from the pre-rename cache.
-async function migrateLegacyQueue() {
+function migrateLegacyQueue() {
   const legacyName = "babytalk-queue";
-  if (!(await caches.has(legacyName))) return;
-  const legacy = await (await caches.open(legacyName)).match("/queue");
-  if (legacy) {
-    const items = await legacy.json();
-    if (items.length > 0) await saveQueue([...(await getQueue()), ...items]);
-  }
-  await caches.delete(legacyName);
+  return withStore(async () => {
+    if (!(await caches.has(legacyName))) return;
+    const legacy = await (await caches.open(legacyName)).match(QUEUE_PATH);
+    if (legacy) {
+      const items = await legacy.json();
+      if (items.length > 0) {
+        await writeJson(QUEUE_PATH, [
+          ...(await readJson(QUEUE_PATH)),
+          ...items,
+        ]);
+      }
+    }
+    await caches.delete(legacyName);
+  });
 }
 
 // Activate: clean old caches
@@ -43,7 +53,7 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k !== CACHE_NAME && k !== "bubsie-queue")
+            .filter((k) => k !== CACHE_NAME && k !== QUEUE_CACHE)
             .map((k) => caches.delete(k))
         )
       )
@@ -164,48 +174,220 @@ async function readQueueableBody(request) {
   }
 }
 
-// Queue a mutation for offline sync
-async function queueMutation(body, request) {
-  const queue = await getQueue();
-  if (queue.length >= MAX_QUEUE_SIZE) {
-    // Drop oldest
-    queue.shift();
-  }
+/* ── Durable store ────────────────────────────────────────────
+ * Two records in the queue cache: the queue of requests still to send
+ * (same item format as earlier workers, so their queues replay unchanged)
+ * and the results of requests that have finished, kept until a page
+ * acknowledges them so an outcome is never lost for want of a listener.
+ * Every read-modify-write goes through withStore, one at a time. */
 
-  queue.push({
-    authorization: request.headers.get("Authorization"),
-    body,
-    id: body.variables.clientMutationId,
-    retries: 0,
-    timestamp: Date.now(),
-    url: request.url,
-  });
+let storeChain = Promise.resolve();
 
-  await saveQueue(queue);
-  try {
-    await self.registration.sync?.register("bubsie-sync");
-  } catch {}
+function withStore(task) {
+  const locks = self.navigator && self.navigator.locks;
+  const run = () => (locks ? locks.request("bubsie-queue", task) : task());
+  const next = storeChain.then(run, run);
+  storeChain = next.catch(() => {});
+  return next;
 }
 
-async function getQueue() {
+async function readJson(path) {
   try {
-    const cache = await caches.open("bubsie-queue");
-    const response = await cache.match("/queue");
+    const cache = await caches.open(QUEUE_CACHE);
+    const response = await cache.match(path);
     if (response) {
-      return response.json();
+      const value = await response.json();
+      if (Array.isArray(value)) return value;
     }
   } catch {}
   return [];
 }
 
-async function saveQueue(queue) {
-  const cache = await caches.open("bubsie-queue");
+async function writeJson(path, value) {
+  const cache = await caches.open(QUEUE_CACHE);
   await cache.put(
-    "/queue",
-    new Response(JSON.stringify(queue), {
+    path,
+    new Response(JSON.stringify(value), {
       headers: { "Content-Type": "application/json" },
     })
   );
+}
+
+// Only call inside withStore.
+async function addResults(results) {
+  const now = Date.now();
+  const kept = (await readJson(RESULTS_PATH)).filter(
+    (r) => now - r.at < RESULT_TTL_MS && !results.some((n) => n.id === r.id)
+  );
+  await writeJson(RESULTS_PATH, [...kept, ...results].slice(-MAX_RESULTS));
+}
+
+async function queueMutation(body, request) {
+  const id = body.variables.clientMutationId;
+  const item = {
+    authorization: request.headers.get("Authorization"),
+    body,
+    id,
+    retries: 0,
+    timestamp: Date.now(),
+    url: request.url,
+  };
+  await withStore(async () => {
+    const queue = (await readJson(QUEUE_PATH)).filter((i) => i.id !== id);
+    queue.push(item);
+    const dropped = queue.splice(0, Math.max(0, queue.length - MAX_QUEUE_SIZE));
+    await writeJson(QUEUE_PATH, queue);
+    if (dropped.length > 0) {
+      const at = Date.now();
+      await addResults(
+        dropped.map((d) => ({ at, id: d.id, type: "MUTATION_FAILED" }))
+      );
+    }
+  });
+  try {
+    await self.registration.sync?.register("bubsie-sync");
+  } catch {}
+}
+
+/* ── Replay ─────────────────────────────────────────────────── */
+
+// The newest session a page has handed over. Access tokens last 15 minutes,
+// so the header captured when a request was queued is often expired.
+let latestAuthorization = null;
+
+function tokenSubject(authorization) {
+  try {
+    const part = authorization.split(" ")[1].split(".")[1];
+    const json = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
+    return typeof json.sub === "string" ? json.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+// A request is only ever sent as the person who made it.
+function authorizationFor(item) {
+  const subject = tokenSubject(item.authorization);
+  if (latestAuthorization && subject) {
+    if (tokenSubject(latestAuthorization) === subject)
+      return latestAuthorization;
+  }
+  return item.authorization;
+}
+
+function isAuthFailure(response, json) {
+  if (response.status === 401) return true;
+  const errors = (json && json.errors) || [];
+  return errors.some(
+    (e) =>
+      e &&
+      typeof e.message === "string" &&
+      (e.message === "Not authenticated" || e.message.includes("jwt"))
+  );
+}
+
+// What happened to one request:
+//   synced   - stored; forget it and report the result
+//   rejected - the server refused it; forget it and report the failure
+//   auth     - the session has expired; keep it, untouched, for a fresh one
+//   retry    - server trouble; keep it and try again later
+//   offline  - no network; stop replaying for now
+async function replayItem(item, apiUrl) {
+  let response;
+  try {
+    response = await fetch(apiUrl, {
+      body: JSON.stringify(item.body),
+      headers: {
+        Authorization: authorizationFor(item),
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+  } catch {
+    return { kind: "offline" };
+  }
+  let json = null;
+  try {
+    json = await response.json();
+  } catch {}
+  if (response.ok && json && json.data && !json.errors) {
+    return { data: json.data, kind: "synced" };
+  }
+  if (isAuthFailure(response, json)) return { kind: "auth" };
+  if (response.status >= 500 || !json) return { kind: "retry" };
+  return { kind: "rejected" };
+}
+
+async function settleItem(item, outcome) {
+  const result =
+    outcome.kind === "synced"
+      ? {
+          at: Date.now(),
+          data: outcome.data,
+          id: item.id,
+          type: "MUTATION_SYNCED",
+        }
+      : { at: Date.now(), id: item.id, type: "MUTATION_FAILED" };
+  await withStore(async () => {
+    const queue = await readJson(QUEUE_PATH);
+    if (outcome.kind === "retry") {
+      await writeJson(
+        QUEUE_PATH,
+        queue.map((i) =>
+          i.id === item.id ? { ...i, retries: i.retries + 1 } : i
+        )
+      );
+      return;
+    }
+    await writeJson(
+      QUEUE_PATH,
+      queue.filter((i) => i.id !== item.id)
+    );
+    await addResults([result]);
+  });
+  if (outcome.kind !== "retry") await notifyClients(result);
+}
+
+async function notifyClients(message) {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  clients.forEach((client) => client.postMessage(message));
+}
+
+// Tell every page what is still queued and what has finished, so a page that
+// was closed when a request finished can still learn its outcome.
+async function reportToClients() {
+  const report = await withStore(async () => ({
+    pending: (await readJson(QUEUE_PATH)).map((i) => i.id),
+    results: await readJson(RESULTS_PATH),
+    type: "QUEUE_REPORT",
+  }));
+  await notifyClients(report);
+}
+
+async function replayQueue() {
+  const snapshot = await withStore(() => readJson(QUEUE_PATH));
+
+  for (const item of snapshot) {
+    const ageInDays = (Date.now() - item.timestamp) / 86_400_000;
+    if (ageInDays > STALE_DAYS) {
+      await notifyClients({
+        age: Math.floor(ageInDays),
+        id: item.id,
+        type: "STALE_MUTATION",
+      });
+      continue;
+    }
+
+    const apiUrl = item.url || configuredApiUrl;
+    if (!apiUrl) continue;
+
+    const outcome = await replayItem(item, apiUrl);
+    if (outcome.kind === "offline") break;
+    if (outcome.kind === "auth") continue;
+    await settleItem(item, outcome);
+  }
+
+  await reportToClients();
 }
 
 // Background sync: replay queued mutations
@@ -216,89 +398,52 @@ self.addEventListener("sync", (event) => {
 });
 
 let replayInFlight = null;
+let replayRequested = false;
 
+// One replay at a time. A request that arrives mid-replay (often carrying a
+// fresh session) runs another pass once this one ends.
 function replayQueueExclusively() {
-  if (!replayInFlight) {
-    replayInFlight = replayQueue().finally(() => {
-      replayInFlight = null;
-    });
+  if (replayInFlight) {
+    replayRequested = true;
+    return replayInFlight;
   }
+  replayInFlight = (async () => {
+    do {
+      replayRequested = false;
+      await replayQueue();
+    } while (replayRequested);
+  })().finally(() => {
+    replayInFlight = null;
+  });
   return replayInFlight;
 }
 
-async function notifyClients(message) {
-  const clients = await self.clients.matchAll({ includeUncontrolled: true });
-  clients.forEach((client) => client.postMessage(message));
-}
-
-async function replayQueue() {
-  const queue = await getQueue();
-  if (queue.length === 0) return;
-
-  const remaining = [];
-
-  for (const item of queue) {
-    // Flag stale items
-    const ageInDays = (Date.now() - item.timestamp) / 86_400_000;
-    if (ageInDays > STALE_DAYS) {
-      // Notify client about stale items
-      await notifyClients({
-        age: Math.floor(ageInDays),
-        id: item.id,
-        type: "STALE_MUTATION",
-      });
-      remaining.push(item);
-      continue;
-    }
-
-    const apiUrl = item.url || configuredApiUrl;
-    if (!apiUrl) {
-      remaining.push(item);
-      continue;
-    }
-
-    let response;
-    try {
-      response = await fetch(apiUrl, {
-        body: JSON.stringify(item.body),
-        headers: {
-          Authorization: item.authorization,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-      });
-    } catch {
-      remaining.push(item);
-      continue;
-    }
-
-    let json = null;
-    try {
-      json = await response.json();
-    } catch {}
-
-    if (response.ok && json && json.data && !json.errors) {
-      await notifyClients({ id: item.id, type: "MUTATION_SYNCED" });
-      continue;
-    }
-
-    item.retries++;
-    if (response.status >= 500 && item.retries < MAX_RETRIES) {
-      remaining.push(item);
-    } else {
-      await notifyClients({ id: item.id, type: "MUTATION_FAILED" });
-    }
-  }
-
-  await saveQueue(remaining);
+function acknowledge(ids) {
+  return withStore(async () => {
+    const results = await readJson(RESULTS_PATH);
+    await writeJson(
+      RESULTS_PATH,
+      results.filter((r) => !ids.includes(r.id))
+    );
+  });
 }
 
 // Listen for messages from clients
 self.addEventListener("message", (event) => {
-  if (event.data === "SYNC_NOW") {
-    replayQueueExclusively();
+  const { data } = event;
+  const keepAlive = (promise) => {
+    if (event.waitUntil) event.waitUntil(promise);
+  };
+  if (data === "SYNC_NOW" || (data && data.type === "SYNC_NOW")) {
+    if (data && typeof data.authorization === "string") {
+      latestAuthorization = data.authorization;
+    }
+    keepAlive(replayQueueExclusively());
   }
-  if (event.data && event.data.type === "SET_API_URL" && event.data.url) {
-    configuredApiUrl = event.data.url;
+  if (data && data.type === "ACK_RESULTS" && Array.isArray(data.ids)) {
+    keepAlive(acknowledge(data.ids));
+  }
+  if (data && data.type === "SET_API_URL" && data.url) {
+    configuredApiUrl = data.url;
   }
 });

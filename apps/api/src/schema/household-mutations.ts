@@ -18,6 +18,7 @@ import {
   PumpMetadataInput,
   SleepMetadataInput,
 } from "./household-types";
+import { logEventOnce } from "./log-event-once";
 
 const requireAuth = (ctx: Context): string => {
   if (!ctx.currentUser) throw new Error("Not authenticated");
@@ -285,18 +286,18 @@ builder.mutationField("logEvent", (t) =>
         args.endedAt ? new Date(args.endedAt) : null
       );
 
-      const [event] = await ctx.db
-        .insert(events)
-        .values({
-          babyId: args.babyId,
-          endedAt,
-          loggedById: userId,
-          metadata,
-          startedAt,
-          type: args.type,
-        })
-        .returning();
-
+      const values = {
+        babyId: args.babyId,
+        endedAt,
+        loggedById: userId,
+        metadata,
+        startedAt,
+        type: args.type,
+      };
+      // A client-chosen start time makes a resent request recognisable; a
+      // request without one cannot be told apart from a new log.
+      if (args.startedAt) return logEventOnce(ctx.db, values);
+      const [event] = await ctx.db.insert(events).values(values).returning();
       return event;
     },
     type: BabyEventType,
@@ -381,7 +382,8 @@ builder.mutationField("deleteEvent", (t) =>
         .from(events)
         .where(eq(events.id, args.id))
         .limit(1);
-      if (!existing) throw new Error("Event not found");
+      // Already gone: a resent delete has nothing left to do.
+      if (!existing) return true;
       await requireBabyAccess(ctx, existing.babyId, householdId);
 
       await ctx.db.delete(events).where(eq(events.id, args.id));

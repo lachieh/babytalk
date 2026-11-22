@@ -1,6 +1,6 @@
 import type { BabyEvent } from "./baby-context";
-import { capitalize, parseMeta } from "./event-meta";
-import { dayRange, durationWithinRange } from "./event-time";
+import { capitalize, eventTypeLabel, parseMeta } from "./event-meta";
+import { dayRange, durationWithinRange, entryShape } from "./event-time";
 import { formatVolume } from "./use-volume-unit";
 import type { VolumeUnit } from "./use-volume-unit";
 
@@ -112,16 +112,28 @@ export function takesAmount(event: BabyEvent): boolean {
   return event.type === "feed" && methodTakesAmount(parseMeta(event.metadata));
 }
 
-type OneTapAction = "instant" | "amount" | "timer";
+export type OneTapAction = "instant" | "amount" | "timer";
 
 export function oneTapAction(
   type: string,
   meta: Record<string, unknown>
 ): OneTapAction {
-  if (type === "diaper" || type === "note") return "instant";
-  if (type !== "feed") return "timer";
-  if (methodTakesAmount(meta)) return "amount";
-  return meta.method === "solid" ? "instant" : "timer";
+  if (entryShape(type, meta.method) === "span") return "timer";
+  return type === "feed" && methodTakesAmount(meta) ? "amount" : "instant";
+}
+
+export function logSheetPrimary(
+  type: string,
+  meta: Record<string, unknown>
+): { action: OneTapAction; label: string } {
+  const action = oneTapAction(type, meta);
+  return {
+    action,
+    label:
+      action === "timer"
+        ? "Start timer"
+        : `Log ${eventTypeLabel(type).toLowerCase()}`,
+  };
 }
 
 export type LastEventDetail = {

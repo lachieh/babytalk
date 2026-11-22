@@ -60,6 +60,18 @@ export function entryShape(type: string, method?: unknown): EntryShape {
   return "instant";
 }
 
+export function editShape(
+  stored: Pick<BabyEvent, "endedAt" | "startedAt"> | null,
+  type: string,
+  method?: unknown
+): EntryShape {
+  const shape = entryShape(type, method);
+  if (!stored || shape === "span" || !DURATION_EVENT_TYPES.has(type)) {
+    return shape;
+  }
+  return stored.endedAt === stored.startedAt ? "instant" : "span";
+}
+
 export type TimeChoice =
   | { kind: "ago"; minutes: number }
   | { kind: "at"; local: string };
@@ -68,10 +80,25 @@ export type LengthChoice =
   | { kind: "minutes"; minutes: number }
   | { kind: "start"; local: string };
 
+interface StoredTiming {
+  endedAt: string | null;
+  startedAt: string;
+}
+
 export interface EntryTiming {
   running: boolean;
   time: TimeChoice | null;
   length: LengthChoice | null;
+  /** The saved times, kept verbatim until a timing field changes. */
+  stored?: StoredTiming;
+}
+
+export function changeTiming(
+  timing: EntryTiming,
+  patch: Partial<Omit<EntryTiming, "stored">>
+): EntryTiming {
+  const { stored: _stored, ...rest } = timing;
+  return { ...rest, ...patch };
 }
 
 export type TimingField = "time" | "length";
@@ -105,6 +132,7 @@ export function resolveEntryTiming(
   timing: EntryTiming,
   now = Date.now()
 ): ResolvedTiming {
+  if (timing.stored) return { ok: true, ...timing.stored };
   if (!timing.time) return fail("time", "Pick a time.");
   const at = resolveTime(timing.time, now);
   if (!Number.isFinite(at)) return fail("time", "Pick a time.");
@@ -142,12 +170,17 @@ export function timingFromEvent(
   shape: EntryShape,
   presets: readonly number[] = []
 ): EntryTiming {
+  const stored = { endedAt: event.endedAt, startedAt: event.startedAt };
   const start: TimeChoice = {
     kind: "at",
     local: toLocalInput(event.startedAt),
   };
-  if (shape === "instant") return { length: null, running: false, time: start };
-  if (!event.endedAt) return { length: null, running: true, time: start };
+  if (shape === "instant") {
+    return { length: null, running: false, stored, time: start };
+  }
+  if (!event.endedAt) {
+    return { length: null, running: true, stored, time: start };
+  }
 
   const end = toLocalInput(event.endedAt);
   const minutes =
@@ -155,7 +188,7 @@ export function timingFromEvent(
   const length: LengthChoice = presets.includes(minutes)
     ? { kind: "minutes", minutes }
     : { kind: "start", local: start.local };
-  return { length, running: false, time: { kind: "at", local: end } };
+  return { length, running: false, stored, time: { kind: "at", local: end } };
 }
 
 export function durationWithinRange(

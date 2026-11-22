@@ -23,6 +23,33 @@ const REFRESH_TOKEN_MUTATION = `
 
 let refreshPromise: Promise<boolean> | null = null;
 
+/** The server answered and refused the operation, so nothing was applied.
+ * A network failure or session problem is never one of these. */
+export class GraphQLResponseError extends Error {
+  override name = "GraphQLResponseError";
+}
+
+const tokenPayload = (token: string): { exp?: number; sub?: string } | null => {
+  try {
+    const part = token.split(".")[1].replaceAll("-", "+").replaceAll("_", "/");
+    return JSON.parse(atob(part)) as { exp?: number; sub?: string };
+  } catch {
+    return null;
+  }
+};
+
+/** The signed-in user, read from the access token without a request. */
+export const currentUserId = (): string | null => {
+  const token = getToken();
+  const sub = token ? tokenPayload(token)?.sub : undefined;
+  return typeof sub === "string" ? sub : null;
+};
+
+export const currentAuthorization = (): string | null => {
+  const token = getToken();
+  return token ? `Bearer ${token}` : null;
+};
+
 function isAuthError(message: string, status: number): boolean {
   if (status === 401) return true;
   if (message === "Not authenticated") return true;
@@ -68,12 +95,9 @@ export const restoreSession = async (): Promise<boolean> => {
   if (!token && !refreshToken) return false;
   if (!token) return refreshSession(getApiUrl());
 
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1])) as { exp?: number };
-    if (payload.exp && payload.exp * 1000 > Date.now() + 30_000) return true;
-  } catch {
-    // Let the refresh token recover malformed or legacy access tokens.
-  }
+  // A malformed or legacy access token falls through to the refresh token.
+  const payload = tokenPayload(token);
+  if (payload?.exp && payload.exp * 1000 > Date.now() + 30_000) return true;
 
   return refreshSession(getApiUrl());
 };
@@ -119,7 +143,7 @@ export const gqlRequest = async <T = unknown>(
       throw new Error("Session expired — redirecting to login");
     }
 
-    throw new Error(message);
+    throw new GraphQLResponseError(message);
   }
   return json.data as T;
 };

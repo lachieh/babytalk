@@ -26,12 +26,50 @@ const [WEIGHT, LENGTH] = METRICS;
 
 const dayParts = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate()];
 
+const ZONES = [
+  "Etc/GMT+12",
+  "Pacific/Pago_Pago",
+  "America/Los_Angeles",
+  "America/New_York",
+  "Europe/London",
+  "Asia/Kolkata",
+  "Australia/Sydney",
+  "Pacific/Auckland",
+  "Pacific/Fiji",
+  "Pacific/Chatham",
+  "Pacific/Tongatapu",
+  "Pacific/Kiritimati",
+];
+
+// Ordinary days plus the US, EU and NZ daylight-saving change days of 2026.
+const DAYS = [
+  "2026-06-05",
+  "2026-01-01",
+  "2026-12-31",
+  "2026-03-08",
+  "2026-11-01",
+  "2026-03-29",
+  "2026-10-25",
+  "2026-04-05",
+  "2026-09-27",
+];
+
+function inZone<T>(zone: string, run: () => T): T {
+  const previous = process.env.TZ;
+  process.env.TZ = zone;
+  try {
+    return run();
+  } finally {
+    process.env.TZ = previous;
+  }
+}
+
 const measurement = (over: Partial<Measurement>): Measurement => ({
   babyId: "b1",
   headMm: null,
   id: "m1",
   lengthMm: null,
-  measuredAt: "2026-11-12T17:00:00.000Z",
+  measuredAt: dateInputToIso("2026-11-12"),
   notes: null,
   weightG: null,
   ...over,
@@ -45,9 +83,41 @@ describe("calendar days", () => {
     expect(parseCalendarDay("2026-11-12").getHours()).toBe(0);
   });
 
-  it("stores a chosen day as local noon, which is still that day in UTC", () => {
-    expect(dateInputToIso("2026-11-12")).toBe("2026-11-12T17:00:00.000Z");
-    expect(dateInputToIso("2026-07-04")).toBe("2026-07-04T16:00:00.000Z");
+  it("stores a chosen day as noon UTC of that day, whatever the zone", () => {
+    for (const zone of ZONES) {
+      inZone(zone, () => {
+        expect(dateInputToIso("2026-11-12")).toBe("2026-11-12T12:00:00.000Z");
+        expect(dateInputToIso("2026-07-04")).toBe("2026-07-04T12:00:00.000Z");
+      });
+    }
+  });
+
+  it("reads an entered day back as the same day in every zone, after travel too", () => {
+    const misread: string[] = [];
+    for (const day of DAYS) {
+      for (const savedIn of ZONES) {
+        const stored = inZone(savedIn, () => dateInputToIso(day));
+        for (const readIn of ZONES) {
+          const read = inZone(readIn, () => ymd(parseCalendarDay(stored)));
+          if (read !== day)
+            misread.push(`${day} ${savedIn}→${readIn}: ${read}`);
+        }
+      }
+    }
+    expect(misread).toStrictEqual([]);
+  });
+
+  it("reads legacy UTC-midnight rows as the day they name in every zone", () => {
+    const misread: string[] = [];
+    for (const day of DAYS) {
+      for (const zone of ZONES) {
+        const read = inZone(zone, () =>
+          ymd(parseCalendarDay(`${day}T00:00:00.000Z`))
+        );
+        if (read !== day) misread.push(`${day} in ${zone}: ${read}`);
+      }
+    }
+    expect(misread).toStrictEqual([]);
   });
 
   it("shows the day that was entered", () => {
@@ -63,9 +133,57 @@ describe("calendar days", () => {
   });
 
   it("reads any other timestamp as the local day it happened on", () => {
-    expect(
-      dayParts(parseCalendarDay("2026-11-13T02:30:00.000Z"))
-    ).toStrictEqual([2026, 11, 12]);
+    inZone("America/New_York", () => {
+      expect(
+        dayParts(parseCalendarDay("2026-11-13T02:30:00.000Z"))
+      ).toStrictEqual([2026, 11, 12]);
+    });
+  });
+
+  it("dates, ages and orders measurements by their day in every zone", () => {
+    const rows = [
+      measurement({
+        id: "new",
+        measuredAt: dateInputToIso("2026-06-05"),
+        weightG: 3600,
+      }),
+      measurement({
+        id: "legacy",
+        measuredAt: "2026-06-04T00:00:00.000Z",
+        weightG: 3500,
+      }),
+      measurement({
+        id: "birthday",
+        measuredAt: dateInputToIso("2026-06-01"),
+        weightG: 3300,
+      }),
+    ];
+    for (const zone of ZONES) {
+      inZone(zone, () => {
+        const points = buildPoints(rows, "2026-06-01", WEIGHT, 3400);
+        expect({
+          points: points.map((p) => [p.id, p.ageDays, ymd(p.day)]),
+          zone,
+        }).toStrictEqual({
+          points: [
+            ["birthday", 0, "2026-06-01"],
+            ["legacy", 3, "2026-06-04"],
+            ["new", 4, "2026-06-05"],
+          ],
+          zone,
+        });
+        const [first] = buildPoints(
+          rows.slice(0, 2),
+          "2026-06-01",
+          WEIGHT,
+          3400
+        );
+        expect({ first: [first.id, first.ageDays], zone }).toStrictEqual({
+          first: [BIRTH_POINT_ID, 0],
+          zone,
+        });
+      });
+    }
   });
 
   it("counts age in whole days across a daylight-saving change", () => {
@@ -109,17 +227,17 @@ describe("points for a metric", () => {
       [
         measurement({
           id: "c",
-          measuredAt: "2026-08-10T16:00:00.000Z",
+          measuredAt: dateInputToIso("2026-08-10"),
           weightG: 5600,
         }),
         measurement({
           id: "b",
           lengthMm: 540,
-          measuredAt: "2026-07-10T16:00:00.000Z",
+          measuredAt: dateInputToIso("2026-07-10"),
         }),
         measurement({
           id: "a",
-          measuredAt: "2026-06-24T16:00:00.000Z",
+          measuredAt: dateInputToIso("2026-06-24"),
           weightG: 3700,
         }),
       ],
@@ -138,7 +256,7 @@ describe("points for a metric", () => {
       [
         measurement({
           id: "a",
-          measuredAt: "2026-06-24T16:00:00.000Z",
+          measuredAt: dateInputToIso("2026-06-24"),
           weightG: 3700,
         }),
       ],
@@ -165,7 +283,7 @@ describe("points for a metric", () => {
       [
         measurement({
           id: "a",
-          measuredAt: "2026-06-10T16:00:00.000Z",
+          measuredAt: dateInputToIso("2026-06-10"),
           weightG: 3380,
         }),
       ],
