@@ -29,18 +29,11 @@ import type {
 } from "./event-outbox";
 import {
   eventsReducer,
-  hasRequest,
   initialEventsState,
   isEmptyOutbox,
   toPersisted,
 } from "./event-outbox";
 import { GraphQLResponseError, gqlRequest } from "./gql-request";
-import type { WorkerResult } from "./register-sw";
-import {
-  ackWorkerResults,
-  onSyncMessage,
-  requestWorkerSync,
-} from "./register-sw";
 
 const KEY_PREFIX = "bubsie_outbox:";
 const TAB_ID_KEY = "bubsie_outbox_tab";
@@ -111,7 +104,10 @@ const UPDATE_EVENT = `
 
 type SendResult =
   | { kind: "ok"; event: BabyEvent | null }
-  | { kind: "queued" }
+  /** Not sent: no network, or the previously deployed worker queued it. That
+   * worker's copy is never replayed (see register-sw.ts), so this page sends
+   * it again. */
+  | { kind: "unsent" }
   | { kind: "failed"; definite: boolean };
 
 const sendEntry = async (
@@ -119,14 +115,16 @@ const sendEntry = async (
   requestId: string,
   forBaby: string | null
 ): Promise<SendResult> => {
-  const { event, id, op, patch } = entry;
+  // An update carries what send-start moved into it, not what has changed
+  // since (that goes in the next request).
+  const { event, id, op, sentPatch: patch } = entry;
   try {
     if (op === "delete") {
       const data = await gqlRequest<{ deleteEvent: boolean } | null>(
         DELETE_EVENT,
         { clientMutationId: requestId, id }
       );
-      return data ? { event: null, kind: "ok" } : { kind: "queued" };
+      return data ? { event: null, kind: "ok" } : { kind: "unsent" };
     }
 
     if (op === "create") {
@@ -139,7 +137,7 @@ const sendEntry = async (
         ...(event.endedAt ? { endedAt: event.endedAt } : {}),
         [`${event.type}Meta`]: JSON.parse(event.metadata),
       });
-      return data ? { event: data.logEvent, kind: "ok" } : { kind: "queued" };
+      return data ? { event: data.logEvent, kind: "ok" } : { kind: "unsent" };
     }
 
     const data = await gqlRequest<{ updateEvent: BabyEvent } | null>(
@@ -152,7 +150,7 @@ const sendEntry = async (
         ...(patch.endedAt === undefined ? {} : { endedAt: patch.endedAt }),
       }
     );
-    return data ? { event: data.updateEvent, kind: "ok" } : { kind: "queued" };
+    return data ? { event: data.updateEvent, kind: "ok" } : { kind: "unsent" };
   } catch (error) {
     return { definite: error instanceof GraphQLResponseError, kind: "failed" };
   }
@@ -168,7 +166,6 @@ let babyId: string | null = null;
 let sendingAllowed = false;
 let releaseTab: (() => void) | null = null;
 let flushScheduled = false;
-let stopListening: (() => void) | null = null;
 /** Whether the last write of this tab's outbox reached storage. */
 let durable = true;
 
@@ -183,7 +180,7 @@ const readPersisted = (key: string): PersistedOutbox | null => {
     const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
     if (
       !isRecord(parsed) ||
-      parsed.v !== 2 ||
+      parsed.v !== 1 ||
       !isRecord(parsed.outbox) ||
       !Array.isArray(parsed.hidden)
     ) {
@@ -253,11 +250,9 @@ const send = async (id: string, requestId: string, forBaby: string | null) => {
       result: result.event,
       type: "send-ok",
     });
-  } else if (result.kind === "queued") {
-    dispatchOutbox({ at: Date.now(), id, requestId, type: "send-queued" });
   } else {
     dispatchOutbox({
-      definite: result.definite,
+      definite: result.kind === "failed" && result.definite,
       id,
       requestId,
       type: "send-failed",
@@ -297,38 +292,12 @@ export const setOutboxBaby = (id: string) => {
   scheduleFlush();
 };
 
-/* ── Worker results ────────────────────────────────────────── */
-
-const applyResult = (result: WorkerResult) => {
-  if (result.type === "MUTATION_SYNCED") {
-    dispatchOutbox({
-      at: Date.now(),
-      requestId: result.id,
-      result: result.event,
-      type: "worker-synced",
-    });
-  } else {
-    dispatchOutbox({ requestId: result.id, type: "worker-failed" });
-  }
+/** The network may be back: send what was waiting. Called on start, when
+ * the browser comes online or the page becomes visible, and after every
+ * successful poll. */
+export const resumeOutbox = () => {
+  dispatchOutbox({ type: "resume" });
 };
-
-/** Results for another tab's entries are left with the worker for that tab,
- * or for whichever tab adopts its outbox later. */
-const listenToWorker = () =>
-  onSyncMessage((message) => {
-    const results =
-      message.type === "QUEUE_REPORT" ? message.results : [message];
-    const mine = results.filter((r) => hasRequest(state, r.id));
-    for (const result of mine) applyResult(result);
-    if (message.type === "QUEUE_REPORT") {
-      dispatchOutbox({
-        at: message.at,
-        pending: message.pending,
-        type: "worker-report",
-      });
-    }
-    ackWorkerResults(mine.map((r) => r.id));
-  });
 
 /* ── Tabs ──────────────────────────────────────────────────── */
 
@@ -449,7 +418,6 @@ export const startOutbox = (user: string | null) => {
   durable = true;
   write();
   notify();
-  stopListening ??= listenToWorker();
   void (async () => {
     try {
       await claimTab(user);
@@ -459,14 +427,7 @@ export const startOutbox = (user: string | null) => {
     if (owner !== user) return;
     sendingAllowed = true;
     scheduleFlush();
-    if (!(await requestWorkerSync())) {
-      // No worker at all, so nothing can be holding a request for us.
-      dispatchOutbox({
-        at: Number.POSITIVE_INFINITY,
-        pending: [],
-        type: "worker-report",
-      });
-    }
+    resumeOutbox();
   })();
 };
 

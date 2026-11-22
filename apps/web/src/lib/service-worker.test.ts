@@ -1,335 +1,121 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
-import { runInNewContext } from "node:vm";
+import type { Network, Sent } from "./testing/sw-harness";
+import {
+  API,
+  createWorker,
+  json,
+  offline,
+  token,
+  workerSource,
+} from "./testing/sw-harness";
 
-/* Runs the real public/sw.js against in-memory stand-ins for Cache Storage,
- * the network and the open pages. Cache reads and writes yield to the event
- * loop, as the real ones do, so unco-ordinated read-modify-writes race. */
+/* The current worker (public/sw.js) in an in-memory harness. */
 
-const API = "https://api.test/graphql";
-const WORKER_SOURCE = readFileSync(
-  join(import.meta.dirname, "../../public/sw.js"),
-  "utf8"
-);
+const legacyItem = (
+  id: string,
+  {
+    query = "mutation LogEvent { logEvent { id } }",
+    variables = {},
+    user = "parent-a",
+  } = {}
+) => ({
+  authorization: token(user, "queued"),
+  body: { query, variables },
+  id,
+  retries: 0,
+  timestamp: Date.now(),
+});
 
-const tick = () => sleep(0);
+const stored: Network = () => json({ data: { logEvent: { id: "x" } } });
 
-const token = (sub: string, tag = "") =>
-  `Bearer h.${Buffer.from(JSON.stringify({ sub, tag })).toString("base64url")}.s`;
-
-interface Sent {
-  authorization: string | null;
-  body: { variables: { clientMutationId: string } };
-}
-
-type Reply = (sent: Sent) => Response | Promise<Response>;
-
-const json = (value: unknown, status = 200) => Response.json(value, { status });
-
-const createWorker = (source = WORKER_SOURCE) => {
-  const stores = new Map<string, Map<string, string>>();
-  const listeners = new Map<string, (event: unknown) => void>();
-  const pages: unknown[][] = [];
-  const sent: Sent[] = [];
-  let reply: Reply | null = null;
-  let pageNetwork: (() => Promise<Response>) | null = null;
-
-  const caches = {
-    delete: async (name: string) => {
-      await tick();
-      return stores.delete(name);
-    },
-    has: async (name: string) => {
-      await tick();
-      return stores.has(name);
-    },
-    keys: () => Promise.resolve([...stores.keys()]),
-    match: () => Promise.resolve(null),
-    open: async (name: string) => {
-      await tick();
-      const store = stores.get(name) ?? new Map<string, string>();
-      stores.set(name, store);
-      return {
-        match: async (path: string) => {
-          await tick();
-          const body = store.get(path);
-          return body === undefined ? undefined : new Response(body);
-        },
-        put: async (path: string, response: Response) => {
-          const body = await response.text();
-          await tick();
-          store.set(path, body);
-        },
-      };
-    },
-  };
-
-  const fetch = async (input: string | Request, init?: RequestInit) => {
-    if (input instanceof Request) {
-      if (pageNetwork) return await pageNetwork();
-      throw new TypeError("offline");
-    }
-    const headers = new Headers(init?.headers);
-    const request: Sent = {
-      authorization: headers.get("Authorization"),
-      body: JSON.parse(String(init?.body)) as Sent["body"],
-    };
-    sent.push(request);
-    if (!reply) throw new TypeError("offline");
-    return await reply(request);
-  };
-
-  const self = {
-    addEventListener: (type: string, listener: (event: unknown) => void) => {
-      listeners.set(type, listener);
-    },
-    clients: {
-      claim: () => Promise.resolve(),
-      matchAll: () =>
-        Promise.resolve(
-          pages.map((inbox) => ({
-            postMessage: (message: unknown) => inbox.push(message),
-          }))
-        ),
-    },
-    navigator: {},
-    registration: {},
-    skipWaiting: () => Promise.resolve(),
-  };
-
-  runInNewContext(source, {
-    Response,
-    URL,
-    atob,
-    caches,
-    console,
-    fetch,
-    self,
-  });
-
-  const read = (path: string, cache = "bubsie-queue") =>
-    JSON.parse(stores.get(cache)?.get(path) ?? "[]") as Record<
-      string,
-      unknown
-    >[];
-
-  return {
-    /** A page queues a mutation while the network is down. */
-    enqueue: (id: string, authorization = token("parent-a")) => {
-      let response: Promise<Response> | undefined;
-      const request = new Request(API, {
-        body: JSON.stringify({
-          query: "mutation LogEvent { logEvent { id } }",
-          variables: { clientMutationId: id },
-        }),
-        headers: { Authorization: authorization },
-        method: "POST",
-      });
-      listeners.get("fetch")?.({
-        request,
-        respondWith: (p: Promise<Response>) => {
-          response = p;
-        },
-      });
-      return (response as Promise<Response>).then((r) => r.json());
-    },
-    message: async (data: unknown) => {
-      const pending: Promise<unknown>[] = [];
-      listeners.get("message")?.({
-        data,
-        waitUntil: (p: Promise<unknown>) => pending.push(p),
-      });
-      await Promise.all(pending);
-    },
-    openPage: () => {
-      const inbox: unknown[] = [];
-      pages.push(inbox);
-      return inbox;
-    },
-    queueIds: () => read("/queue").map((item) => item.id),
-    read,
-    seed: (cache: string, path: string, value: unknown) => {
-      const store = stores.get(cache) ?? new Map<string, string>();
-      store.set(path, JSON.stringify(value));
-      stores.set(cache, store);
-    },
-    sent,
-    setReply: (next: Reply | null) => {
-      reply = next;
-    },
-    /** How the network answers a page's own request. */
-    setPageNetwork: (next: (() => Promise<Response>) | null) => {
-      pageNetwork = next;
-    },
-    activate: async () => {
-      const pending: Promise<unknown>[] = [];
-      listeners.get("activate")?.({
-        waitUntil: (p: Promise<unknown>) => pending.push(p),
-      });
-      await Promise.all(pending);
-    },
-  };
+const setUp = (network: Network = stored) => {
+  const worker = createWorker({ source: workerSource("current") });
+  worker.setNetwork(network);
+  return worker;
 };
 
-const synced = (sent: Sent) =>
-  json({
-    data: { logEvent: { id: `srv-${sent.body.variables.clientMutationId}` } },
+const openPage = (worker: ReturnType<typeof setUp>, user = "parent-a") =>
+  worker.message({
+    authorization: token(user, "fresh"),
+    type: "SET_API_URL",
+    url: API,
   });
 
-describe("service worker queue", () => {
-  it("keeps both of two requests queued at the same moment", async () => {
-    const worker = createWorker();
-    const answers = await Promise.all([
-      worker.enqueue("a"),
-      worker.enqueue("b"),
-    ]);
-    expect(answers).toStrictEqual([
-      expect.objectContaining({ queued: true }),
-      expect.objectContaining({ queued: true }),
-    ]);
-    expect(worker.queueIds().toSorted()).toStrictEqual(["a", "b"]);
-  });
+const sentIds = (sent: Sent[]) => sent.map((s) => s.body.query);
 
-  it("keeps a request queued while a replay is in flight", async () => {
-    const worker = createWorker();
-    await worker.enqueue("a");
-    const reached = Promise.withResolvers<boolean>();
-    const answer = Promise.withResolvers<Response>();
-    worker.setReply((sent) => {
-      reached.resolve(true);
-      return answer.promise.then(() => synced(sent));
+describe("service worker", () => {
+  it("leaves the page's requests to the network", async () => {
+    const worker = setUp(offline);
+    const request = worker.pageFetch(API, {
+      body: JSON.stringify({
+        query: "mutation LogEvent { logEvent { id } }",
+        variables: { clientMutationId: "r1" },
+      }),
+      method: "POST",
     });
-    const replay = worker.message({ type: "SYNC_NOW" });
-    await reached.promise;
-    await worker.enqueue("b");
-    answer.resolve(new Response());
-    await replay;
-    expect(worker.queueIds()).toStrictEqual(["b"]);
+    await expect(request).rejects.toThrow("offline");
+    expect(worker.storage.stores.size).toBe(0);
   });
 
-  it("holds a request whose session expired until a fresh one arrives", async () => {
-    const worker = createWorker();
-    const page = worker.openPage();
-    await worker.enqueue("a", token("parent-a", "old"));
-    worker.setReply((sent) =>
-      sent.authorization === token("parent-a", "fresh")
-        ? synced(sent)
-        : json({ data: null, errors: [{ message: "Not authenticated" }] })
-    );
+  it("replays the previous worker's queue once, with the person's fresh session", async () => {
+    const worker = setUp();
+    worker.storage.seed("bubsie-queue", "/queue", [legacyItem("a")]);
+    worker.storage.seed("babytalk-queue", "/queue", [legacyItem("b")]);
+    await openPage(worker);
+    expect(worker.sent.map((s) => s.authorization)).toStrictEqual([
+      token("parent-a", "fresh"),
+      token("parent-a", "fresh"),
+    ]);
+    expect(worker.storage.stores.has("bubsie-queue")).toBeFalsy();
+    expect(worker.storage.stores.has("babytalk-queue")).toBeFalsy();
 
-    await worker.message({ type: "SYNC_NOW" });
-    expect(worker.read("/queue")).toMatchObject([{ id: "a", retries: 0 }]);
-    expect(page).not.toContainEqual(
-      expect.objectContaining({ type: "MUTATION_FAILED" })
-    );
+    await openPage(worker);
+    expect(worker.sent).toHaveLength(2);
+  });
 
-    await worker.message({
-      authorization: token("parent-a", "fresh"),
-      type: "SYNC_NOW",
-    });
-    expect(worker.sent.at(-1)?.authorization).toBe(token("parent-a", "fresh"));
-    expect(worker.queueIds()).toStrictEqual([]);
-    expect(page).toContainEqual(
-      expect.objectContaining({
-        data: { logEvent: { id: "srv-a" } },
-        id: "a",
-        type: "MUTATION_SYNCED",
-      })
+  it("drops requests a page keeps and resends itself, and queued queries", async () => {
+    const worker = setUp();
+    worker.storage.seed("bubsie-queue", "/queue", [
+      legacyItem("page-owned", { variables: { clientMutationId: "r1" } }),
+      legacyItem("query", { query: "query { myBabies { id } }" }),
+    ]);
+    await openPage(worker);
+    expect(worker.sent).toStrictEqual([]);
+    expect(worker.storage.stores.has("bubsie-queue")).toBeFalsy();
+  });
+
+  it("keeps the queue while offline or signed out, and replays it later", async () => {
+    const worker = setUp(offline);
+    worker.storage.seed("bubsie-queue", "/queue", [
+      legacyItem("a"),
+      legacyItem("b"),
+    ]);
+    await openPage(worker);
+    expect(worker.storage.read("bubsie-queue")).toHaveLength(2);
+
+    worker.setNetwork(() =>
+      json({ data: null, errors: [{ message: "Not authenticated" }] })
     );
+    await openPage(worker);
+    expect(worker.storage.read("bubsie-queue")).toHaveLength(2);
+
+    worker.setNetwork(stored);
+    await openPage(worker);
+    expect(worker.storage.stores.has("bubsie-queue")).toBeFalsy();
   });
 
   it("never sends a request with another person's session", async () => {
-    const worker = createWorker();
-    await worker.enqueue("a", token("parent-a"));
-    worker.setReply(() => json({ errors: [{ message: "Not authenticated" }] }));
-    await worker.message({
-      authorization: token("parent-b"),
-      type: "SYNC_NOW",
-    });
+    const worker = setUp();
+    worker.storage.seed("bubsie-queue", "/queue", [legacyItem("a")]);
+    await openPage(worker, "parent-b");
     expect(worker.sent.map((s) => s.authorization)).toStrictEqual([
-      token("parent-a"),
+      token("parent-a", "queued"),
     ]);
-    expect(worker.queueIds()).toStrictEqual(["a"]);
   });
 
-  it("keeps a request through server errors", async () => {
-    const worker = createWorker();
-    await worker.enqueue("a");
-    worker.setReply(() => json({ errors: [{ message: "boom" }] }, 503));
-    for (let i = 0; i < 5; i += 1) await worker.message({ type: "SYNC_NOW" });
-    expect(worker.read("/queue")).toMatchObject([{ id: "a", retries: 5 }]);
-  });
-
-  it("reports a rejection to a page that opens later, until acknowledged", async () => {
-    const worker = createWorker();
-    await worker.enqueue("a");
-    worker.setReply(() =>
-      json({ data: null, errors: [{ message: "Event not found" }] })
-    );
-    await worker.message({ type: "SYNC_NOW" });
-    expect(worker.queueIds()).toStrictEqual([]);
-
-    const page = worker.openPage();
-    await worker.message({ type: "SYNC_NOW" });
-    expect(page.at(-1)).toMatchObject({
-      pending: [],
-      results: [{ id: "a", type: "MUTATION_FAILED" }],
-      type: "QUEUE_REPORT",
-    });
-
-    await worker.message({ ids: ["a"], type: "ACK_RESULTS" });
-    await worker.message({ type: "SYNC_NOW" });
-    expect(page.at(-1)).toMatchObject({ results: [], type: "QUEUE_REPORT" });
-  });
-
-  it("replays a queue written by the previous worker", async () => {
-    const worker = createWorker();
-    const legacyItem = (id: string) => ({
-      authorization: token("parent-a"),
-      body: {
-        query: "mutation LogEvent { logEvent { id } }",
-        variables: { clientMutationId: id },
-      },
-      id,
-      retries: 1,
-      timestamp: Date.now(),
-      url: API,
-    });
-    worker.seed("bubsie-queue", "/queue", [legacyItem("old")]);
-    worker.seed("babytalk-queue", "/queue", [legacyItem("older")]);
-    await worker.activate();
-    expect(worker.queueIds()).toStrictEqual(["old", "older"]);
-
-    const page = worker.openPage();
-    worker.setReply(synced);
-    await worker.message("SYNC_NOW");
-    expect(worker.queueIds()).toStrictEqual([]);
-    expect(page.at(-1)).toMatchObject({
-      pending: [],
-      results: [
-        { id: "old", type: "MUTATION_SYNCED" },
-        { id: "older", type: "MUTATION_SYNCED" },
-      ],
-    });
-  });
-
-  it("reports a page's request as pending while it is still on its way", async () => {
-    const worker = createWorker();
-    const page = worker.openPage();
-    const network = Promise.withResolvers<Response>();
-    worker.setPageNetwork(() => network.promise);
-    const answer = worker.enqueue("in-flight");
-    await tick();
-    await worker.message({ type: "SYNC_NOW" });
-    const report = page.at(-1) as { at: number; pending: string[] };
-    expect([...report.pending]).toStrictEqual(["in-flight"]);
-    expect(report.at).toBeGreaterThan(0);
-
-    network.reject(new TypeError("offline"));
-    await answer;
-    await worker.message({ type: "SYNC_NOW" });
-    expect(page.at(-1)).toMatchObject({ pending: ["in-flight"] });
-    expect(worker.queueIds()).toStrictEqual(["in-flight"]);
+  it("sends each queued request once when two pages open together", async () => {
+    const worker = setUp();
+    worker.storage.seed("bubsie-queue", "/queue", [legacyItem("a")]);
+    await Promise.all([openPage(worker), openPage(worker)]);
+    expect(sentIds(worker.sent)).toHaveLength(1);
   });
 });

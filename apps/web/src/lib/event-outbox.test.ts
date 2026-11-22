@@ -43,8 +43,6 @@ const start = (id: string, requestId: string): EventsAction => ({
 });
 const ok = (id: string, requestId: string, result: BabyEvent | null) =>
   ({ id, requestId, result, type: "send-ok" }) as const;
-const queued = (id: string, requestId: string, at = 1000) =>
-  ({ at, id, requestId, type: "send-queued" }) as const;
 const failed = (id: string, requestId: string, definite = false) =>
   ({ definite, id, requestId, type: "send-failed" }) as const;
 const stop = (id: string, endedAt: string) =>
@@ -73,11 +71,11 @@ describe("optimistic create", () => {
     expect(state.outbox).toStrictEqual({});
   });
 
-  it("keeps a failed create visible as failed, and retry sends it again", () => {
+  it("keeps a refused create visible as failed, and retry sends it again", () => {
     const state = run([
       { event: feed("e1"), type: "create" },
       start("e1", "r1"),
-      failed("e1", "r1"),
+      failed("e1", "r1", true),
     ]);
     expect(shown(state)[0].syncState).toBe("failed");
     expect(unsavedCounts(state)).toStrictEqual({ failed: 1, queued: 0 });
@@ -197,7 +195,10 @@ describe("a create that may already be stored", () => {
       { events: [feed("theirs")], type: "loaded" },
     ]);
     expect(Object.keys(state.outbox)).toStrictEqual(["mine"]);
-    expect(state.outbox.mine).toMatchObject({ op: "delete", status: "failed" });
+    expect(state.outbox.mine).toMatchObject({
+      op: "delete",
+      status: "waiting",
+    });
     expect(shown(state)).toContainEqual({
       endedAt: null,
       id: "theirs",
@@ -233,12 +234,7 @@ describe("events outside the recent cache", () => {
   });
 
   it("does not put a placeholder in the list once the edit is confirmed", () => {
-    const state = run([
-      edit,
-      start("old", "r1"),
-      queued("old", "r1"),
-      { requestId: "r1", type: "worker-synced" },
-    ]);
+    const state = run([edit, start("old", "r1"), ok("old", "r1", null)]);
     expect(state.outbox).toStrictEqual({});
     expect(state.server).toStrictEqual([]);
   });
@@ -260,7 +256,7 @@ describe("updates and deletes of saved events", () => {
       [
         stop("e1", nine),
         start("e1", "r1"),
-        failed("e1", "r1"),
+        failed("e1", "r1", true),
         { events: [feed("e1")], type: "loaded" },
       ],
       saved
@@ -272,7 +268,11 @@ describe("updates and deletes of saved events", () => {
 
   it("a failed delete brings the event back as failed", () => {
     const state = run(
-      [{ id: "e1", type: "delete" }, start("e1", "r1"), failed("e1", "r1")],
+      [
+        { id: "e1", type: "delete" },
+        start("e1", "r1"),
+        failed("e1", "r1", true),
+      ],
       saved
     );
     expect(shown(state)).toStrictEqual([
@@ -290,138 +290,122 @@ describe("updates and deletes of saved events", () => {
   });
 });
 
-describe("service worker queue", () => {
-  const held = run([
+describe("a request that did not get through", () => {
+  const offline = run([
     { event: feed("e1"), type: "create" },
     start("e1", "r1"),
-    queued("e1", "r1"),
+    failed("e1", "r1"),
   ]);
 
-  it("stays pending while the worker holds it", () => {
-    expect(shown(held)[0].syncState).toBe("pending");
-    expect(unsavedCounts(held)).toStrictEqual({ failed: 0, queued: 1 });
+  it("stays pending and is counted as waiting to save", () => {
+    expect(shown(offline)[0].syncState).toBe("pending");
+    expect(unsavedCounts(offline)).toStrictEqual({ failed: 0, queued: 1 });
   });
 
-  it("is done once the worker replays it", () => {
-    const state = run(
-      [{ requestId: "r1", result: feed("e1"), type: "worker-synced" }],
-      held
-    );
-    expect(state.outbox).toStrictEqual({});
-    expect(shown(state)).toStrictEqual([
-      { endedAt: null, id: "e1", syncState: undefined },
+  it("is sent again when the network may be back, but not before", () => {
+    expect(run([start("e1", "r2")], offline).outbox.e1.status).toBe("waiting");
+    const resumed = run([{ type: "resume" }, start("e1", "r2")], offline);
+    expect(resumed.outbox.e1).toMatchObject({
+      requestId: "r2",
+      status: "sending",
+    });
+  });
+
+  it("does not resend what the server refused until the person retries", () => {
+    const refused = run([
+      { event: feed("e1"), type: "create" },
+      start("e1", "r1"),
+      failed("e1", "r1", true),
+      { type: "resume" },
     ]);
+    expect(refused.outbox.e1.status).toBe("failed");
+    expect(run([{ type: "retry" }], refused).outbox.e1.status).toBe("ready");
   });
 
-  it("is done when a worker that predates result data replays it", () => {
-    const state = run([{ requestId: "r1", type: "worker-synced" }], held);
-    expect(state.outbox).toStrictEqual({});
-    expect(shown(state).map((e) => e.id)).toStrictEqual(["e1"]);
+  it("puts the changes it carried back into the next request", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      stop("e1", nine),
+      start("e1", "r1"),
+      { changes: { meta: { amountMl: 90 } }, id: "e1", type: "update" },
+      failed("e1", "r1"),
+    ]);
+    expect(state.outbox.e1.patch).toStrictEqual({
+      endedAt: nine,
+      meta: { amountMl: 90 },
+    });
   });
+});
 
-  it("sends an edit made while queued once the replay lands, even if the start time changed", () => {
-    const state = run(
-      [
-        {
-          changes: { startedAt: "2026-11-21T02:45:00.000Z" },
-          id: "e1",
-          type: "update",
-        },
-        { requestId: "r1", result: feed("e1"), type: "worker-synced" },
-      ],
-      held
-    );
+describe("a request carries only unconfirmed changes", () => {
+  it("does not resend a confirmed stop with a later amount", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      stop("e1", "2026-11-21T03:10:00.000Z"),
+      start("e1", "r1"),
+      {
+        changes: { meta: { amountMl: 90, method: "bottle" } },
+        id: "e1",
+        type: "update",
+      },
+      ok("e1", "r1", feed("e1", { endedAt: "2026-11-21T03:10:00.000Z" })),
+    ]);
     expect(state.outbox.e1).toMatchObject({
-      op: "update",
-      patch: { startedAt: "2026-11-21T02:45:00.000Z" },
+      patch: { meta: { amountMl: 90, method: "bottle" } },
       status: "ready",
     });
-    expect(unsavedCounts(state)).toStrictEqual({ failed: 0, queued: 0 });
   });
 
-  it("marks it failed when the worker reports a rejection", () => {
-    const state = eventsReducer(held, {
-      requestId: "r1",
-      type: "worker-failed",
-    });
-    expect(shown(state)[0].syncState).toBe("failed");
-  });
-
-  it("resends a request the worker no longer holds", () => {
-    const state = eventsReducer(held, {
-      at: 2000,
-      pending: [],
-      type: "worker-report",
-    });
-    expect(state.outbox.e1).toMatchObject({ requestId: null, status: "ready" });
-  });
-
-  it("leaves a request the worker still holds", () => {
-    const state = eventsReducer(held, {
-      at: 2000,
-      pending: ["r1"],
-      type: "worker-report",
-    });
-    expect(state).toBe(held);
-  });
-
-  it("ignores a report taken before the worker said it had the request", () => {
-    const state = eventsReducer(held, {
-      at: 900,
-      pending: [],
-      type: "worker-report",
-    });
-    expect(state).toBe(held);
+  it("still sends a field that changed again while the request was out", () => {
+    const state = run([
+      { events: [feed("e1")], type: "loaded" },
+      stop("e1", nine),
+      start("e1", "r1"),
+      stop("e1", ten),
+      ok("e1", "r1", feed("e1", { endedAt: nine })),
+    ]);
+    expect(state.outbox.e1.patch).toStrictEqual({ endedAt: ten });
   });
 });
 
 describe("outbox that outlives the page", () => {
-  it("keeps a stop made offline and sends it once the create lands", () => {
+  it("keeps a timer started and stopped offline as one stopped event", () => {
     const before = run([
       { event: feed("e1"), type: "create" },
       start("e1", "r1"),
-      queued("e1", "r1"),
+      failed("e1", "r1"),
       stop("e1", nine),
     ]);
-    const after = run(
-      [{ requestId: "r1", result: feed("e1"), type: "worker-synced" }],
-      reload(before)
-    );
-    expect(after.outbox.e1).toMatchObject({
-      op: "update",
-      patch: { endedAt: nine },
-      status: "ready",
-    });
+    const after = reload(before);
+    expect(after.outbox.e1).toMatchObject({ op: "create", status: "ready" });
+    expect(after.outbox.e1.event.endedAt).toBe(nine);
     expect(shown(after)).toStrictEqual([
       { endedAt: nine, id: "e1", syncState: "pending" },
     ]);
   });
 
-  it("keeps an undo of a queued create", () => {
-    const before = run([
-      { event: feed("e1"), type: "create" },
-      start("e1", "r1"),
-      queued("e1", "r1"),
-      { id: "e1", type: "delete" },
-    ]);
-    const after = run(
-      [{ requestId: "r1", result: feed("e1"), type: "worker-synced" }],
-      reload(before)
-    );
-    expect(after.outbox.e1).toMatchObject({ op: "delete", status: "ready" });
-    expect(shown(after)).toStrictEqual([]);
-  });
-
-  it("keeps failed entries so they can still be retried", () => {
+  it("keeps an undo of a create that may have reached the server", () => {
     const before = run([
       { event: feed("e1"), type: "create" },
       start("e1", "r1"),
       failed("e1", "r1"),
+      { id: "e1", type: "delete" },
+    ]);
+    const after = reload(before);
+    expect(after.outbox.e1).toMatchObject({ op: "delete" });
+    expect(shown(after)).toStrictEqual([]);
+  });
+
+  it("keeps refused entries so they can still be retried", () => {
+    const before = run([
+      { event: feed("e1"), type: "create" },
+      start("e1", "r1"),
+      failed("e1", "r1", true),
     ]);
     expect(unsavedCounts(reload(before)).failed).toBe(1);
   });
 
-  it("waits for the worker before sending the next change to an event", () => {
+  it("resends a request that was in flight, with the changes made since", () => {
     const before = run([
       { events: [feed("e1")], type: "loaded" },
       stop("e1", nine),
@@ -430,45 +414,10 @@ describe("outbox that outlives the page", () => {
     ]);
     const after = reload(before);
     expect(after.outbox.e1).toMatchObject({
-      requestId: "r1",
-      status: "unknown",
-    });
-    expect(run([start("e1", "r2")], after).outbox.e1.requestId).toBe("r1");
-
-    const stillHeld = run(
-      [{ at: 5000, pending: ["r1"], type: "worker-report" }],
-      after
-    );
-    expect(stillHeld.outbox.e1.status).toBe("unknown");
-
-    const replayed = run(
-      [
-        {
-          requestId: "r1",
-          result: feed("e1", { endedAt: nine }),
-          type: "worker-synced",
-        },
-      ],
-      stillHeld
-    );
-    expect(replayed.outbox.e1).toMatchObject({
       patch: { endedAt: ten },
+      requestId: null,
       status: "ready",
     });
-  });
-
-  it("sends the next change once the worker shows it never had the request", () => {
-    const before = run([
-      { events: [feed("e1")], type: "loaded" },
-      stop("e1", nine),
-      start("e1", "r1"),
-      stop("e1", ten),
-    ]);
-    const after = run(
-      [{ at: 5000, pending: [], type: "worker-report" }],
-      reload(before)
-    );
-    expect(after.outbox.e1).toMatchObject({ requestId: null, status: "ready" });
     expect(after.outbox.e1.event.endedAt).toBe(ten);
   });
 

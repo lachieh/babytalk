@@ -6,9 +6,11 @@
  * same event by id however it has been edited since, so nothing here ever
  * matches events by their contents.
  *
- * Each event has at most one request outstanding. A change made while one is
- * in flight waits for it to resolve, so writes for an event reach the server
- * in the order they were made, across reloads.
+ * The page is the only place unsent changes live (persisted by
+ * outbox-store), and it sends each event's changes one request at a time:
+ * a change made while a request is in flight waits for it, so writes for an
+ * event reach the server in the order they were made. A request carries only
+ * changes the server has not yet confirmed.
  */
 
 export type SyncState = "pending" | "failed";
@@ -31,19 +33,13 @@ export interface EventChanges {
 export type Op = "create" | "update" | "delete";
 
 /**
- * - ready: needs a request, nothing outstanding
+ * - ready: needs a request
  * - sending: this page is waiting for the reply
- * - queued: the service worker holds the request
- * - unknown: an earlier page sent it and never learned the outcome; the
- *   worker's report decides whether it is still pending
- * - failed: the last request failed; nothing outstanding
+ * - waiting: the request did not get through (offline, server unreachable);
+ *   sent again automatically
+ * - failed: the server refused it; sent again only when the person retries
  */
-export type OutboxStatus =
-  | "ready"
-  | "sending"
-  | "queued"
-  | "unknown"
-  | "failed";
+export type OutboxStatus = "ready" | "sending" | "waiting" | "failed";
 
 /** Whether the server may hold a row with this id. */
 type Exists = "no" | "maybe" | "yes";
@@ -52,24 +48,24 @@ export interface OutboxEntry {
   id: string;
   op: Op;
   event: BabyEvent;
-  /** Every change since the entry began; resending it is harmless. */
+  /** Changes not in any request yet. */
   patch: EventChanges;
+  /** Changes carried by the request in flight. */
+  sentPatch: EventChanges;
   status: OutboxStatus;
   exists: Exists;
   version: number;
-  /** The version the outstanding (or last) request carried. */
+  /** The version the request in flight (or the last one) carried. */
   sentVersion: number;
   sentOp: Op | null;
   requestId: string | null;
-  /** When this page learned the worker holds the request. */
-  queuedAt: number;
   /** A change to a saved event this page has not loaded (an older week). */
   detached: boolean;
 }
 
 /** The part of the state that must outlive the page. */
 export interface PersistedOutbox {
-  v: 2;
+  v: 1;
   hidden: string[];
   outbox: Record<string, OutboxEntry>;
 }
@@ -96,7 +92,6 @@ export type EventsAction =
       result: BabyEvent | null;
       at?: number;
     }
-  | { type: "send-queued"; id: string; requestId: string; at: number }
   | {
       type: "send-failed";
       id: string;
@@ -104,18 +99,11 @@ export type EventsAction =
       /** The server answered and refused, so nothing was stored. */
       definite?: boolean;
     }
-  | {
-      type: "worker-synced";
-      requestId: string;
-      result?: BabyEvent | null;
-      at?: number;
-    }
-  | { type: "worker-failed"; requestId: string }
-  /** What the worker still holds, as of `at`. */
-  | { type: "worker-report"; pending: string[]; at: number }
   | { type: "adopt"; persisted: PersistedOutbox }
-  | { type: "retry"; id: string }
-  | { type: "retry-failed" };
+  /** The network may be back: send what was waiting. */
+  | { type: "resume" }
+  /** The person asked to try again, including what the server refused. */
+  | { type: "retry"; id?: string };
 
 export const initialEventsState: EventsState = {
   hidden: [],
@@ -148,14 +136,6 @@ const dropEntry = (state: EventsState, id: string): EventsState => {
   return { ...state, outbox };
 };
 
-const entryForRequest = (state: EventsState, requestId: string) =>
-  Object.values(state.outbox).find((entry) => entry.requestId === requestId);
-
-const outstanding = (entry: OutboxEntry) =>
-  entry.status === "sending" ||
-  entry.status === "queued" ||
-  entry.status === "unknown";
-
 const newEntry = (
   event: BabyEvent,
   op: Op,
@@ -167,9 +147,9 @@ const newEntry = (
   id: event.id,
   op,
   patch,
-  queuedAt: 0,
   requestId: null,
   sentOp: null,
+  sentPatch: {},
   sentVersion: 0,
   status: "ready",
   version: 1,
@@ -186,8 +166,8 @@ const placeholder = (id: string, type = ""): BabyEvent => ({
 const serverEvent = (state: EventsState, id: string) =>
   state.server.find((e) => e.id === id);
 
-/** The outstanding request succeeded. Send what changed meanwhile, if
- * anything; otherwise the entry is done. */
+/** The request in flight succeeded: its changes are confirmed. Send what
+ * changed meanwhile, if anything; otherwise the entry is done. */
 const settle = (
   state: EventsState,
   entry: OutboxEntry,
@@ -200,6 +180,7 @@ const settle = (
       exists,
       op: entry.op === "create" ? "update" : entry.op,
       requestId: null,
+      sentPatch: {},
       status: "ready",
     });
   }
@@ -212,6 +193,8 @@ const settle = (
   return saved ? { ...next, server: upsert(next.server, saved) } : next;
 };
 
+/** The request did not confirm anything: its changes go back into the next
+ * one. */
 const fail = (
   state: EventsState,
   entry: OutboxEntry,
@@ -224,8 +207,10 @@ const fail = (
   return putEntry(state, {
     ...entry,
     exists,
+    patch: { ...entry.sentPatch, ...entry.patch },
     requestId: null,
-    status: "failed",
+    sentPatch: {},
+    status: definite ? "failed" : "waiting",
   });
 };
 
@@ -242,7 +227,7 @@ const update = (
       ...entry,
       event: applyChanges(entry.event, changes),
       patch: { ...entry.patch, ...changes },
-      status: entry.status === "failed" ? "ready" : entry.status,
+      status: entry.status === "sending" ? "sending" : "ready",
       version: entry.version + 1,
     });
   }
@@ -266,14 +251,13 @@ const remove = (state: EventsState, id: string): EventsState => {
       newEntry(current ?? placeholder(id), "delete", { detached: !current })
     );
   }
+  const sending = entry.status === "sending";
   // Never sent, or the server refused it: there is nothing to delete.
-  if (entry.exists === "no" && !outstanding(entry)) {
-    return dropEntry(state, id);
-  }
+  if (entry.exists === "no" && !sending) return dropEntry(state, id);
   return putEntry(state, {
     ...entry,
     op: "delete",
-    status: outstanding(entry) ? entry.status : "ready",
+    status: sending ? "sending" : "ready",
     version: entry.version + 1,
   });
 };
@@ -285,15 +269,17 @@ const startSend = (
 ): EventsState => {
   const entry = state.outbox[id];
   if (!entry || entry.status !== "ready") return state;
-  // A create that may already be stored keeps the version of its first
-  // send: if it was, the server keeps that copy and ignores this one, so
-  // later edits still have to follow as an update.
+  // A resent create that the server may already hold confirms only that
+  // first copy (the server ignores this one), so the changes made since
+  // stay unconfirmed and follow as an update.
   const resentCreate = entry.op === "create" && entry.exists === "maybe";
   return putEntry(state, {
     ...entry,
     exists: entry.op === "create" ? "maybe" : entry.exists,
+    patch: resentCreate ? entry.patch : {},
     requestId,
     sentOp: entry.op,
+    sentPatch: resentCreate ? {} : entry.patch,
     sentVersion: resentCreate ? entry.sentVersion : entry.version,
     status: "sending",
   });
@@ -311,56 +297,27 @@ const onReply = (
     : state;
 };
 
-const onWorkerReply = (
-  state: EventsState,
-  requestId: string,
-  change: (entry: OutboxEntry) => EventsState
-): EventsState => {
-  const entry = entryForRequest(state, requestId);
-  const waiting = entry?.status === "queued" || entry?.status === "unknown";
-  return entry && waiting ? change(entry) : state;
-};
-
-/** A request the worker no longer holds, in a report taken after this page
- * learned it was queued, will never be replayed: send the next one. */
-const workerReport = (state: EventsState, pending: string[], at: number) => {
-  const held = new Set(pending);
-  let next = state;
-  for (const entry of Object.values(state.outbox)) {
-    const lost =
-      (entry.status === "queued" || entry.status === "unknown") &&
-      at > entry.queuedAt &&
-      !(entry.requestId && held.has(entry.requestId));
-    if (lost) {
-      next = putEntry(next, { ...entry, requestId: null, status: "ready" });
-    }
-  }
-  return next;
-};
-
 export const toPersisted = (state: EventsState): PersistedOutbox => ({
   hidden: state.hidden,
   outbox: state.outbox,
-  v: 2,
+  v: 1,
 });
 
 export const isEmptyOutbox = (persisted: PersistedOutbox) =>
   Object.keys(persisted.outbox).length === 0 && persisted.hidden.length === 0;
 
-export const hasRequest = (state: EventsState, requestId: string) =>
-  entryForRequest(state, requestId) !== undefined;
-
 /** Take over entries written by an earlier page (a reload, a closed tab). A
- * request that was in flight keeps its id and waits for the worker's report;
- * a discard whose undo window was cut short is committed. */
+ * request that was in flight has no reply coming, so its changes go into the
+ * next one; a discard whose undo window was cut short is committed. */
 const adopt = (state: EventsState, persisted: PersistedOutbox): EventsState => {
   let next = state;
   for (const entry of Object.values(persisted.outbox)) {
     if (next.outbox[entry.id]) continue;
-    next = putEntry(next, {
-      ...entry,
-      status: entry.status === "sending" ? "unknown" : entry.status,
-    });
+    next = putEntry(next, entry);
+    if (entry.status === "sending") {
+      next = fail(next, entry, false);
+      next = putEntry(next, { ...next.outbox[entry.id], status: "ready" });
+    }
   }
   for (const id of persisted.hidden) next = remove(next, id);
   return next;
@@ -374,15 +331,13 @@ export const canRecord = (
 ): boolean =>
   action.type === "delete" || state.outbox[action.id]?.op !== "delete";
 
-const retryWhere = (
+const readyWhere = (
   state: EventsState,
   test: (entry: OutboxEntry) => boolean
 ): EventsState => {
   let next = state;
   for (const entry of Object.values(state.outbox)) {
-    if (entry.status === "failed" && test(entry)) {
-      next = putEntry(next, { ...entry, status: "ready" });
-    }
+    if (test(entry)) next = putEntry(next, { ...entry, status: "ready" });
   }
   return next;
 };
@@ -395,57 +350,6 @@ const wroteAt = (
   after !== before && at !== undefined && at > after.lastWriteAt
     ? { ...after, lastWriteAt: at }
     : after;
-
-type ReplyAction = Extract<
-  EventsAction,
-  {
-    type:
-      | "send-ok"
-      | "send-queued"
-      | "send-failed"
-      | "worker-synced"
-      | "worker-failed"
-      | "worker-report";
-  }
->;
-
-const replyReducer = (state: EventsState, action: ReplyAction): EventsState => {
-  switch (action.type) {
-    case "send-ok": {
-      const next = onReply(state, action.id, action.requestId, (entry) =>
-        settle(state, entry, action.result)
-      );
-      return wroteAt(state, next, action.at);
-    }
-    case "send-queued": {
-      return onReply(state, action.id, action.requestId, (entry) =>
-        putEntry(state, { ...entry, queuedAt: action.at, status: "queued" })
-      );
-    }
-    case "send-failed": {
-      return onReply(state, action.id, action.requestId, (entry) =>
-        fail(state, entry, action.definite === true)
-      );
-    }
-    case "worker-synced": {
-      const next = onWorkerReply(state, action.requestId, (entry) =>
-        settle(state, entry, action.result ?? null)
-      );
-      return wroteAt(state, next, action.at);
-    }
-    case "worker-failed": {
-      return onWorkerReply(state, action.requestId, (entry) =>
-        fail(state, entry, true)
-      );
-    }
-    case "worker-report": {
-      return workerReport(state, action.pending, action.at);
-    }
-    default: {
-      return state;
-    }
-  }
-};
 
 export const eventsReducer = (
   state: EventsState,
@@ -482,22 +386,30 @@ export const eventsReducer = (
     case "send-start": {
       return startSend(state, action.id, action.requestId);
     }
-    case "send-ok":
-    case "send-queued":
-    case "send-failed":
-    case "worker-synced":
-    case "worker-failed":
-    case "worker-report": {
-      return replyReducer(state, action);
+    case "send-ok": {
+      const next = onReply(state, action.id, action.requestId, (entry) =>
+        settle(state, entry, action.result)
+      );
+      return wroteAt(state, next, action.at);
+    }
+    case "send-failed": {
+      return onReply(state, action.id, action.requestId, (entry) =>
+        fail(state, entry, action.definite === true)
+      );
     }
     case "adopt": {
       return adopt(state, action.persisted);
     }
-    case "retry": {
-      return retryWhere(state, (entry) => entry.id === action.id);
+    case "resume": {
+      return readyWhere(state, (entry) => entry.status === "waiting");
     }
-    case "retry-failed": {
-      return retryWhere(state, () => true);
+    case "retry": {
+      return readyWhere(
+        state,
+        (entry) =>
+          (entry.status === "waiting" || entry.status === "failed") &&
+          (action.id === undefined || entry.id === action.id)
+      );
     }
     default: {
       return state;
@@ -525,7 +437,7 @@ export const deriveEvents = (state: EventsState): BabyEvent[] => {
       result.push(event);
     } else if (visible(entry)) {
       const base = entry.detached
-        ? applyChanges(event, entry.patch)
+        ? applyChanges(event, { ...entry.sentPatch, ...entry.patch })
         : entry.event;
       result.push({ ...base, id: event.id, syncState: syncStateOf(entry) });
     }
@@ -545,9 +457,7 @@ export const unsavedCounts = (state: EventsState) => {
   let queued = 0;
   for (const entry of Object.values(state.outbox)) {
     if (entry.status === "failed") failed += 1;
-    else if (entry.status === "queued" || entry.status === "unknown") {
-      queued += 1;
-    }
+    else if (entry.status === "waiting") queued += 1;
   }
   return { failed, queued };
 };

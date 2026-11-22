@@ -25,6 +25,7 @@ import { currentUserId, gqlRequest } from "@/lib/gql-request";
 import { RECENT_EVENTS_LIMIT } from "@/lib/history-days";
 import {
   adoptClosedTabs,
+  resumeOutbox,
   dispatchOutbox as dispatch,
   getOutboxState,
   getServerOutboxState,
@@ -218,6 +219,8 @@ export const BabyContextProvider = ({
       );
       if (data) {
         dispatch({ events: data.recentEvents, requestedAt, type: "loaded" });
+        // The server answered, so whatever was waiting can go now.
+        resumeOutbox();
       }
     } catch {
       /* non-critical: polling tries again */
@@ -252,7 +255,9 @@ export const BabyContextProvider = ({
 
   useEffect(() => {
     const handleVisible = () => {
-      if (document.visibilityState === "visible") adoptClosedTabs();
+      if (document.visibilityState !== "visible") return;
+      adoptClosedTabs();
+      resumeOutbox();
     };
     document.addEventListener("visibilitychange", handleVisible);
     return () =>
@@ -263,7 +268,7 @@ export const BabyContextProvider = ({
     setOnline(navigator.onLine);
     const handleOnline = () => {
       setOnline(true);
-      dispatch({ type: "retry-failed" });
+      resumeOutbox();
       refreshEvents();
     };
     const handleOffline = () => setOnline(false);
@@ -439,7 +444,7 @@ export const BabyContextProvider = ({
   }, []);
 
   const retryFailed = useCallback(() => {
-    dispatch({ type: "retry-failed" });
+    dispatch({ type: "retry" });
   }, []);
 
   const sync = useMemo((): SyncSummary => {

@@ -1,15 +1,14 @@
 /* The outbox store against fake browser storage and Web Locks. Sending is
  * stubbed out: these tests are about what is kept, adopted and reported. */
 
+const sent = vi.hoisted(() => [] as Record<string, unknown>[]);
+
 vi.mock(import("./gql-request"), () => ({
   GraphQLResponseError: class extends Error {},
-  gqlRequest: () => Promise.withResolvers<never>().promise,
-}));
-
-vi.mock(import("./register-sw"), () => ({
-  ackWorkerResults: () => null,
-  onSyncMessage: () => () => null,
-  requestWorkerSync: () => Promise.resolve(false),
+  gqlRequest: (_query: string, variables?: Record<string, unknown>) => {
+    sent.push(variables ?? {});
+    return Promise.withResolvers<never>().promise;
+  },
 }));
 
 const USER = "parent-a";
@@ -82,7 +81,7 @@ const pendingEntry = (id: string) => ({
 });
 
 const persisted = (outbox: Record<string, unknown>, hidden: string[] = []) =>
-  JSON.stringify({ aliases: {}, hidden, outbox, v: 2 });
+  JSON.stringify({ hidden, outbox, v: 1 });
 
 const settle = async () => {
   for (let i = 0; i < 20; i += 1) await Promise.resolve();
@@ -172,6 +171,32 @@ describe("outbox store", () => {
       full = false;
       store.dispatchOutbox({ event: pendingEntry("e2").event, type: "create" });
       expect(store.isOutboxDurable()).toBeTruthy();
+    });
+  });
+
+  describe("sending", () => {
+    it("sends the changes the request is meant to carry", async () => {
+      sent.length = 0;
+      const store = await loadStore({
+        local: fakeStorage(),
+        locks: fakeLocks(),
+      });
+      store.dispatchOutbox({
+        events: [pendingEntry("e1").event],
+        type: "loaded",
+      });
+      store.dispatchOutbox({
+        changes: { endedAt: "2026-11-21T03:10:00.000Z" },
+        id: "e1",
+        type: "update",
+      });
+      await settle();
+      expect(sent).toContainEqual(
+        expect.objectContaining({
+          endedAt: "2026-11-21T03:10:00.000Z",
+          id: "e1",
+        })
+      );
     });
   });
 });
