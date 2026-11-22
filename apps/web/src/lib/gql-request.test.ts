@@ -9,7 +9,7 @@ vi.mock(import("./runtime-config"), () => ({
 
 const QUERY = 'mutation { deleteEvent(id: "x") }';
 
-type Answer = () => Response | Promise<Response>;
+type Answer = (init: RequestInit) => Response | Promise<Response>;
 
 const answers = (...queue: Answer[]) => {
   const calls: { authorization: string | null; body: string }[] = [];
@@ -21,7 +21,7 @@ const answers = (...queue: Answer[]) => {
     const next = queue.shift();
     if (!next) return Promise.reject(new TypeError("offline"));
     try {
-      return Promise.resolve(next());
+      return Promise.resolve(next(init));
     } catch (error) {
       return Promise.reject(error);
     }
@@ -58,6 +58,68 @@ const load = async () => {
     setItem: (key: string, value: string) => items.set(key, value),
   });
   return { ...(await import("./gql-request")), items, page };
+};
+
+const signInAs = (items: Map<string, string>, who: string) => {
+  items.set("bubsie_token", `${who}-token`);
+  items.set("bubsie_refresh_token", `${who}-refresh`);
+};
+
+type RefreshLockTask = (lock: { name: string }) => Promise<unknown>;
+
+/** Web Locks that grant in order and honour an abort while waiting. */
+const fifoLocks = () => {
+  let tail: Promise<unknown> = Promise.resolve();
+  return {
+    request: (
+      name: string,
+      optionsOrTask: { signal?: AbortSignal } | RefreshLockTask,
+      maybeTask?: RefreshLockTask
+    ) => {
+      const task = (maybeTask ?? optionsOrTask) as RefreshLockTask;
+      const options = maybeTask
+        ? (optionsOrTask as { signal?: AbortSignal })
+        : {};
+      const previous = tail;
+      const released = Promise.withResolvers<null>();
+      tail = previous.then(() => released.promise);
+      const result = Promise.withResolvers<unknown>();
+      let granted = false;
+      options.signal?.addEventListener("abort", () => {
+        if (!granted) result.reject(new DOMException("aborted", "AbortError"));
+      });
+      void previous.then(async () => {
+        if (options.signal?.aborted) {
+          released.resolve(null);
+          return;
+        }
+        granted = true;
+        try {
+          result.resolve(await task({ name }));
+        } catch (error) {
+          result.reject(error);
+        } finally {
+          released.resolve(null);
+        }
+      });
+      return result.promise;
+    },
+  };
+};
+
+const hangs: Answer = ({ signal }) => {
+  const pending = Promise.withResolvers<Response>();
+  signal?.addEventListener("abort", () =>
+    pending.reject(new DOMException("aborted", "AbortError"))
+  );
+  return pending.promise;
+};
+
+const settleWithin = async <T>(promise: Promise<T>, ms: number) => {
+  await vi.advanceTimersByTimeAsync(ms);
+  const waiting = Symbol("waiting");
+  const value = await Promise.race([promise, Promise.resolve(waiting)]);
+  return value === waiting ? { settled: false } : { settled: true, value };
 };
 
 describe("gqlRequest", () => {
@@ -246,6 +308,101 @@ describe("gqlRequest", () => {
       expect(items.has("bubsie_token")).toBeFalsy();
       expect(items.has("bubsie_refresh_token")).toBeFalsy();
       expect(calls).toHaveLength(2);
+    });
+  });
+
+  describe("which session a request belongs to", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("never retries an old request as the next person, even if the clock went back", async () => {
+      vi.useFakeTimers({
+        now: new Date("2026-11-22T10:00:00Z"),
+        toFake: ["Date"],
+      });
+      const { gqlRequest, items, signOut } = await load();
+      const slow = Promise.withResolvers<Response>();
+      const calls = answers(
+        text("Unauthorized", 401),
+        () => slow.promise,
+        json({ data: { deleteEvent: true } })
+      );
+      const request = gqlRequest(QUERY);
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
+      vi.setSystemTime(new Date("2026-11-22T09:00:00Z"));
+      signOut();
+      signInAs(items, "next-person");
+      slow.resolve(refreshed());
+      await expect(request).rejects.toThrow(Error);
+      expect(calls.map((c) => c.authorization)).not.toContain(
+        "Bearer next-person-token"
+      );
+      expect(items.get("bubsie_token")).toBe("next-person-token");
+    });
+
+    it("lets a new session start at once after a sign-out stamped in the future", async () => {
+      vi.useFakeTimers({
+        now: new Date("2026-11-22T11:00:00Z"),
+        toFake: ["Date"],
+      });
+      const { items, restoreSession, signOut } = await load();
+      signOut();
+      vi.setSystemTime(new Date("2026-11-22T10:00:00Z"));
+      signInAs(items, "returning");
+      const calls = answers(refreshed);
+      await expect(restoreSession()).resolves.toBeTruthy();
+      expect(calls).toHaveLength(1);
+    });
+
+    it("does not continue a session that ended while its refresh failed", async () => {
+      const { restoreSession, signOut } = await load();
+      const slow = Promise.withResolvers<Response>();
+      answers(() => slow.promise);
+      const restoring = restoreSession();
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
+      signOut();
+      slow.reject(new TypeError("Failed to fetch"));
+      await expect(restoring).resolves.toBeFalsy();
+    });
+  });
+
+  describe("a refresh that stalls", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("gives up waiting for another tab's stalled refresh, keeps the session, and starts no second one", async () => {
+      vi.useFakeTimers();
+      const { items, restoreSession } = await load();
+      const blocked = fifoLocks();
+      void blocked.request(
+        "bubsie-session-refresh",
+        {},
+        () => Promise.withResolvers<null>().promise
+      );
+      vi.stubGlobal("navigator", { locks: blocked });
+      const calls = answers(refreshed);
+      await expect(
+        settleWithin(restoreSession(), 60_000)
+      ).resolves.toStrictEqual({ settled: true, value: true });
+      expect(calls).toHaveLength(0);
+      expect(items.get("bubsie_refresh_token")).toBe("refresh-1");
+    });
+
+    it("bounds its own request, then lets the next refresh through", async () => {
+      vi.useFakeTimers();
+      const { items, restoreSession } = await load();
+      vi.stubGlobal("navigator", { locks: fifoLocks() });
+      answers(hangs, refreshed);
+      await expect(
+        settleWithin(restoreSession(), 60_000)
+      ).resolves.toStrictEqual({ settled: true, value: true });
+      expect(items.get("bubsie_refresh_token")).toBe("refresh-1");
+      await expect(
+        settleWithin(restoreSession(), 60_000)
+      ).resolves.toStrictEqual({ settled: true, value: true });
+      expect(items.get("bubsie_refresh_token")).toBe("refresh-2");
     });
   });
 });

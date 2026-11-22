@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
-import { gqlRequest } from "@/lib/gql-request";
+import { gqlRequest, storeSession } from "@/lib/gql-request";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { disableDeviceMode } from "@/lib/use-device-mode";
 
@@ -78,9 +78,8 @@ const VerifyContent = () => {
           return;
         }
 
-        localStorage.setItem("bubsie_token", result.verifyMagicLink.token);
-        localStorage.setItem(
-          "bubsie_refresh_token",
+        storeSession(
+          result.verifyMagicLink.token,
           result.verifyMagicLink.refreshToken
         );
         disableDeviceMode();

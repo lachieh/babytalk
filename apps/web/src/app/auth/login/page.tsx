@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
-import { gqlRequest } from "@/lib/gql-request";
+import { gqlRequest, storeSession } from "@/lib/gql-request";
 import { isPasskeySupported, signInWithPasskey } from "@/lib/passkey";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { disableDeviceMode } from "@/lib/use-device-mode";
@@ -98,8 +98,7 @@ export default function LoginPage() {
         if (!available || cancelled) return;
         const result = await signInWithPasskey(null, { conditional: true });
         if (cancelled) return;
-        localStorage.setItem("bubsie_token", result.token);
-        localStorage.setItem("bubsie_refresh_token", result.refreshToken);
+        storeSession(result.token, result.refreshToken);
         disableDeviceMode();
         const stored = localStorage.getItem("bubsie_auth_redirect");
         if (stored) localStorage.removeItem("bubsie_auth_redirect");
@@ -119,8 +118,7 @@ export default function LoginPage() {
     setSigningInWithPasskey(true);
     try {
       const result = await signInWithPasskey(email.trim() || null);
-      localStorage.setItem("bubsie_token", result.token);
-      localStorage.setItem("bubsie_refresh_token", result.refreshToken);
+      storeSession(result.token, result.refreshToken);
       disableDeviceMode();
       const stored = localStorage.getItem("bubsie_auth_redirect");
       if (stored) localStorage.removeItem("bubsie_auth_redirect");

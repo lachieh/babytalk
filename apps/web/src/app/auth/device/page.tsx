@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { gqlRequest } from "@/lib/gql-request";
+import { gqlRequest, storeSession } from "@/lib/gql-request";
 import { loadRuntimeConfig } from "@/lib/runtime-config";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { enableDeviceMode } from "@/lib/use-device-mode";
@@ -114,8 +114,7 @@ const DevicePage = () => {
 
         if (status === "approved" && token && refreshToken) {
           stopPolling();
-          localStorage.setItem("bubsie_token", token);
-          localStorage.setItem("bubsie_refresh_token", refreshToken);
+          storeSession(token, refreshToken);
           enableDeviceMode();
           setPhase("approved");
           setTimeout(() => router.replace("/station"), 600);

@@ -27,22 +27,50 @@ const REFRESH_TOKEN_MUTATION = `
  * person signed out while this was in flight: its result is void. */
 type RefreshOutcome = "refreshed" | "rejected" | "unavailable" | "signed-out";
 
-let refreshPromise: Promise<RefreshOutcome> | null = null;
+/* Which session is current, as an opaque value replaced on every sign-in
+ * and sign-out (in any tab). A request or refresh belongs to the session
+ * current when it started; once that is no longer the current one, its
+ * result is void: it stores no credentials and is not retried. Never a time,
+ * so a clock that moves cannot confuse it. */
+const SESSION_KEY = "bubsie_session";
 
-/* Signing out (here, or in another tab) records when it happened. Anything
- * started before that, a refresh or a request's retry, is void afterwards. */
-const SIGNED_OUT_AT_KEY = "bubsie_signed_out_at";
+const currentSession = () => localStorage.getItem(SESSION_KEY) ?? "";
 
-const signedOutSince = (startedAt: number) => {
-  const at = Number(localStorage.getItem(SIGNED_OUT_AT_KEY) ?? 0);
-  return at >= startedAt;
+const startNewSession = () => {
+  localStorage.setItem(SESSION_KEY, crypto.randomUUID());
+};
+
+/** Store a new sign-in's credentials: every sign-in path goes through here. */
+export const storeSession = (token: string, refreshToken: string) => {
+  startNewSession();
+  localStorage.setItem("bubsie_token", token);
+  localStorage.setItem("bubsie_refresh_token", refreshToken);
 };
 
 /** End the session on this device: every sign-out path goes through here. */
 export const signOut = () => {
   localStorage.removeItem("bubsie_token");
   localStorage.removeItem("bubsie_refresh_token");
-  localStorage.setItem(SIGNED_OUT_AT_KEY, String(Date.now()));
+  startNewSession();
+};
+
+/** A refresh shared by the callers of one session. */
+let refreshing: { session: string; outcome: Promise<RefreshOutcome> } | null =
+  null;
+
+/* Bounds on a refresh. A tab that cannot get the refresh lock in time does
+ * not refresh on its own: two tabs rotating the same refresh token at once
+ * would see the loser's rotation rejected and sign out. It keeps the session
+ * and its request fails as retryable, like any outage. */
+const REFRESH_LOCK_WAIT_MS = 10_000;
+const REFRESH_REQUEST_MS = 10_000;
+
+/** An abort signal that fires after `ms` (AbortSignal.timeout needs Safari
+ * 16 and is not driven by fake timers). */
+const deadline = (ms: number) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  return { clear: () => clearTimeout(timer), signal: controller.signal };
 };
 
 /** The server understood the request and refused it, so sending it again
@@ -105,30 +133,47 @@ const isAuthFailure = (status: number, errors: GraphQLErrorShape[]) =>
       e.message === "Not authenticated"
   );
 
-/** One refresh at a time across tabs: two tabs rotating the same refresh
- * token at once would see the loser's rotation rejected. */
-const withRefreshLock = <T>(task: () => Promise<T>): Promise<T> =>
-  typeof navigator !== "undefined" && navigator.locks
-    ? (navigator.locks.request(
-        "bubsie-session-refresh",
-        task
-      ) as unknown as Promise<T>)
-    : task();
+/** One refresh at a time across tabs, waiting a bounded time for the lock. */
+const withRefreshLock = async (
+  task: () => Promise<RefreshOutcome>
+): Promise<RefreshOutcome> => {
+  const locks = typeof navigator === "undefined" ? undefined : navigator.locks;
+  if (!locks) return task();
+  const wait = deadline(REFRESH_LOCK_WAIT_MS);
+  try {
+    return (await locks.request(
+      "bubsie-session-refresh",
+      { signal: wait.signal },
+      () => {
+        wait.clear();
+        return task();
+      }
+    )) as RefreshOutcome;
+  } catch (error) {
+    if (wait.signal.aborted) return "unavailable";
+    throw error;
+  } finally {
+    wait.clear();
+  }
+};
 
 const tryRefresh = async (
   apiUrl: string,
   used: string,
-  startedAt: number
+  session: string
 ): Promise<RefreshOutcome> => {
   // Settled while waiting: signed out, or another tab already refreshed.
   const settled = (): RefreshOutcome | null => {
-    if (signedOutSince(startedAt)) return "signed-out";
+    if (currentSession() !== session) return "signed-out";
     return getRefreshToken() === used ? null : "refreshed";
   };
   const before = settled();
   if (before) return before;
 
+  // The request and its body together are bounded, so the lock is too.
+  const limit = deadline(REFRESH_REQUEST_MS);
   let res: Response;
+  let json: Awaited<ReturnType<typeof readJson>>;
   try {
     res = await fetch(apiUrl, {
       body: JSON.stringify({
@@ -137,11 +182,15 @@ const tryRefresh = async (
       }),
       headers: { "Content-Type": "application/json" },
       method: "POST",
+      signal: limit.signal,
     });
+    json = await readJson(res);
   } catch {
     return "unavailable";
+  } finally {
+    limit.clear();
   }
-  const json = await readJson(res);
+  if (limit.signal.aborted) return "unavailable";
   const after = settled();
   if (after) return after;
 
@@ -165,20 +214,36 @@ const tryRefresh = async (
   return refused ? "rejected" : "unavailable";
 };
 
-const refreshSession = (
-  apiUrl: string,
-  startedAt: number
-): Promise<RefreshOutcome> => {
+const refreshOnce = (apiUrl: string, session: string) => {
   const used = getRefreshToken();
-  if (!used) return Promise.resolve("rejected");
-  refreshPromise ??= (async () => {
-    try {
-      return await withRefreshLock(() => tryRefresh(apiUrl, used, startedAt));
-    } finally {
-      refreshPromise = null;
-    }
-  })();
-  return refreshPromise;
+  if (!used) return Promise.resolve<RefreshOutcome>("rejected");
+  if (refreshing?.session !== session) {
+    // Read by the cleanup below, once the refresh has settled.
+    let outcome: Promise<RefreshOutcome> | null = null;
+    const run = async () => {
+      try {
+        return await withRefreshLock(() => tryRefresh(apiUrl, used, session));
+      } finally {
+        if (refreshing?.outcome === outcome) refreshing = null;
+      }
+    };
+    outcome = run();
+    refreshing = { outcome, session };
+  }
+  return refreshing.outcome;
+};
+
+/** The one place a refresh turns into a result for its caller: however the
+ * refresh ended, a session that is no longer current is "signed-out".
+ * `attempt: false` is for a caller that already refreshed and was refused
+ * again, which counts as rejected. */
+const refreshFor = async (
+  session: string,
+  apiUrl: string,
+  attempt: boolean
+): Promise<RefreshOutcome> => {
+  const outcome = attempt ? await refreshOnce(apiUrl, session) : "rejected";
+  return currentSession() === session ? outcome : "signed-out";
 };
 
 /** Whether there is a session to continue. During an outage the session is
@@ -187,7 +252,7 @@ const refreshSession = (
 export const restoreSession = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false;
   if (!getRuntimeConfig()) await loadRuntimeConfig();
-  const startedAt = Date.now();
+  const session = currentSession();
   const token = getToken();
   if (!token && !getRefreshToken()) return false;
 
@@ -195,9 +260,12 @@ export const restoreSession = async (): Promise<boolean> => {
   const payload = token ? tokenPayload(token) : null;
   if (payload?.exp && payload.exp * 1000 > Date.now() + 30_000) return true;
 
-  const outcome = await refreshSession(getApiUrl(), startedAt);
+  const outcome = await refreshFor(session, getApiUrl(), true);
   if (outcome === "rejected") signOut();
-  return outcome === "refreshed" || outcome === "unavailable";
+  const hasCredentials = Boolean(getToken() || getRefreshToken());
+  return (
+    hasCredentials && (outcome === "refreshed" || outcome === "unavailable")
+  );
 };
 export const gqlRequest = async <T = unknown>(
   query: string,
@@ -209,7 +277,7 @@ export const gqlRequest = async <T = unknown>(
     await loadRuntimeConfig();
   }
   const apiUrl = getApiUrl();
-  const startedAt = Date.now();
+  const session = currentSession();
   const token = getToken();
   const res = await fetch(apiUrl, {
     body: JSON.stringify({ query, variables }),
@@ -225,10 +293,8 @@ export const gqlRequest = async <T = unknown>(
 
   if (typeof window !== "undefined" && isAuthFailure(res.status, errors)) {
     // A token just refreshed and still refused counts as rejected.
-    const outcome = hasRetried
-      ? "rejected"
-      : await refreshSession(apiUrl, startedAt);
-    if (outcome === "signed-out" || signedOutSince(startedAt)) {
+    const outcome = await refreshFor(session, apiUrl, !hasRetried);
+    if (outcome === "signed-out") {
       // The session this request belonged to has ended: no retry.
       throw new Error("Signed out");
     }
