@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { restoreSession } from "@/lib/tambo/graphql";
+import { restoreSession } from "@/lib/gql-request";
 import { isDeviceMode } from "@/lib/use-device-mode";
 
 /**

@@ -65,14 +65,11 @@ self.addEventListener("fetch", (event) => {
   // GraphQL API requests: network-first
   if (url.pathname.includes("/graphql")) {
     event.respondWith(
-      fetch(request).catch(() => {
-        // If it's a mutation, queue it for later
-        if (request.method === "POST") {
-          return request
-            .clone()
-            .json()
-            .then((body) => queueMutation(body, request.headers))
-            .then(
+      // Read the body before the network attempt consumes the request.
+      readQueueableBody(request).then((body) =>
+        fetch(request).catch(() => {
+          if (body) {
+            return queueMutation(body, request).then(
               () =>
                 new Response(
                   JSON.stringify({
@@ -85,12 +82,13 @@ self.addEventListener("fetch", (event) => {
                   }
                 )
             );
-        }
-        return new Response(
-          JSON.stringify({ errors: [{ message: "Offline" }] }),
-          { headers: { "Content-Type": "application/json" } }
-        );
-      })
+          }
+          return new Response(
+            JSON.stringify({ errors: [{ message: "Offline" }] }),
+            { headers: { "Content-Type": "application/json" } }
+          );
+        })
+      )
     );
     return;
   }
@@ -149,8 +147,25 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
+function isQueueableMutation(body) {
+  const id = body && body.variables && body.variables.clientMutationId;
+  const isMutation =
+    typeof body.query === "string" && /^\s*mutation\b/.test(body.query);
+  return typeof id === "string" && isMutation;
+}
+
+async function readQueueableBody(request) {
+  if (request.method !== "POST") return null;
+  try {
+    const body = await request.clone().json();
+    return isQueueableMutation(body) ? body : null;
+  } catch {
+    return null;
+  }
+}
+
 // Queue a mutation for offline sync
-async function queueMutation(body, headers) {
+async function queueMutation(body, request) {
   const queue = await getQueue();
   if (queue.length >= MAX_QUEUE_SIZE) {
     // Drop oldest
@@ -158,21 +173,22 @@ async function queueMutation(body, headers) {
   }
 
   queue.push({
-    authorization: headers.get("Authorization"),
+    authorization: request.headers.get("Authorization"),
     body,
-    id: crypto.randomUUID(),
+    id: body.variables.clientMutationId,
     retries: 0,
     timestamp: Date.now(),
+    url: request.url,
   });
 
   await saveQueue(queue);
+  try {
+    await self.registration.sync?.register("bubsie-sync");
+  } catch {}
 }
 
 async function getQueue() {
   try {
-    const clients = await self.clients.matchAll();
-    // Use IndexedDB via a simple approach
-    // For SW, we use the Cache API as a key-value store
     const cache = await caches.open("bubsie-queue");
     const response = await cache.match("/queue");
     if (response) {
@@ -195,36 +211,55 @@ async function saveQueue(queue) {
 // Background sync: replay queued mutations
 self.addEventListener("sync", (event) => {
   if (event.tag === "bubsie-sync") {
-    event.waitUntil(syncQueue());
+    event.waitUntil(replayQueueExclusively());
   }
 });
 
-async function syncQueue() {
+let replayInFlight = null;
+
+function replayQueueExclusively() {
+  if (!replayInFlight) {
+    replayInFlight = replayQueue().finally(() => {
+      replayInFlight = null;
+    });
+  }
+  return replayInFlight;
+}
+
+async function notifyClients(message) {
+  const clients = await self.clients.matchAll({ includeUncontrolled: true });
+  clients.forEach((client) => client.postMessage(message));
+}
+
+async function replayQueue() {
   const queue = await getQueue();
   if (queue.length === 0) return;
 
   const remaining = [];
-  const apiUrl = configuredApiUrl;
 
   for (const item of queue) {
     // Flag stale items
     const ageInDays = (Date.now() - item.timestamp) / 86_400_000;
     if (ageInDays > STALE_DAYS) {
       // Notify client about stale items
-      const clients = await self.clients.matchAll();
-      clients.forEach((client) => {
-        client.postMessage({
-          age: Math.floor(ageInDays),
-          id: item.id,
-          type: "STALE_MUTATION",
-        });
+      await notifyClients({
+        age: Math.floor(ageInDays),
+        id: item.id,
+        type: "STALE_MUTATION",
       });
       remaining.push(item);
       continue;
     }
 
+    const apiUrl = item.url || configuredApiUrl;
+    if (!apiUrl) {
+      remaining.push(item);
+      continue;
+    }
+
+    let response;
     try {
-      const response = await fetch(apiUrl, {
+      response = await fetch(apiUrl, {
         body: JSON.stringify(item.body),
         headers: {
           Authorization: item.authorization,
@@ -232,25 +267,26 @@ async function syncQueue() {
         },
         method: "POST",
       });
-
-      if (!response.ok) throw new Error("Sync failed");
-
-      // Successfully synced — notify client
-      const clients = await self.clients.matchAll();
-      clients.forEach((client) => {
-        client.postMessage({ id: item.id, type: "MUTATION_SYNCED" });
-      });
     } catch {
-      item.retries++;
-      if (item.retries < MAX_RETRIES) {
-        remaining.push(item);
-      } else {
-        // Max retries exceeded — notify client
-        const clients = await self.clients.matchAll();
-        clients.forEach((client) => {
-          client.postMessage({ id: item.id, type: "MUTATION_FAILED" });
-        });
-      }
+      remaining.push(item);
+      continue;
+    }
+
+    let json = null;
+    try {
+      json = await response.json();
+    } catch {}
+
+    if (response.ok && json && json.data && !json.errors) {
+      await notifyClients({ id: item.id, type: "MUTATION_SYNCED" });
+      continue;
+    }
+
+    item.retries++;
+    if (response.status >= 500 && item.retries < MAX_RETRIES) {
+      remaining.push(item);
+    } else {
+      await notifyClients({ id: item.id, type: "MUTATION_FAILED" });
     }
   }
 
@@ -260,7 +296,7 @@ async function syncQueue() {
 // Listen for messages from clients
 self.addEventListener("message", (event) => {
   if (event.data === "SYNC_NOW") {
-    syncQueue();
+    replayQueueExclusively();
   }
   if (event.data && event.data.type === "SET_API_URL" && event.data.url) {
     configuredApiUrl = event.data.url;

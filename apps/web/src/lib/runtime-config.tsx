@@ -40,13 +40,6 @@ const requireRuntimeConfig = (): PublicConfig => {
 /** Get the API URL from the runtime config. */
 export const getApiUrl = (): string => requireRuntimeConfig().apiUrl;
 
-/** Get the Tambo URL from the runtime config. */
-export const getTamboUrl = (): string => requireRuntimeConfig().tamboUrl;
-
-/** Get the Tambo API key from the runtime config. */
-export const getTamboApiKey = (): string =>
-  requireRuntimeConfig().tamboApiKey ?? "";
-
 /* ── React context for components that need to re-render on config load ── */
 
 const RuntimeConfigContext = createContext<PublicConfig | null>(null);

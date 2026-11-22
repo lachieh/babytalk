@@ -2,8 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { gqlRequest } from "@/lib/gql-request";
 import { triggerFeedback } from "@/lib/haptics";
-import { gqlRequest } from "@/lib/tambo/graphql";
+
+import {
+  ChoiceChips,
+  FIELD_INPUT_CLASS,
+  FIELD_LABEL_CLASS,
+  Sheet,
+} from "./sheet";
+import type { ChipOption } from "./sheet";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -40,6 +48,15 @@ function lbOzToGrams(lbs: string, oz: string): number | null {
   return Math.round(l * 453.592 + o * 28.3495);
 }
 
+type GenderKey = "male" | "female" | "other" | "unset";
+
+const GENDERS: readonly ChipOption<GenderKey>[] = [
+  { label: "Boy", value: "male" },
+  { label: "Girl", value: "female" },
+  { label: "Other", value: "other" },
+  { label: "Prefer not to say", value: "unset" },
+];
+
 /* ── Component ─────────────────────────────────────────────── */
 
 export const EditBabySheet = ({
@@ -59,9 +76,11 @@ export const EditBabySheet = ({
   const [weightOz, setWeightOz] = useState("");
   const [gender, setGender] = useState("");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !baby) return;
+    setSaveError(null);
     setName(baby.name);
     setBirthDate(baby.birthDate);
     setGender(baby.gender ?? "");
@@ -78,6 +97,7 @@ export const EditBabySheet = ({
   const handleSave = useCallback(async () => {
     if (!baby) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await gqlRequest(UPDATE_BABY, {
         id: baby.id,
@@ -91,24 +111,11 @@ export const EditBabySheet = ({
       onClose();
     } catch (error) {
       console.error("[EditBabySheet]", error);
+      setSaveError("Couldn't save. Try again.");
     } finally {
       setSaving(false);
     }
   }, [baby, name, birthDate, weightLbs, weightOz, gender, onSaved, onClose]);
-
-  const handleBackdrop = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
 
   const handleNameChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value),
@@ -127,119 +134,108 @@ export const EditBabySheet = ({
     []
   );
   const handleGenderChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => setGender(e.target.value),
+    (key: GenderKey) => setGender(key === "unset" ? "" : key),
     []
   );
 
-  if (!open || !baby) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-neutral-900/30"
-      onClick={handleBackdrop}
-      onKeyDown={handleKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Edit baby"
-    >
-      <div className="w-full max-w-lg rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
-        <div className="flex justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-neutral-200" />
-        </div>
-        <div className="flex items-center justify-between px-5 pt-2 pb-4">
-          <h2 className="text-base font-semibold text-neutral-700">
-            Edit baby
-          </h2>
-          <button
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100"
-            onClick={onClose}
-            type="button"
-            aria-label="Close"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
+    <Sheet
+      footer={
+        <>
+          {saveError && (
+            <p
+              className="mb-3 text-center text-sm text-danger-500"
+              role="alert"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="space-y-4 px-5 pb-6">
-          <label className="block text-xs font-medium text-neutral-500">
-            Name
-            <input
-              className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-              onChange={handleNameChange}
-              type="text"
-              value={name}
-            />
-          </label>
-
-          <label className="block text-xs font-medium text-neutral-500">
-            Gender
-            <select
-              className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-              onChange={handleGenderChange}
-              value={gender}
-            >
-              <option value="">Prefer not to say</option>
-              <option value="male">Boy</option>
-              <option value="female">Girl</option>
-              <option value="other">Other</option>
-            </select>
-          </label>
-
-          <label className="block text-xs font-medium text-neutral-500">
-            Birthday
-            <input
-              className="mt-1 block w-full rounded-lg border border-neutral-200 bg-surface px-3 py-2.5 text-sm text-neutral-800"
-              onChange={handleDateChange}
-              type="date"
-              value={birthDate}
-            />
-          </label>
-
-          <div>
-            <p className="text-xs font-medium text-neutral-500">Birth weight</p>
-            <div className="mt-1 flex gap-2">
-              <input
-                className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-                inputMode="numeric"
-                onChange={handleLbsChange}
-                placeholder="lbs"
-                type="number"
-                value={weightLbs}
-              />
-              <input
-                className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800"
-                inputMode="decimal"
-                onChange={handleOzChange}
-                placeholder="oz"
-                step="0.1"
-                type="number"
-                value={weightOz}
-              />
-            </div>
-          </div>
-
+              {saveError}
+            </p>
+          )}
           <button
             className="min-h-[48px] w-full rounded-xl bg-primary-500 px-4 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:opacity-40"
             disabled={saving || !name}
             onClick={handleSave}
             type="button"
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </button>
-        </div>
+        </>
+      }
+      onClose={onClose}
+      open={open && baby !== null}
+      title="Edit baby"
+    >
+      <div className="space-y-5 px-5 pb-4">
+        <label className={FIELD_LABEL_CLASS}>
+          Name
+          <input
+            autoComplete="off"
+            className={FIELD_INPUT_CLASS}
+            onChange={handleNameChange}
+            type="text"
+            value={name}
+          />
+        </label>
+
+        <ChoiceChips
+          legend="Gender"
+          onChange={handleGenderChange}
+          options={GENDERS}
+          value={(gender || "unset") as GenderKey}
+        />
+
+        <label className={FIELD_LABEL_CLASS}>
+          Birthday
+          <input
+            className={FIELD_INPUT_CLASS}
+            onChange={handleDateChange}
+            type="date"
+            value={birthDate}
+          />
+        </label>
+
+        <fieldset>
+          <legend className={FIELD_LABEL_CLASS}>Birth weight</legend>
+          <div className="flex gap-3">
+            <label className="flex-1 text-sm text-neutral-600">
+              <span className="sr-only">Pounds</span>
+              <span className="relative block">
+                <input
+                  className={`${FIELD_INPUT_CLASS} pr-10`}
+                  inputMode="numeric"
+                  onChange={handleLbsChange}
+                  type="number"
+                  value={weightLbs}
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-3 mt-1.5 flex items-center text-neutral-400"
+                >
+                  lb
+                </span>
+              </span>
+            </label>
+            <label className="flex-1 text-sm text-neutral-600">
+              <span className="sr-only">Ounces</span>
+              <span className="relative block">
+                <input
+                  className={`${FIELD_INPUT_CLASS} pr-10`}
+                  inputMode="decimal"
+                  onChange={handleOzChange}
+                  step="0.1"
+                  type="number"
+                  value={weightOz}
+                />
+                <span
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 right-3 mt-1.5 flex items-center text-neutral-400"
+                >
+                  oz
+                </span>
+              </span>
+            </label>
+          </div>
+        </fieldset>
       </div>
-    </div>
+    </Sheet>
   );
 };

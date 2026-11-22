@@ -1,54 +1,14 @@
 import type { ReactNode } from "react";
 
-/* ── SVG Line Icons ───────────────────────────────────────── */
+import { Icon } from "@/components/icons";
 
-const iconProps = {
-  className: "h-4 w-4",
-  fill: "none",
-  viewBox: "0 0 24 24",
-  stroke: "currentColor",
-  strokeWidth: 1.8,
-  strokeLinecap: "round" as const,
-  strokeLinejoin: "round" as const,
-};
+const SIZE = "h-4 w-4";
 
-/** Bottle icon — Feed */
-const FeedIcon = () => (
-  <svg {...iconProps}>
-    <path d="M6 8h8v10a2 2 0 01-2 2H8a2 2 0 01-2-2V8z" />
-    <path d="M6 8l1-4h6l1 4" />
-    <path d="M6 12h8" />
-  </svg>
-);
-
-/** Moon icon — Sleep */
-const SleepIcon = () => (
-  <svg {...iconProps}>
-    <path d="M21 12.79A9 9 0 1111.21 3a7 7 0 009.79 9.79z" />
-  </svg>
-);
-
-/** Droplet icon — Diaper */
-const DiaperIcon = () => (
-  <svg {...iconProps}>
-    <path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0L12 2.69z" />
-  </svg>
-);
-
-/** Heart-pulse icon — Pump */
-const PumpIcon = () => (
-  <svg {...iconProps}>
-    <path d="M20.42 4.58a5.4 5.4 0 00-7.65 0L12 5.36l-.77-.78a5.4 5.4 0 00-7.65 7.65l1.06 1.06L12 20.64l7.36-7.36 1.06-1.06a5.4 5.4 0 000-7.64z" />
-  </svg>
-);
-
-/** Pencil/note icon — Note */
-const NoteIcon = () => (
-  <svg {...iconProps}>
-    <path d="M12 20h9" />
-    <path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z" />
-  </svg>
-);
+const FeedIcon = () => <Icon className={SIZE} name="feed" />;
+const SleepIcon = () => <Icon className={SIZE} name="sleep" />;
+const DiaperIcon = () => <Icon className={SIZE} name="diaper" />;
+const PumpIcon = () => <Icon className={SIZE} name="pump" />;
+const NoteIcon = () => <Icon className={SIZE} name="note" />;
 
 /* ── Public API ───────────────────────────────────────────── */
 
@@ -64,7 +24,7 @@ interface EventStyle {
   buttonBg: string;
 }
 
-export const EVENT_STYLES: Record<EventType, EventStyle> = {
+const EVENT_STYLES: Record<EventType, EventStyle> = {
   feed: {
     icon: FeedIcon,
     iconColor: "text-feed-500",
@@ -115,10 +75,10 @@ export function EventIcon({
   className?: string;
 }) {
   const style = getEventStyle(type);
-  const Icon = style.icon;
+  const Glyph = style.icon;
   return (
     <span className={`${style.iconColor} ${className}`}>
-      <Icon />
+      <Glyph />
     </span>
   );
 }

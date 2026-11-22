@@ -5,33 +5,49 @@ import { useCallback, useState } from "react";
 import { StationSettingsSheet } from "@/components/station-settings-sheet";
 import { StationTile } from "@/components/station-tile";
 import { UndoToast } from "@/components/undo-toast";
-import { VoiceButton } from "@/components/voice-button";
-import { VoiceOverlay } from "@/components/voice-overlay";
 import { useBabyContext } from "@/lib/baby-context";
+import type { StationActionKey } from "@/lib/station-config";
 import { useStationActions } from "@/lib/station-config";
-import { useTamboReady } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
-import { VoiceSessionProvider } from "@/lib/voice-session";
+
+const TILE_ORDER: StationActionKey[] = [
+  "feed",
+  "sleep",
+  "diaper",
+  "pump",
+  "note",
+];
 
 const StationHeader = ({
   babyName,
   onOpenSettings,
 }: {
-  babyName: string;
+  babyName: string | null;
   onOpenSettings: () => void;
 }) => (
   <header className="relative shrink-0 px-4 pt-[max(env(safe-area-inset-top),1.5rem)] pb-4 text-center">
-    <p className="font-medium text-[11px] text-neutral-400 uppercase tracking-[0.2em]">
+    <p className="font-medium text-neutral-500 text-xs uppercase tracking-[0.16em]">
       Station
     </p>
-    <h1 className="mt-1 font-serif text-2xl text-neutral-800">{babyName}</h1>
+    <h1 className="mt-1 font-serif text-2xl text-neutral-800">
+      {babyName ?? (
+        <>
+          <span
+            aria-hidden="true"
+            className="inline-block h-6 w-32 animate-breathe rounded-full bg-neutral-200 align-middle"
+          />
+          <span className="sr-only">Loading</span>
+        </>
+      )}
+    </h1>
     <button
       aria-label="Station settings"
-      className="absolute top-6 right-4 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
+      className="absolute top-[max(env(safe-area-inset-top),1.5rem)] right-4 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-700"
       onClick={onOpenSettings}
       type="button"
     >
       <svg
+        aria-hidden="true"
         className="h-5 w-5"
         fill="none"
         stroke="currentColor"
@@ -71,17 +87,23 @@ const EmptyState = ({ onOpenSettings }: { onOpenSettings: () => void }) => (
   </div>
 );
 
+function spansFullRow(index: number, count: number) {
+  return index === 0 && count > 1 && count % 2 === 1;
+}
+
 export default function StationPage() {
   useAutoDarkMode();
   const { baby, loading } = useBabyContext();
-  const tamboEnabled = useTamboReady();
   const { visible, toggle } = useStationActions();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleOpenSettings = useCallback(() => setSettingsOpen(true), []);
   const handleCloseSettings = useCallback(() => setSettingsOpen(false), []);
 
-  const tileCount = visible.length;
+  const tiles = visible.toSorted(
+    (a, b) => TILE_ORDER.indexOf(a) - TILE_ORDER.indexOf(b)
+  );
+  const tileCount = tiles.length;
   const gridCols = tileCount <= 1 ? "grid-cols-1" : "grid-cols-2";
 
   let mainContent: React.ReactNode;
@@ -96,43 +118,37 @@ export default function StationPage() {
   } else {
     mainContent = (
       <div className={`grid h-full gap-3 ${gridCols} auto-rows-fr`}>
-        {visible.map((key) => (
-          <StationTile key={key} type={key} />
+        {tiles.map((key, index) => (
+          <div
+            className={`min-h-0 ${spansFullRow(index, tileCount) ? "col-span-2" : ""}`}
+            key={key}
+          >
+            <StationTile type={key} />
+          </div>
         ))}
       </div>
     );
   }
 
   return (
-    <VoiceSessionProvider>
-      <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
-        <StationHeader
-          babyName={baby?.name ?? "Little One"}
-          onOpenSettings={handleOpenSettings}
-        />
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
+      <StationHeader
+        babyName={baby?.name ?? (loading ? null : "Bubsie")}
+        onOpenSettings={handleOpenSettings}
+      />
 
-        <main className="flex min-h-0 flex-1 flex-col px-4 pb-6">
-          {mainContent}
-        </main>
+      <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+4.75rem)]">
+        {mainContent}
+      </main>
 
-        {tamboEnabled && <VoiceOverlay />}
-        {tamboEnabled && (
-          <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+1.25rem)] right-4 z-30">
-            <div className="pointer-events-auto">
-              <VoiceButton />
-            </div>
-          </div>
-        )}
+      <UndoToast />
 
-        <UndoToast />
-
-        <StationSettingsSheet
-          onClose={handleCloseSettings}
-          onToggle={toggle}
-          open={settingsOpen}
-          visible={visible}
-        />
-      </div>
-    </VoiceSessionProvider>
+      <StationSettingsSheet
+        onClose={handleCloseSettings}
+        onToggle={toggle}
+        open={settingsOpen}
+        visible={visible}
+      />
+    </div>
   );
 }

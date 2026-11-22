@@ -1,133 +1,64 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
+import { eventAwaitingAmount, lastAmountMl } from "@/lib/daily-totals";
 import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
-import {
-  signalPumpIntent,
-  subscribePumpHint,
-  subscribePumpRefreshing,
-} from "@/lib/pump-hint-bus";
-import type { PumpHint } from "@/lib/pump-hint-bus";
-import { useTamboReady } from "@/lib/tambo/provider";
 import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
-import { AmountInput } from "./amount-input";
+import { ActiveTimer } from "./active-timer";
+import { AmountInput, useDismissedAmountPrompts } from "./amount-input";
 import { EventEditSheet } from "./event-edit-sheet";
-import { PumpAiBridge } from "./pump-ai-bridge";
-import { PumpHintCard } from "./pump-hint-card";
 import { PumpStartSegments } from "./pump-start-segments";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
-function formatTimer(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const min = Math.floor(totalSec / 60);
-  const sec = totalSec % 60;
-  return `${min}:${String(sec).padStart(2, "0")}`;
+interface SessionMeta {
+  amountMl?: number;
+  method?: string;
+  side?: string;
 }
 
-function formatDuration(startedAt: string, endedAt: string): string {
+function parseMeta(metadata: string): SessionMeta {
+  try {
+    return JSON.parse(metadata) as SessionMeta;
+  } catch {
+    return {};
+  }
+}
+
+function formatDuration(startedAt: string, endedAt: string): string | null {
   const ms = new Date(endedAt).getTime() - new Date(startedAt).getTime();
   const mins = Math.round(ms / 60_000);
+  if (mins < 1) return null;
   if (mins < 60) return `${mins}m`;
   const h = Math.floor(mins / 60);
   const m = mins % 60;
   return m > 0 ? `${h}h ${m}m` : `${h}h`;
 }
 
-function parseSide(metadata: string): string | null {
-  try {
-    return (JSON.parse(metadata) as { side?: string }).side ?? null;
-  } catch {
-    return null;
-  }
-}
+const SIDE_LABELS: Record<string, string> = {
+  both: "Both sides",
+  left: "Left",
+  right: "Right",
+};
 
-function parseAmount(metadata: string): number | null {
-  try {
-    return (JSON.parse(metadata) as { amountMl?: number }).amountMl ?? null;
-  } catch {
-    return null;
-  }
-}
+const BREAST_LABELS: Record<string, string> = {
+  both: "Both breasts",
+  left: "Left breast",
+  right: "Right breast",
+};
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 
-/* ── Active Timer ─────────────────────────────────────────── */
-
-const PumpTimer = ({
-  event,
-  onStop,
-  onCancel,
-}: {
-  event: BabyEvent;
-  onStop: (id: string) => void;
-  onCancel: (id: string) => void;
-}) => {
-  const [elapsed, setElapsed] = useState(
-    () => Date.now() - new Date(event.startedAt).getTime()
-  );
-
-  useEffect(() => {
-    const start = new Date(event.startedAt).getTime();
-    const tick = () => setElapsed(Date.now() - start);
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [event.startedAt]);
-
-  const handleStop = useCallback(() => {
-    triggerFeedback("logged");
-    onStop(event.id);
-  }, [onStop, event.id]);
-
-  const handleCancel = useCallback(
-    () => onCancel(event.id),
-    [onCancel, event.id]
-  );
-
-  const side = parseSide(event.metadata) ?? "pump";
-
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-pump-200 bg-pump-50 px-4 py-6">
-      <p className="text-xs font-medium capitalize text-pump-600">
-        {side} side
-      </p>
-      <p className="font-sans text-4xl tabular-nums text-neutral-800">
-        {formatTimer(elapsed)}
-      </p>
-      <button
-        className="min-h-[48px] w-full rounded-xl bg-pump-500 px-6 py-3 text-base font-semibold text-white transition-[background-color,transform] hover:bg-pump-600 active:scale-[0.97]"
-        onClick={handleStop}
-        type="button"
-      >
-        Done
-      </button>
-      <button
-        className="min-h-[36px] px-2 py-1 text-xs text-neutral-400 transition-colors hover:text-neutral-600"
-        onClick={handleCancel}
-        type="button"
-      >
-        Cancel
-      </button>
-    </div>
-  );
-};
+const isBreastFeed = (e: BabyEvent) =>
+  e.type === "feed" && parseMeta(e.metadata).method === "breast";
 
 /* ── Session Row ──────────────────────────────────────────── */
-
-function parseMethod(metadata: string): string | null {
-  try {
-    return (JSON.parse(metadata) as { method?: string }).method ?? null;
-  } catch {
-    return null;
-  }
-}
 
 const SessionRow = ({
   event,
@@ -138,47 +69,59 @@ const SessionRow = ({
 }) => {
   const { unit } = useVolumeUnit();
   const handleClick = useCallback(() => onEdit(event), [onEdit, event]);
-  const side = parseSide(event.metadata);
-  const amount = parseAmount(event.metadata);
+  const { amountMl, side } = parseMeta(event.metadata);
   const duration = event.endedAt
     ? formatDuration(event.startedAt, event.endedAt)
     : null;
 
-  const isBreast = event.type === "feed";
-  const label = isBreast ? `Breast ${side ?? ""}` : (side ?? "Pump");
+  const label =
+    event.type === "feed"
+      ? (BREAST_LABELS[side ?? ""] ?? "Breast")
+      : (SIDE_LABELS[side ?? ""] ?? "Pump");
+  const detail = [amountMl ? formatVolume(amountMl, unit) : null, duration]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <button
-      className="flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors active:bg-neutral-50"
-      onClick={handleClick}
-      type="button"
-    >
-      <span className="w-14 shrink-0 text-xs tabular-nums text-neutral-400">
-        {formatTime(event.startedAt)}
-      </span>
-      <EventIcon type={event.type} />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium capitalize text-neutral-700">
-          {label}
-        </p>
-        <p className="mt-0.5 text-xs text-neutral-400">
-          {[amount ? formatVolume(amount, unit) : null, duration]
-            .filter(Boolean)
-            .join(" \u00B7 ")}
-        </p>
-      </div>
-      <svg
-        className="h-3.5 w-3.5 shrink-0 text-neutral-300"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
+    <li>
+      <button
+        className="flex min-h-[56px] w-full items-center gap-3 border-neutral-100 border-b px-4 py-2 text-left transition-colors hover:bg-neutral-50 active:bg-neutral-100"
+        onClick={handleClick}
+        type="button"
       >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-      </svg>
-    </button>
+        <span className="w-16 shrink-0 text-neutral-500 text-xs tabular-nums">
+          {formatTime(event.startedAt)}
+        </span>
+        <span aria-hidden="true">
+          <EventIcon type={event.type} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium text-neutral-700 text-sm">
+            {label}
+          </span>
+          {detail && (
+            <span className="mt-0.5 block text-neutral-500 text-xs">
+              {detail}
+            </span>
+          )}
+        </span>
+        <svg
+          aria-hidden="true"
+          className="h-3.5 w-3.5 shrink-0 text-neutral-400"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          viewBox="0 0 24 24"
+        >
+          <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </li>
   );
 };
+
+const sectionHeading =
+  "font-medium text-neutral-500 text-xs uppercase tracking-wider";
 
 /* ── Pump View ────────────────────────────────────────────── */
 
@@ -187,36 +130,21 @@ export const PumpView = () => {
     baby,
     events,
     activeEvents,
+    completeAmount,
+    discardEvent,
     logEventDirect,
     stopEvent,
-    updateEventMeta,
-    deleteEvent,
-    loading,
   } = useBabyContext();
   const { unit } = useVolumeUnit();
-  const tamboReady = useTamboReady();
-
-  const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
-    null
-  );
-
-  // Subscribe to the pump-hint bus so the card updates when the agent calls
-  // updatePumpHint. The PumpAiBridge owns the thread + hydration.
-  const [pumpHint, setPumpHint] = useState<PumpHint | null>(null);
-  const [hintRefreshing, setHintRefreshing] = useState(false);
-  useEffect(() => subscribePumpHint(setPumpHint), []);
-  useEffect(() => subscribePumpRefreshing(setHintRefreshing), []);
-
-  // Signal page-open on mount so the bridge can refresh a stale hint.
-  useEffect(() => {
-    signalPumpIntent({ kind: "page-open" });
-  }, []);
-
-  const handleRefreshHint = useCallback(() => {
-    signalPumpIntent({ kind: "refresh" });
-  }, []);
+  const { dismissed, dismiss } = useDismissedAmountPrompts();
 
   const activePump = activeEvents.find((e) => e.type === "pump") ?? null;
+  const awaitingAmount = eventAwaitingAmount(
+    events,
+    "pump",
+    Date.now(),
+    dismissed
+  );
 
   const todayStart = useMemo(() => {
     const d = new Date();
@@ -237,148 +165,158 @@ export const PumpView = () => {
     setEditingEvent(null);
   }, []);
 
-  const isBreastFeed = (e: BabyEvent) => {
-    if (e.type !== "feed") return false;
-    return parseMethod(e.metadata) === "breast";
-  };
-
-  const todaySessions = useMemo(
+  const finishedToday = useMemo(
     () =>
       events.filter(
-        (e) =>
-          (e.type === "pump" || isBreastFeed(e)) &&
-          e.endedAt !== null &&
-          new Date(e.startedAt) >= todayStart
+        (e) => e.endedAt !== null && new Date(e.startedAt) >= todayStart
       ),
     [events, todayStart]
   );
+  const pumpSessions = useMemo(
+    () => finishedToday.filter((e) => e.type === "pump"),
+    [finishedToday]
+  );
+  const breastfeeds = useMemo(
+    () => finishedToday.filter(isBreastFeed),
+    [finishedToday]
+  );
 
-  const todayTotal = useMemo(() => {
+  const pumpedTotal = useMemo(() => {
     let total = 0;
-    for (const e of todaySessions) {
-      const amt = parseAmount(e.metadata);
-      if (amt) total += amt;
+    for (const e of pumpSessions) {
+      total += parseMeta(e.metadata).amountMl ?? 0;
     }
     return total;
-  }, [todaySessions]);
+  }, [pumpSessions]);
+
+  const lastPumpAmount = useMemo(() => lastAmountMl(events, "pump"), [events]);
 
   const handleStart = useCallback(
     (side: "left" | "right" | "both") => {
       triggerFeedback("logged");
       logEventDirect("pump", { side });
-      signalPumpIntent({ kind: "pump-start", side });
     },
     [logEventDirect]
   );
 
   const handleStop = useCallback(
-    (id: string) => {
-      stopEvent(id);
-      setPumpStoppedEventId(id);
+    (event: BabyEvent) => {
+      stopEvent(event.id);
     },
     [stopEvent]
   );
 
-  const handleCancel = useCallback(
-    (id: string) => {
-      deleteEvent(id);
-    },
-    [deleteEvent]
+  const handleDiscard = useCallback(
+    (event: BabyEvent) => discardEvent(event.id),
+    [discardEvent]
   );
 
   const handleAmountConfirm = useCallback(
     (amountMl: number) => {
-      if (!pumpStoppedEventId) return;
-      const event = events.find((e) => e.id === pumpStoppedEventId);
-      if (event) {
-        try {
-          const meta = JSON.parse(event.metadata);
-          updateEventMeta(pumpStoppedEventId, event.type, {
-            ...meta,
-            amountMl,
-          });
-        } catch {
-          updateEventMeta(pumpStoppedEventId, "pump", { amountMl });
-        }
-      }
-      setPumpStoppedEventId(null);
+      if (!awaitingAmount) return;
+      completeAmount(awaitingAmount.id, amountMl);
+      dismiss(awaitingAmount.id);
     },
-    [pumpStoppedEventId, events, updateEventMeta]
+    [awaitingAmount, completeAmount, dismiss]
   );
 
-  const handleAmountCancel = useCallback(() => {
-    setPumpStoppedEventId(null);
-  }, []);
+  const handleAmountSkip = useCallback(() => {
+    if (!awaitingAmount) return;
+    completeAmount(awaitingAmount.id, null);
+    dismiss(awaitingAmount.id);
+  }, [awaitingAmount, completeAmount, dismiss]);
 
-  if (loading) return null;
-
-  const showActions = !activePump && !pumpStoppedEventId;
-
-  return (
-    <div className="py-2">
-      {/* Hint card above the actions */}
-      <div className="px-4">
-        <PumpHintCard
-          hint={pumpHint}
-          onRefresh={handleRefreshHint}
-          refreshing={hintRefreshing}
+  let action: React.ReactNode;
+  if (activePump) {
+    action = (
+      <ActiveTimer
+        event={activePump}
+        onDiscard={handleDiscard}
+        onStop={handleStop}
+      />
+    );
+  } else if (awaitingAmount) {
+    action = (
+      <div className="rounded-2xl border border-neutral-200 bg-surface-raised p-4">
+        <AmountInput
+          label="How much did you pump?"
+          lastAmountMl={lastPumpAmount}
+          onCancel={handleAmountSkip}
+          onConfirm={handleAmountConfirm}
         />
       </div>
+    );
+  } else {
+    action = (
+      <section aria-labelledby="pump-start-heading">
+        <h2
+          className="pb-3 text-center font-serif text-lg text-neutral-600 italic"
+          id="pump-start-heading"
+        >
+          Start pumping
+        </h2>
+        <PumpStartSegments disabled={baby === null} onStart={handleStart} />
+      </section>
+    );
+  }
 
-      {/* Action zone */}
-      <div className="mt-4 flex flex-col gap-3 px-4">
-        {activePump && (
-          <PumpTimer
-            event={activePump}
-            onStop={handleStop}
-            onCancel={handleCancel}
-          />
-        )}
-
-        {pumpStoppedEventId && (
-          <div className="rounded-xl border border-pump-200 bg-pump-50 px-4 py-6">
-            <p className="mb-3 text-center text-sm font-medium text-neutral-600">
-              How much did you express?
-            </p>
-            <AmountInput
-              cancelLabel="Skip"
-              onCancel={handleAmountCancel}
-              onConfirm={handleAmountConfirm}
-            />
+  return (
+    <div className="flex min-h-full flex-col">
+      <div className="flex-1 pt-2 pb-4">
+        <section aria-labelledby="pumped-today-heading">
+          <div className="flex items-baseline justify-between px-4 pb-2">
+            <h2 className={sectionHeading} id="pumped-today-heading">
+              Pumped today
+            </h2>
+            {pumpedTotal > 0 && (
+              <p className="font-medium text-pump-600 text-sm tabular-nums">
+                {formatVolume(pumpedTotal, unit)} total
+              </p>
+            )}
           </div>
-        )}
+          {pumpSessions.length === 0 && activePump ? (
+            <p className="px-6 py-6 text-center text-neutral-600 text-sm">
+              Pumping now. The session is listed here once you tap Done.
+            </p>
+          ) : null}
+          {pumpSessions.length === 0 && !activePump ? (
+            <div className="px-6 py-6 text-center">
+              <p className="text-neutral-600 text-sm">
+                No pumping logged today.
+              </p>
+              <p className="mx-auto mt-1 max-w-xs text-neutral-500 text-sm">
+                Choose a side below to start a timer. Finished sessions are
+                listed here with their amounts.
+              </p>
+            </div>
+          ) : (
+            <ul>
+              {pumpSessions.map((e) => (
+                <SessionRow event={e} key={e.id} onEdit={handleEdit} />
+              ))}
+            </ul>
+          )}
+        </section>
 
-        {showActions && (
-          <PumpStartSegments
-            highlightSide={pumpHint?.suggestedSide ?? null}
-            onStart={handleStart}
-          />
+        {breastfeeds.length > 0 && (
+          <section aria-labelledby="breastfed-today-heading" className="mt-6">
+            <h2
+              className={`px-4 pb-2 ${sectionHeading}`}
+              id="breastfed-today-heading"
+            >
+              Breastfed today
+            </h2>
+            <ul>
+              {breastfeeds.map((e) => (
+                <SessionRow event={e} key={e.id} onEdit={handleEdit} />
+              ))}
+            </ul>
+          </section>
         )}
       </div>
 
-      {tamboReady && <PumpAiBridge babyId={baby?.id ?? null} events={events} />}
-
-      {/* Today's sessions */}
-      <div className="mt-6">
-        <div className="flex items-center justify-between px-4 pb-2">
-          <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">
-            Today&apos;s Sessions
-          </p>
-          {todayTotal > 0 && (
-            <p className="text-xs font-medium text-pump-500">
-              Total: {formatVolume(todayTotal, unit)}
-            </p>
-          )}
-        </div>
-        {todaySessions.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-neutral-400">
-            No pump sessions yet today
-          </p>
-        ) : (
-          todaySessions.map((e) => (
-            <SessionRow event={e} key={e.id} onEdit={handleEdit} />
-          ))
-        )}
+      <div className="sticky bottom-0 flex flex-col gap-2 border-neutral-200 border-t bg-surface px-4 pt-4 pb-[4.75rem]">
+        {action}
       </div>
 
       <EventEditSheet

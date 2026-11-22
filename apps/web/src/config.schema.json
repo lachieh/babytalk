@@ -11,19 +11,9 @@
       "description": "Source code link shown on the homepage (hidden if unset)",
       "type": "string",
       "format": "uri"
-    },
-    "tamboApiKey": {
-      "default": "",
-      "type": "string"
-    },
-    "tamboUrl": {
-      "type": "string",
-      "format": "uri",
-      "description": "Tambo API URL"
     }
   },
   "required": [
-    "apiUrl",
-    "tamboUrl"
+    "apiUrl"
   ]
 }

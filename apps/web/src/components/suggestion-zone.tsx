@@ -1,392 +1,153 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import { EventIcon, getEventStyle } from "@/lib/event-styles";
+import {
+  eventAwaitingAmount,
+  lastAmountMl,
+  oneTapAction,
+} from "@/lib/daily-totals";
+import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
 
 import { ActiveTimer } from "./active-timer";
-import { AmountInput } from "./amount-input";
+import { AmountInput, useDismissedAmountPrompts } from "./amount-input";
+import {
+  amountLabelFor,
+  inferDefault,
+  LogSheet,
+  requestMeta,
+  VariantButton,
+  VARIANTS_BY_TYPE,
+} from "./log-sheet";
+import type { LogRequest } from "./log-sheet";
 
-/* ── Types ─────────────────────────────────────────────────── */
-
-interface Variant {
-  key: string;
-  label: string;
-  meta: Record<string, unknown>;
-}
-
-/* ── Inference ─────────────────────────────────────────────── */
-
-function inferFeedVariant(events: BabyEvent[]): string {
-  const recentFeeds = events
-    .filter((e) => e.type === "feed" && e.endedAt !== null)
-    .slice(0, 5);
-  if (recentFeeds.length === 0) return "breast-l";
-
-  let breastCount = 0;
-  let nonBreastCount = 0;
-  let lastSide = "left";
-  let lastNonBreastMethod = "bottle";
-
-  for (const feed of recentFeeds) {
-    try {
-      const meta = JSON.parse(feed.metadata);
-      if (meta.method === "bottle" || meta.method === "formula") {
-        nonBreastCount += 1;
-        lastNonBreastMethod = meta.method;
-      } else if (meta.method === "breast") {
-        breastCount += 1;
-      }
-      if (meta.side) lastSide = meta.side;
-    } catch {
-      /* ignore */
-    }
-  }
-
-  if (nonBreastCount > breastCount) return lastNonBreastMethod;
-  return lastSide === "left" ? "breast-r" : "breast-l";
-}
-
-function inferDiaperVariant(events: BabyEvent[]): string {
-  const recent = events.filter((e) => e.type === "diaper").slice(0, 5);
-  let soiledCount = 0;
-  for (const d of recent) {
-    try {
-      if (JSON.parse(d.metadata).soiled) soiledCount += 1;
-    } catch {
-      /* ignore */
-    }
-  }
-  return soiledCount > recent.length / 2 ? "wet-soiled" : "wet";
-}
-
-function inferSleepLocation(events: BabyEvent[]): string {
-  const last = events.find((e) => e.type === "sleep");
-  if (!last) return "crib";
-  try {
-    return JSON.parse(last.metadata).location || "crib";
-  } catch {
-    return "crib";
-  }
-}
-
-/* ── Variant definitions ───────────────────────────────────── */
-
-const FEED_VARIANTS: Variant[] = [
-  {
-    key: "breast-l",
-    label: "Breast \u00B7 Left",
-    meta: { method: "breast", side: "left" },
-  },
-  {
-    key: "breast-r",
-    label: "Breast \u00B7 Right",
-    meta: { method: "breast", side: "right" },
-  },
-  { key: "bottle", label: "Bottle", meta: { method: "bottle" } },
-  { key: "formula", label: "Formula", meta: { method: "formula" } },
-  { key: "solid", label: "Solid", meta: { method: "solid" } },
-];
-
-const DIAPER_VARIANTS: Variant[] = [
-  { key: "wet", label: "Wet", meta: { wet: true, soiled: false } },
-  { key: "soiled", label: "Soiled", meta: { wet: false, soiled: true } },
-  {
-    key: "wet-soiled",
-    label: "Wet + Soiled",
-    meta: { wet: true, soiled: true },
-  },
-];
-
-const SLEEP_VARIANTS: Variant[] = [
-  { key: "crib", label: "Crib", meta: { location: "crib" } },
-  { key: "bassinet", label: "Bassinet", meta: { location: "bassinet" } },
-  { key: "held", label: "Held", meta: { location: "held" } },
-  { key: "carrier", label: "Carrier", meta: { location: "carrier" } },
-];
+type HomeLogType = "feed" | "sleep" | "diaper";
 
 /* ── Styles ────────────────────────────────────────────────── */
 
-/* ── Dropdown Popover ─────────────────────────────────────── */
-
-const PopoverOption = ({
-  variant,
-  isSelected,
-  onSelect,
-}: {
-  variant: Variant;
-  isSelected: boolean;
-  onSelect: (key: string) => void;
-}) => {
-  const handleClick = useCallback(
-    () => onSelect(variant.key),
-    [onSelect, variant.key]
-  );
-
-  return (
-    <button
-      className="flex min-h-[44px] w-full items-center justify-between px-4 py-2 text-left text-sm text-neutral-700 transition-colors hover:bg-neutral-50 active:bg-neutral-100"
-      onClick={handleClick}
-      type="button"
-    >
-      <span>{variant.label}</span>
-      {isSelected && (
-        <svg
-          className="h-4 w-4 text-primary-500"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth={2.5}
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M5 13l4 4L19 7"
-          />
-        </svg>
-      )}
-    </button>
-  );
+const LOG_BUTTON_TONE: Record<HomeLogType, string> = {
+  diaper:
+    "border-diaper-500/60 bg-diaper-100 hover:bg-diaper-200 active:bg-diaper-200",
+  feed: "border-feed-500/60 bg-feed-100 hover:bg-feed-200 active:bg-feed-200",
+  sleep:
+    "border-sleep-500/60 bg-sleep-100 hover:bg-sleep-200 active:bg-sleep-200",
 };
 
-const VariantPopover = ({
-  variants,
-  selected,
-  onSelect,
-  onClose,
-}: {
-  variants: Variant[];
-  selected: string;
-  onSelect: (key: string) => void;
-  onClose: () => void;
-}) => {
-  const popoverRef = useRef<HTMLDivElement>(null);
+const LOG_LABEL: Record<HomeLogType, { busy: string; idle: string }> = {
+  diaper: { busy: "Diaper", idle: "Diaper" },
+  feed: { busy: "Feeding", idle: "Feed" },
+  sleep: { busy: "Asleep", idle: "Sleep" },
+};
 
-  useEffect(() => {
-    const handleClickOutside = (e: PointerEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
-    };
-    document.addEventListener("pointerdown", handleClickOutside);
-    return () =>
-      document.removeEventListener("pointerdown", handleClickOutside);
-  }, [onClose]);
-
-  return (
-    <div
-      className="animate-fade-up absolute top-full left-0 z-50 mt-2 min-w-[160px] overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg"
-      ref={popoverRef}
-    >
-      {variants.map((v) => (
-        <PopoverOption
-          isSelected={v.key === selected}
-          key={v.key}
-          onSelect={onSelect}
-          variant={v}
-        />
-      ))}
+const Reveal = ({ children }: { children: React.ReactNode }) => (
+  <div className="grid grid-rows-[1fr] opacity-100 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] starting:grid-rows-[0fr] starting:opacity-0">
+    <div className="min-h-0 overflow-hidden">
+      <div className="pb-2">{children}</div>
     </div>
-  );
-};
+  </div>
+);
 
-/* ── Action Section ────────────────────────────────────────── */
-
-const ActionSection = ({
+const LogColumn = ({
   type,
-  variants,
   defaultVariant,
-  activeEvent,
+  isBusy,
+  isReady,
+  lastAmount,
   onLog,
-  onStop,
-  onUpdateMeta,
-  onCancel,
 }: {
-  type: string;
-  variants: Variant[];
+  type: HomeLogType;
   defaultVariant: string;
-  activeEvent: BabyEvent | null;
-  onLog: (type: string, meta: Record<string, unknown>) => void;
-  onStop: (id: string) => void;
-  onUpdateMeta: (id: string, meta: Record<string, unknown>) => void;
-  onCancel: (id: string) => void;
+  isBusy: boolean;
+  isReady: boolean;
+  lastAmount: number | null;
+  onLog: (type: HomeLogType, meta: Record<string, unknown>) => void;
 }) => {
+  const variants = VARIANTS_BY_TYPE[type];
   const [selected, setSelected] = useState(defaultVariant);
-  const [expanded, setExpanded] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetAtAmount, setSheetAtAmount] = useState(false);
 
-  // Sync selected variant when the inferred default changes (e.g. after logging)
   useEffect(() => {
     setSelected(defaultVariant);
   }, [defaultVariant]);
-  // For pump: after stopping timer, capture amount before finalizing
-  const [pumpStoppedEventId, setPumpStoppedEventId] = useState<string | null>(
-    null
-  );
-  // For bottle/formula feeds: after stopping timer, capture amount
-  const [feedStoppedEventId, setFeedStoppedEventId] = useState<string | null>(
-    null
-  );
+
   const selectedVariant =
     variants.find((v) => v.key === selected) ?? variants[0];
 
-  const handleMainTap = useCallback(() => {
-    triggerFeedback("logged");
-    const { meta } = selectedVariant;
+  const log = useCallback(
+    (request: LogRequest) => {
+      onLog(type, requestMeta(selectedVariant.meta, request));
+    },
+    [onLog, selectedVariant, type]
+  );
 
-    if (type === "diaper") {
-      // Diaper: instant event — set endedAt = startedAt (point in time, not duration)
-      const now = new Date().toISOString();
-      onLog(type, { ...meta, _startedAt: now, _endedAt: now });
+  const handleMainTap = useCallback(() => {
+    const action = oneTapAction(type, selectedVariant.meta);
+    if (action === "amount") {
+      setSheetAtAmount(true);
+      setSheetOpen(true);
       return;
     }
+    log({ finished: action === "instant", minutesAgo: 0 });
+  }, [log, selectedVariant, type]);
 
-    // Everything else (feed, sleep, pump) starts a timer
-    onLog(type, meta);
-  }, [type, selectedVariant, onLog]);
-
-  const handleTimerStop = useCallback(
-    (id: string) => {
-      if (type === "pump") {
-        // Pump: stop the timer, then ask for amount
-        onStop(id);
-        setPumpStoppedEventId(id);
-        return;
-      }
-      if (type === "feed") {
-        const method = selectedVariant.meta.method as string;
-        onStop(id);
-        if (method === "bottle" || method === "formula") {
-          setFeedStoppedEventId(id);
-        }
-        return;
-      }
-      onStop(id);
+  const handleSheetLog = useCallback(
+    (request: LogRequest) => {
+      log(request);
+      setSheetOpen(false);
     },
-    [type, selectedVariant, onStop]
+    [log]
   );
 
-  const handlePumpAmountConfirm = useCallback(
-    (amountMl: number) => {
-      if (!pumpStoppedEventId) return;
-      onUpdateMeta(pumpStoppedEventId, { ...selectedVariant.meta, amountMl });
-      setPumpStoppedEventId(null);
-    },
-    [pumpStoppedEventId, selectedVariant, onUpdateMeta]
-  );
-
-  const handlePumpAmountCancel = useCallback(() => {
-    setPumpStoppedEventId(null);
+  const openSheet = useCallback(() => {
+    setSheetAtAmount(false);
+    setSheetOpen(true);
   }, []);
+  const closeSheet = useCallback(() => setSheetOpen(false), []);
 
-  const handleFeedAmountConfirm = useCallback(
-    (amountMl: number) => {
-      if (!feedStoppedEventId) return;
-      onUpdateMeta(feedStoppedEventId, { ...selectedVariant.meta, amountMl });
-      setFeedStoppedEventId(null);
-    },
-    [feedStoppedEventId, selectedVariant, onUpdateMeta]
-  );
-
-  const handleFeedAmountCancel = useCallback(() => {
-    setFeedStoppedEventId(null);
-  }, []);
-
-  const handleVariantTap = useCallback(() => setExpanded((prev) => !prev), []);
-  const handleOptionSelect = useCallback((key: string) => {
-    setSelected(key);
-    setExpanded(false);
-  }, []);
-
-  const hasTimer = activeEvent !== null;
-  const showPumpAmount = pumpStoppedEventId !== null;
-  const showFeedAmount = feedStoppedEventId !== null;
-  const showActions = !hasTimer && !showPumpAmount && !showFeedAmount;
-  const style = getEventStyle(type);
+  const disabled = !isReady || isBusy;
+  const label = isBusy ? LOG_LABEL[type].busy : LOG_LABEL[type].idle;
 
   return (
-    <div className="flex-1">
-      {/* Active timer */}
-      {hasTimer && (
-        <div className="rounded-lg border border-neutral-200 p-3">
-          <ActiveTimer
-            event={activeEvent}
-            onStop={handleTimerStop}
-            onCancel={onCancel}
-          />
-        </div>
-      )}
-
-      {/* Pump: amount input after timer stops */}
-      {showPumpAmount && (
-        <div className="rounded-lg border border-neutral-200 p-3">
-          <AmountInput
-            onConfirm={handlePumpAmountConfirm}
-            onCancel={handlePumpAmountCancel}
-          />
-        </div>
-      )}
-
-      {/* Bottle/formula: amount input after timer stops */}
-      {showFeedAmount && (
-        <div className="rounded-lg border border-neutral-200 p-3">
-          <AmountInput
-            confirmLabel="Save"
-            onConfirm={handleFeedAmountConfirm}
-            onCancel={handleFeedAmountCancel}
-          />
-        </div>
-      )}
-
-      {/* Normal state: bordered square button */}
-      {showActions && (
-        <>
-          <button
-            className={`flex w-full flex-col items-center gap-2 rounded-lg border px-3 py-4 text-center transition-[background-color,transform] active:scale-[0.97] ${style.buttonBg}`}
-            onClick={handleMainTap}
-            type="button"
-          >
-            <EventIcon type={type} />
-            <span className="text-[10px] font-medium uppercase tracking-[0.15em]">
-              {type}
-            </span>
-          </button>
-          <div className="relative mt-1.5">
-            <button
-              className="flex w-full items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-neutral-400 transition-colors hover:text-neutral-600"
-              onClick={handleVariantTap}
-              type="button"
-            >
-              <span>{selectedVariant.label}</span>
-              <svg
-                className={`h-3 w-3 text-neutral-400 transition-transform ${expanded ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </button>
-            {expanded && (
-              <VariantPopover
-                onClose={handleVariantTap}
-                onSelect={handleOptionSelect}
-                selected={selected}
-                variants={variants}
-              />
-            )}
-          </div>
-        </>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <button
+        className={`flex min-h-[112px] w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 px-2 shadow-sm transition-[background-color,box-shadow,transform] duration-150 active:scale-[0.97] active:shadow-none disabled:border-dashed disabled:border-neutral-300 disabled:bg-transparent disabled:shadow-none disabled:active:scale-100 ${LOG_BUTTON_TONE[type]}`}
+        disabled={disabled}
+        onClick={handleMainTap}
+        type="button"
+      >
+        <span
+          aria-hidden="true"
+          className={`[&_svg]:h-8 [&_svg]:w-8 ${disabled ? "opacity-50" : ""}`}
+        >
+          <EventIcon type={type} />
+        </span>
+        <span
+          className={`font-semibold text-base leading-tight ${disabled ? "text-neutral-400" : "text-neutral-800"}`}
+        >
+          {label}
+        </span>
+      </button>
+      <VariantButton
+        disabled={disabled}
+        isOpen={sheetOpen}
+        label={selectedVariant.label}
+        onOpen={openSheet}
+        type={type}
+      />
+      {sheetOpen && (
+        <LogSheet
+          lastAmountMl={lastAmount}
+          onClose={closeSheet}
+          onLog={handleSheetLog}
+          onSelect={setSelected}
+          selected={selected}
+          startAtAmount={sheetAtAmount}
+          type={type}
+        />
       )}
     </div>
   );
@@ -394,27 +155,47 @@ const ActionSection = ({
 
 /* ── SuggestionZone ────────────────────────────────────────── */
 
+const HOME_TIMER_TYPES = new Set(["feed", "sleep"]);
+
 export const SuggestionZone = () => {
   const {
+    baby,
     events,
     activeEvents,
+    completeAmount,
+    discardEvent,
     logEventDirect,
     stopEvent,
-    updateEventMeta,
-    deleteEvent,
-    loading,
   } = useBabyContext();
+  const { dismissed, dismiss } = useDismissedAmountPrompts();
 
-  const feedDefault = useMemo(() => inferFeedVariant(events), [events]);
-  const diaperDefault = useMemo(() => inferDiaperVariant(events), [events]);
-  const sleepDefault = useMemo(() => inferSleepLocation(events), [events]);
+  const feedDefault = useMemo(() => inferDefault("feed", events), [events]);
+  const diaperDefault = useMemo(() => inferDefault("diaper", events), [events]);
+  const sleepDefault = useMemo(() => inferDefault("sleep", events), [events]);
+  const lastFeedAmount = useMemo(() => lastAmountMl(events, "feed"), [events]);
 
-  // Find active (in-progress) events for each type
-  const activeFeed = activeEvents.find((e) => e.type === "feed") ?? null;
-  const activeSleep = activeEvents.find((e) => e.type === "sleep") ?? null;
+  const timers = useMemo(
+    () =>
+      activeEvents
+        .filter((e) => HOME_TIMER_TYPES.has(e.type))
+        .toSorted(
+          (a, b) =>
+            new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime()
+        ),
+    [activeEvents]
+  );
+  const isFeeding = timers.some((e) => e.type === "feed");
+  const isAsleep = timers.some((e) => e.type === "sleep");
+
+  const awaitingAmount = eventAwaitingAmount(
+    events,
+    "feed",
+    Date.now(),
+    dismissed
+  );
 
   const handleLog = useCallback(
-    (type: string, meta: Record<string, unknown>) => {
+    (type: HomeLogType, meta: Record<string, unknown>) => {
       triggerFeedback("logged");
       logEventDirect(type, meta);
     },
@@ -422,66 +203,94 @@ export const SuggestionZone = () => {
   );
 
   const handleStop = useCallback(
-    (id: string) => {
-      stopEvent(id);
+    (event: BabyEvent) => {
+      stopEvent(event.id);
     },
     [stopEvent]
   );
 
-  const handleUpdateMeta = useCallback(
-    (id: string, meta: Record<string, unknown>) => {
-      // Determine event type from active events
-      const event =
-        activeEvents.find((e) => e.id === id) ??
-        events.find((e) => e.id === id);
-      if (event) {
-        updateEventMeta(id, event.type, meta);
-      }
-    },
-    [activeEvents, events, updateEventMeta]
+  const handleDiscard = useCallback(
+    (event: BabyEvent) => discardEvent(event.id),
+    [discardEvent]
   );
 
-  const handleCancel = useCallback(
-    (id: string) => {
-      deleteEvent(id);
+  const handleAmountConfirm = useCallback(
+    (amountMl: number) => {
+      if (!awaitingAmount) return;
+      completeAmount(awaitingAmount.id, amountMl);
+      dismiss(awaitingAmount.id);
     },
-    [deleteEvent]
+    [awaitingAmount, completeAmount, dismiss]
   );
 
-  if (loading) return null;
+  const handleAmountSkip = useCallback(() => {
+    if (!awaitingAmount) return;
+    completeAmount(awaitingAmount.id, null);
+    dismiss(awaitingAmount.id);
+  }, [awaitingAmount, completeAmount, dismiss]);
+
+  const isReady = baby !== null;
 
   return (
-    <div className="flex gap-2 px-4 py-3">
-      <ActionSection
-        activeEvent={activeFeed}
-        defaultVariant={feedDefault}
-        onCancel={handleCancel}
-        onLog={handleLog}
-        onStop={handleStop}
-        onUpdateMeta={handleUpdateMeta}
-        type="feed"
-        variants={FEED_VARIANTS}
-      />
-      <ActionSection
-        activeEvent={activeSleep}
-        defaultVariant={sleepDefault}
-        onCancel={handleCancel}
-        onLog={handleLog}
-        onStop={handleStop}
-        onUpdateMeta={handleUpdateMeta}
-        type="sleep"
-        variants={SLEEP_VARIANTS}
-      />
-      <ActionSection
-        activeEvent={null}
-        defaultVariant={diaperDefault}
-        onCancel={handleCancel}
-        onLog={handleLog}
-        onStop={handleStop}
-        onUpdateMeta={handleUpdateMeta}
-        type="diaper"
-        variants={DIAPER_VARIANTS}
-      />
-    </div>
+    <section aria-labelledby="log-activity-heading">
+      <div className="px-4">
+        {timers.map((event, index) => (
+          <Reveal key={event.id}>
+            <ActiveTimer
+              event={event}
+              layout={index === 0 ? "card" : "compact"}
+              onDiscard={handleDiscard}
+              onStop={handleStop}
+            />
+          </Reveal>
+        ))}
+        {awaitingAmount && (
+          <Reveal key={`amount-${awaitingAmount.id}`}>
+            <div className="rounded-2xl border border-neutral-200 bg-surface-raised p-4">
+              <AmountInput
+                label={amountLabelFor(awaitingAmount)}
+                lastAmountMl={lastFeedAmount}
+                onCancel={handleAmountSkip}
+                onConfirm={handleAmountConfirm}
+              />
+            </div>
+          </Reveal>
+        )}
+      </div>
+
+      <h2
+        className="px-4 pt-2 text-center font-serif text-lg text-neutral-600 italic"
+        id="log-activity-heading"
+      >
+        Log Activity
+      </h2>
+
+      <div className="mt-3 grid grid-cols-3 gap-2 px-4">
+        <LogColumn
+          defaultVariant={feedDefault}
+          isBusy={isFeeding}
+          isReady={isReady}
+          lastAmount={lastFeedAmount}
+          onLog={handleLog}
+          type="feed"
+        />
+        <LogColumn
+          defaultVariant={sleepDefault}
+          isBusy={isAsleep}
+          isReady={isReady}
+          lastAmount={null}
+          onLog={handleLog}
+          type="sleep"
+        />
+        <LogColumn
+          defaultVariant={diaperDefault}
+          isBusy={false}
+          isReady={isReady}
+          lastAmount={null}
+          onLog={handleLog}
+          type="diaper"
+        />
+      </div>
+    </section>
   );
 };

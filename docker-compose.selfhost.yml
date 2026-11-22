@@ -45,8 +45,6 @@ services:
       - "3000:3000"
     environment:
       BUBSIE_WEB_API_URL: ${BUBSIE_WEB_API_URL:?set BUBSIE_WEB_API_URL to the public API URL, ending in /graphql}
-      BUBSIE_WEB_TAMBO_URL: ${BUBSIE_WEB_TAMBO_URL:-https://api.tambo.co}
-      BUBSIE_WEB_TAMBO_API_KEY: ${BUBSIE_WEB_TAMBO_API_KEY:-}
     depends_on:
       - api
 

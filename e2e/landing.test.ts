@@ -6,7 +6,7 @@ test.describe("Landing page", () => {
 
     await expect(page.getByText("Shared baby tracking")).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Log every feed in a single tap." })
+      page.getByRole("heading", { name: "Start every feed with one tap." })
     ).toBeVisible();
     await expect(
       page.getByRole("link", { name: "Start tracking" }).first()

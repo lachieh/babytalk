@@ -1,10 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 
-import { gqlRequest } from "@/lib/tambo/graphql";
-import { useTamboStatus } from "@/lib/tambo/provider";
+import { gqlRequest } from "@/lib/gql-request";
+import { isSoundEnabled, setSoundEnabled } from "@/lib/haptics";
 import { disableDeviceMode, enableDeviceMode } from "@/lib/use-device-mode";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
@@ -13,63 +13,7 @@ import { useVolumeUnit } from "@/lib/use-volume-unit";
 import { AddDeviceSheet } from "./add-device-sheet";
 import { EditBabySheet } from "./edit-baby-sheet";
 import { PasskeysSheet } from "./passkeys-sheet";
-
-const AI_STATUS_COPY: Record<
-  "not_configured" | "connecting" | "connected" | "error",
-  { dot: string; label: string; note: string }
-> = {
-  not_configured: {
-    dot: "bg-neutral-300",
-    label: "Not configured",
-    note: "No Tambo API key is set for this deploy, so the voice assistant is disabled.",
-  },
-  connecting: {
-    dot: "bg-neutral-400",
-    label: "Connecting",
-    note: "Waking up the assistant — this usually takes a second.",
-  },
-  connected: {
-    dot: "bg-success-500",
-    label: "Connected",
-    note: "The voice button in the bottom nav is ready to use.",
-  },
-  error: {
-    dot: "bg-danger-500",
-    label: "Can't connect",
-    note: "Couldn't verify your account with the assistant. Try signing out and back in.",
-  },
-};
-
-const AIFeaturesSection = () => {
-  const { status, speechRecognitionSupported } = useTamboStatus();
-  const copy = AI_STATUS_COPY[status];
-
-  return (
-    <section>
-      <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
-        AI Features
-      </h3>
-      <div className="rounded-xl bg-neutral-50 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className={`h-2 w-2 rounded-full ${copy.dot}`}
-          />
-          <span className="text-sm font-medium text-neutral-700">
-            {copy.label}
-          </span>
-        </div>
-        <p className="mt-1 text-xs text-neutral-500">{copy.note}</p>
-        {status === "connected" && !speechRecognitionSupported && (
-          <p className="mt-2 text-xs text-neutral-400">
-            Voice input isn&apos;t supported by this browser. Try Chrome, Edge,
-            or Safari for the mic button.
-          </p>
-        )}
-      </div>
-    </section>
-  );
-};
+import { Sheet } from "./sheet";
 
 const InstallAppSection = () => {
   const { canInstall, install, isInstalled } = useInstallPrompt();
@@ -187,7 +131,7 @@ const UserAvatar = ({
   const colors =
     variant === "success"
       ? "bg-success-100 text-success-600"
-      : "bg-primary-100 text-primary-600";
+      : "bg-primary-100 text-primary-ink";
   return (
     <div
       className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${colors}`}
@@ -214,6 +158,7 @@ const PartnerInvite = ({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const emailId = useId();
 
   const handleEmailChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value),
@@ -228,7 +173,7 @@ const PartnerInvite = ({
       await gqlRequest(INVITE_PARTNER, { email: email.trim() });
       setSent(true);
     } catch {
-      setErrorMsg("Failed to send invite");
+      setErrorMsg("Couldn't send the invite. Try again.");
     } finally {
       setSending(false);
     }
@@ -251,10 +196,19 @@ const PartnerInvite = ({
     <div className="space-y-3">
       {/* Email invite — primary */}
       <div className="rounded-xl bg-neutral-50 px-4 py-4">
-        <p className="text-sm font-medium text-neutral-700">Invite by email</p>
+        <label
+          className="text-sm font-medium text-neutral-700"
+          htmlFor={emailId}
+        >
+          Partner&apos;s email
+        </label>
         <div className="mt-2 flex gap-2">
           <input
-            className="min-h-[44px] flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-sm text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-100"
+            aria-describedby={errorMsg ? `${emailId}-error` : undefined}
+            autoComplete="email"
+            className="min-h-[44px] min-w-0 flex-1 rounded-lg border border-neutral-200 bg-surface px-3 py-2 text-base text-neutral-800 placeholder:text-neutral-400 transition-colors focus-visible:border-primary-300"
+            id={emailId}
+            inputMode="email"
             onChange={handleEmailChange}
             placeholder="partner@email.com"
             type="email"
@@ -266,10 +220,18 @@ const PartnerInvite = ({
             onClick={handleSendInvite}
             type="button"
           >
-            {sending ? "..." : "Send"}
+            {sending ? "Sending…" : "Send invite"}
           </button>
         </div>
-        {errorMsg && <p className="mt-2 text-xs text-danger-500">{errorMsg}</p>}
+        {errorMsg && (
+          <p
+            className="mt-2 text-sm text-danger-500"
+            id={`${emailId}-error`}
+            role="alert"
+          >
+            {errorMsg}
+          </p>
+        )}
       </div>
 
       {/* Share link fallback — secondary */}
@@ -277,7 +239,7 @@ const PartnerInvite = ({
         <p className="text-xs text-neutral-400">Or share this link</p>
         <div className="mt-1 flex items-center justify-center gap-2">
           <button
-            className="min-h-[36px] rounded-md px-3 py-1 text-xs font-medium text-primary-500 transition-colors hover:bg-primary-50"
+            className="min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium text-primary-ink transition-colors hover:bg-primary-50"
             onClick={onShare}
             type="button"
           >
@@ -342,7 +304,8 @@ const BabyCard = ({
         </p>
       </div>
       <svg
-        className="h-4 w-4 text-neutral-300"
+        aria-hidden="true"
+        className="h-4 w-4 text-neutral-400"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
@@ -353,6 +316,80 @@ const BabyCard = ({
     </button>
   );
 };
+
+type OnOff = "on" | "off";
+
+const VOLUME_OPTIONS = [
+  { label: "oz", value: "oz" },
+  { label: "ml", value: "ml" },
+] as const;
+
+const MEASUREMENT_OPTIONS = [
+  { label: "lb / in", value: "imperial" },
+  { label: "kg / cm", value: "metric" },
+] as const;
+
+const SOUND_OPTIONS = [
+  { label: "Off", value: "off" },
+  { label: "On", value: "on" },
+] as const;
+
+function PreferenceRow<T extends string>({
+  label,
+  hint,
+  options,
+  value,
+  onChange,
+}: {
+  hint?: string;
+  label: string;
+  onChange: (value: T) => void;
+  options: readonly { label: string; value: T }[];
+  value: T;
+}) {
+  const id = useId();
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value as T),
+    [onChange]
+  );
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-neutral-50 px-4 py-2">
+      <div className="min-w-0">
+        <p className="text-sm text-neutral-700" id={id}>
+          {label}
+        </p>
+        {hint && (
+          <p className="mt-0.5 text-xs text-neutral-500" id={`${id}-hint`}>
+            {hint}
+          </p>
+        )}
+      </div>
+      <div
+        aria-describedby={hint ? `${id}-hint` : undefined}
+        aria-labelledby={id}
+        className="flex shrink-0 rounded-xl border border-neutral-200 p-0.5"
+        role="radiogroup"
+      >
+        {options.map((option) => (
+          <label
+            className="flex min-h-[44px] min-w-[44px] cursor-pointer items-center justify-center whitespace-nowrap rounded-lg px-3 text-sm font-medium text-neutral-500 transition-colors has-checked:bg-primary-500 has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-ink"
+            key={option.value}
+          >
+            <input
+              checked={value === option.value}
+              className="sr-only focus-visible:outline-none"
+              name={id}
+              onChange={handleChange}
+              type="radio"
+              value={option.value}
+            />
+            {option.label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const ProfileContent = ({
   me,
@@ -382,9 +419,16 @@ const ProfileContent = ({
   onUseAsStation: () => void;
 }) => {
   const partner = members.find((m) => m.id !== me?.id);
-  const { unit, toggle: toggleUnit } = useVolumeUnit();
-  const { unit: measurementUnit, toggle: toggleMeasurementUnit } =
+  const { unit, setUnit: setVolumeUnit } = useVolumeUnit();
+  const { unit: measurementUnit, setUnit: setMeasurementUnit } =
     useMeasurementUnit();
+  const [sound, setSound] = useState<OnOff>(() =>
+    isSoundEnabled() ? "on" : "off"
+  );
+  const handleSoundChange = useCallback((value: OnOff) => {
+    setSoundEnabled(value === "on");
+    setSound(value);
+  }, []);
 
   return (
     <div className="space-y-5 px-5 pb-6">
@@ -457,9 +501,6 @@ const ProfileContent = ({
         )}
       </section>
 
-      {/* AI Features */}
-      <AIFeaturesSection />
-
       {/* Devices */}
       <section>
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
@@ -471,7 +512,7 @@ const ProfileContent = ({
             onClick={onAddDevice}
             type="button"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-ink">
               <svg
                 aria-hidden="true"
                 className="h-5 w-5"
@@ -493,12 +534,13 @@ const ProfileContent = ({
                 Add a station device
               </span>
               <span className="mt-0.5 block text-xs text-neutral-500">
-                Sign in another phone or tablet for one-tap logging.
+                A station is a shared screen for the nursery with one-tap
+                logging. Sign in a spare phone or tablet as one.
               </span>
             </span>
             <svg
               aria-hidden="true"
-              className="h-4 w-4 text-neutral-300"
+              className="h-4 w-4 text-neutral-400"
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
@@ -516,7 +558,7 @@ const ProfileContent = ({
             onClick={onUseAsStation}
             type="button"
           >
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-ink">
               <svg
                 aria-hidden="true"
                 className="h-5 w-5"
@@ -538,12 +580,13 @@ const ProfileContent = ({
                 Use this device as a station
               </span>
               <span className="mt-0.5 block text-xs text-neutral-500">
-                Switch to one-tap logging. The app will reopen here.
+                Turn this screen into the nursery&apos;s shared one-tap logger.
+                It will reopen as a station.
               </span>
             </span>
             <svg
               aria-hidden="true"
-              className="h-4 w-4 text-neutral-300"
+              className="h-4 w-4 text-neutral-400"
               fill="none"
               stroke="currentColor"
               strokeWidth={2}
@@ -569,7 +612,7 @@ const ProfileContent = ({
           onClick={onManagePasskeys}
           type="button"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-600">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-100 text-primary-ink">
             <svg
               aria-hidden="true"
               className="h-5 w-5"
@@ -600,7 +643,7 @@ const ProfileContent = ({
           </span>
           <svg
             aria-hidden="true"
-            className="h-4 w-4 text-neutral-300"
+            className="h-4 w-4 text-neutral-400"
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
@@ -623,45 +666,26 @@ const ProfileContent = ({
         <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-neutral-400">
           Preferences
         </h3>
-        <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
-          <span className="text-sm text-neutral-700">Volume unit</span>
-          <button
-            className="flex rounded-lg border border-neutral-200 text-xs"
-            onClick={toggleUnit}
-            type="button"
-          >
-            <span
-              className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${unit === "oz" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-            >
-              oz
-            </span>
-            <span
-              className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${unit === "ml" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-            >
-              ml
-            </span>
-          </button>
-        </div>
-        <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
-          <span className="text-sm text-neutral-700">
-            Height &amp; weight unit
-          </span>
-          <button
-            className="flex rounded-lg border border-neutral-200 text-xs"
-            onClick={toggleMeasurementUnit}
-            type="button"
-          >
-            <span
-              className={`min-h-[32px] rounded-l-lg px-3 py-1.5 font-medium transition-colors ${measurementUnit === "imperial" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-            >
-              lb / in
-            </span>
-            <span
-              className={`min-h-[32px] rounded-r-lg px-3 py-1.5 font-medium transition-colors ${measurementUnit === "metric" ? "bg-primary-500 text-white" : "text-neutral-400"}`}
-            >
-              kg / cm
-            </span>
-          </button>
+        <div className="space-y-2">
+          <PreferenceRow
+            label="Volume unit"
+            onChange={setVolumeUnit}
+            options={VOLUME_OPTIONS}
+            value={unit}
+          />
+          <PreferenceRow
+            label="Height & weight unit"
+            onChange={setMeasurementUnit}
+            options={MEASUREMENT_OPTIONS}
+            value={measurementUnit}
+          />
+          <PreferenceRow
+            hint="A soft chime when you log, on phones that can't vibrate."
+            label="Sounds"
+            onChange={handleSoundChange}
+            options={SOUND_OPTIONS}
+            value={sound}
+          />
         </div>
       </section>
 
@@ -803,94 +827,44 @@ export const ProfileSheet = ({
   const handlePasskeysOpen = useCallback(() => setPasskeysOpen(true), []);
   const handlePasskeysClose = useCallback(() => setPasskeysOpen(false), []);
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent | React.KeyboardEvent) => {
-      if (e.target === e.currentTarget) onClose();
-    },
-    [onClose]
-  );
-
-  const handleBackdropKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    },
-    [onClose]
-  );
-
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-neutral-900/30 transition-opacity"
-      onClick={handleBackdropClick}
-      onKeyDown={handleBackdropKeyDown}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Profile"
-    >
-      <div className="animate-slide-up flex max-h-[calc(100dvh-2rem)] w-full max-w-lg flex-col rounded-t-2xl bg-surface-raised shadow-lg safe-bottom">
-        {/* Handle bar */}
-        <div className="flex shrink-0 justify-center pt-3 pb-1">
-          <div className="h-1 w-10 rounded-full bg-neutral-200" />
-        </div>
+    <>
+      <Sheet
+        closeLabel="Close profile"
+        onClose={onClose}
+        open={open}
+        title="Profile"
+      >
+        {loading ? (
+          <div className="flex justify-center px-5 py-12">
+            <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+          </div>
+        ) : (
+          <ProfileContent
+            me={me}
+            household={household}
+            babies={babies}
+            members={members}
+            latestWeights={latestWeights}
+            copied={copied}
+            onAddDevice={handleAddDeviceOpen}
+            onEditBaby={handleEditBaby}
+            onManagePasskeys={handlePasskeysOpen}
+            onShare={handleShareLink}
+            onSignOut={handleSignOut}
+            onUseAsStation={handleUseAsStation}
+          />
+        )}
+      </Sheet>
 
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between px-5 pt-2 pb-4">
-          <h2 className="text-base font-semibold text-neutral-700">Profile</h2>
-          <button
-            className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-neutral-600"
-            onClick={onClose}
-            type="button"
-            aria-label="Close profile"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {loading ? (
-            <div className="flex justify-center px-5 py-12">
-              <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
-            </div>
-          ) : (
-            <ProfileContent
-              me={me}
-              household={household}
-              babies={babies}
-              members={members}
-              latestWeights={latestWeights}
-              copied={copied}
-              onAddDevice={handleAddDeviceOpen}
-              onEditBaby={handleEditBaby}
-              onManagePasskeys={handlePasskeysOpen}
-              onShare={handleShareLink}
-              onSignOut={handleSignOut}
-              onUseAsStation={handleUseAsStation}
-            />
-          )}
-        </div>
-
-        <EditBabySheet
-          baby={editingBaby}
-          onClose={handleEditBabyClose}
-          onSaved={handleEditBabySaved}
-          open={editBabyOpen}
-        />
-        <AddDeviceSheet onClose={handleAddDeviceClose} open={addDeviceOpen} />
-        <PasskeysSheet onClose={handlePasskeysClose} open={passkeysOpen} />
-      </div>
-    </div>
+      <EditBabySheet
+        baby={editingBaby}
+        onClose={handleEditBabyClose}
+        onSaved={handleEditBabySaved}
+        open={editBabyOpen}
+      />
+      <AddDeviceSheet onClose={handleAddDeviceClose} open={addDeviceOpen} />
+      <PasskeysSheet onClose={handlePasskeysClose} open={passkeysOpen} />
+    </>
   );
 };

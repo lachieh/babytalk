@@ -1,15 +1,15 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { EventEditSheet } from "@/components/event-edit-sheet";
 import type { BabyEvent } from "@/lib/baby-context";
 import { BabyContextProvider } from "@/lib/baby-context";
+import { gqlRequest, restoreSession } from "@/lib/gql-request";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { gqlRequest, restoreSession } from "@/lib/tambo/graphql";
-import { BabyTamboProvider } from "@/lib/tambo/provider";
 import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 import { HistorySheetContext } from "./_context";
@@ -18,46 +18,42 @@ const CHECK_HOUSEHOLD = `
   query { myHousehold { id } myBabies { id } }
 `;
 
-type SubTab = "averages" | "days" | "week" | "list";
+const SUB_TABS = [
+  { href: "/history/list", label: "List" },
+  { href: "/history/days", label: "Days" },
+  { href: "/history/week", label: "Week" },
+  { href: "/history/averages", label: "Averages" },
+] as const;
 
-function subTabFromPath(pathname: string): SubTab {
-  if (pathname.startsWith("/history/averages")) return "averages";
-  if (pathname.startsWith("/history/week")) return "week";
-  if (pathname.startsWith("/history/list")) return "list";
-  return "days";
-}
-
-const SubTabButton = ({
-  active,
-  label,
-  href,
-}: {
-  active: boolean;
-  label: string;
-  href: string;
-}) => {
-  const router = useRouter();
-  const onClick = useCallback(() => router.push(href), [router, href]);
-
+const HistoryTabs = () => {
+  const pathname = usePathname() ?? "";
   return (
-    <button
-      className={`flex-1 rounded-lg py-1.5 font-medium text-xs transition-colors ${
-        active
-          ? "bg-primary-500 text-white"
-          : "text-neutral-400 hover:text-neutral-600"
-      }`}
-      onClick={onClick}
-      type="button"
+    <nav
+      aria-label="History views"
+      className="mx-4 mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-neutral-100 p-1"
     >
-      {label}
-    </button>
+      {SUB_TABS.map(({ href, label }) => {
+        const active = pathname.startsWith(href);
+        return (
+          <Link
+            aria-current={active ? "page" : undefined}
+            className={`flex min-h-[44px] flex-1 items-center justify-center rounded-lg px-2 text-sm transition-colors ${
+              active
+                ? "bg-primary-500 font-semibold text-white shadow-sm"
+                : "font-medium text-neutral-400 hover:text-neutral-600"
+            }`}
+            href={href}
+            key={href}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 };
 
 const HistoryShell = ({ children }: { children: React.ReactNode }) => {
-  const pathname = usePathname() ?? "";
-  const sub = subTabFromPath(pathname);
-
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<BabyEvent | null>(null);
   const [isNew, setIsNew] = useState(false);
@@ -86,30 +82,9 @@ const HistoryShell = ({ children }: { children: React.ReactNode }) => {
     <AppShell>
       <HistorySheetContext.Provider value={ctxValue}>
         <div className="flex min-h-0 flex-1 flex-col py-2">
-          <div className="mx-4 mb-3 flex shrink-0 gap-1 overflow-x-auto rounded-xl bg-neutral-100 p-1">
-            <SubTabButton
-              active={sub === "averages"}
-              href="/history/averages"
-              label="Averages"
-            />
-            <SubTabButton
-              active={sub === "days"}
-              href="/history/days"
-              label="Days"
-            />
-            <SubTabButton
-              active={sub === "week"}
-              href="/history/week"
-              label="Week"
-            />
-            <SubTabButton
-              active={sub === "list"}
-              href="/history/list"
-              label="List"
-            />
-          </div>
+          <HistoryTabs />
 
-          {children}
+          <Suspense>{children}</Suspense>
         </div>
 
         <EventEditSheet
@@ -160,19 +135,23 @@ export default function HistoryLayout({
 
   if (!ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-surface">
+        <div
+          aria-hidden="true"
+          className="h-[calc(max(env(safe-area-inset-top),1.5rem)+4.5rem)] shrink-0"
+        />
+        <div className="py-2">
+          <HistoryTabs />
+        </div>
       </div>
     );
   }
 
   return (
     <RuntimeConfigProvider>
-      <BabyTamboProvider>
-        <BabyContextProvider>
-          <HistoryShell>{children}</HistoryShell>
-        </BabyContextProvider>
-      </BabyTamboProvider>
+      <BabyContextProvider>
+        <HistoryShell>{children}</HistoryShell>
+      </BabyContextProvider>
     </RuntimeConfigProvider>
   );
 }

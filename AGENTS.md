@@ -248,6 +248,7 @@ Next.js 15 with App Router, React 19, Tailwind CSS 4 (PostCSS plugin).
 | `src/app/page.tsx`             | Landing page with sign-in link              |
 | `src/app/auth/login/page.tsx`  | Magic link request form                     |
 | `src/app/auth/verify/page.tsx` | Token verification + redirect               |
+| `src/lib/gql-request.ts`       | fetch GraphQL helper + session refresh      |
 | `src/lib/graphql-client.ts`    | urql client factory                         |
 | `src/lib/urql-provider.tsx`    | Client-side urql provider with SSR exchange |
 | `next.config.ts`               | `output: "standalone"`, `transpilePackages` |
@@ -404,11 +405,9 @@ values.
 
 ### Web (`BUBSIE_WEB_*`)
 
-| Variable                   | Required | Purpose                     |
-| -------------------------- | -------- | --------------------------- |
-| `BUBSIE_WEB_API_URL`       | yes      | Public GraphQL endpoint     |
-| `BUBSIE_WEB_TAMBO_URL`     | yes      | Tambo API URL               |
-| `BUBSIE_WEB_TAMBO_API_KEY` | no       | Tambo API key (AI features) |
+| Variable             | Required | Purpose                 |
+| -------------------- | -------- | ----------------------- |
+| `BUBSIE_WEB_API_URL` | yes      | Public GraphQL endpoint |
 
 ### `packages/db/.env`
 

@@ -8,9 +8,6 @@ declare global {
     BUBSIE_WEB_API_URL: string;
     /** Source code link shown on the homepage (hidden if unset) */
     BUBSIE_WEB_SOURCE_URL: string;
-    BUBSIE_WEB_TAMBO_API_KEY: string;
-    /** Tambo API URL */
-    BUBSIE_WEB_TAMBO_URL: string;
   }
 
   interface ImportMetaEnv {
@@ -18,9 +15,6 @@ declare global {
     readonly BUBSIE_WEB_API_URL: string;
     /** Source code link shown on the homepage (hidden if unset) */
     readonly BUBSIE_WEB_SOURCE_URL: string;
-    readonly BUBSIE_WEB_TAMBO_API_KEY: string;
-    /** Tambo API URL */
-    readonly BUBSIE_WEB_TAMBO_URL: string;
   }
 
   interface ImportMeta {

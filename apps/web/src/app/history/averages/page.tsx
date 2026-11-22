@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
-import {
-  calculateMonthlyAverages,
-  monthStartsThrough,
-} from "@/lib/monthly-averages";
-import { gqlRequest } from "@/lib/tambo/graphql";
-import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
+import { gqlRequest } from "@/lib/gql-request";
+import { buildTypicalDay, historyStart } from "@/lib/typical-day-report";
+import type { TypicalDayReport } from "@/lib/typical-day-report";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
+
+import { TypicalDay } from "./typical-day";
 
 const EVENTS_IN_RANGE = `
   query EventsInRange(
@@ -31,58 +31,89 @@ const EVENTS_IN_RANGE = `
   }
 `;
 
-const formatAverage = (value: number, suffix = "") =>
-  `${value.toFixed(1)}${suffix}`;
+type LoadState =
+  | { status: "loading" }
+  | { status: "failed" }
+  | { babyId: string; report: TypicalDayReport; status: "ready" };
 
 export default function HistoryAveragesPage() {
   const { unit } = useVolumeUnit();
   const { baby, loading } = useBabyContext();
-  const [averages, setAverages] = useState<
-    ReturnType<typeof calculateMonthlyAverages>[]
-  >([]);
-  const [loadingAverages, setLoadingAverages] = useState(true);
+  const babyId = baby?.id;
+  const birthDate = baby?.birthDate;
+  const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => {
+    setState({ status: "loading" });
+    setAttempt((count) => count + 1);
+  }, []);
 
   useEffect(() => {
-    if (!baby) return;
+    if (!babyId) return;
     let cancelled = false;
 
-    const loadAverages = async () => {
-      setLoadingAverages(true);
-      const months = monthStartsThrough(12);
-      const results = await Promise.all(
-        months.map(async (month) => {
-          const nextMonth = new Date(month);
-          nextMonth.setMonth(nextMonth.getMonth() + 1);
-          try {
-            const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
-              EVENTS_IN_RANGE,
-              {
-                babyId: baby.id,
-                startedAfter: month.toISOString(),
-                startedBefore: nextMonth.toISOString(),
-              }
-            );
-            return calculateMonthlyAverages(data.eventsInRange, month);
-          } catch {
-            return calculateMonthlyAverages([], month);
+    const load = async () => {
+      const now = new Date();
+      try {
+        const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
+          EVENTS_IN_RANGE,
+          {
+            babyId,
+            startedAfter: historyStart(now, birthDate).toISOString(),
+            startedBefore: now.toISOString(),
           }
-        })
-      );
-      if (!cancelled) {
-        setAverages(results);
-        setLoadingAverages(false);
+        );
+        if (cancelled) return;
+        setState({
+          babyId,
+          report: buildTypicalDay(data.eventsInRange, { birthDate, now }),
+          status: "ready",
+        });
+      } catch {
+        if (!cancelled) setState({ status: "failed" });
       }
     };
 
-    loadAverages();
+    load();
     return () => {
       cancelled = true;
     };
-  }, [baby]);
+  }, [babyId, birthDate, attempt]);
 
-  if (loading || loadingAverages) {
+  if (state.status === "failed") {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4">
+        <div className="mx-auto w-full max-w-xl pt-2 pb-8">
+          <h2 className="font-serif text-neutral-800 text-xl leading-7">
+            Averages could not load
+          </h2>
+          <p className="mt-2 text-neutral-600 text-sm leading-6">
+            Nothing is lost. Check the connection and try again.
+          </p>
+          <button
+            className="mt-4 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-neutral-200 px-5 font-medium text-neutral-800 text-sm transition-colors hover:bg-neutral-300 focus-visible:outline-2 focus-visible:outline-primary-500 focus-visible:outline-offset-2"
+            onClick={retry}
+            type="button"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    loading ||
+    !baby ||
+    state.status === "loading" ||
+    state.babyId !== baby.id
+  ) {
+    return (
+      <div
+        aria-label="Loading averages"
+        className="flex min-h-0 flex-1 items-center justify-center"
+        role="status"
+      >
         <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
       </div>
     );
@@ -90,77 +121,7 @@ export default function HistoryAveragesPage() {
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-4">
-      <div className="mb-5">
-        <h1 className="font-serif text-2xl text-neutral-700">
-          Monthly Averages
-        </h1>
-        <p className="mt-1 text-neutral-400 text-sm">
-          Average activity per calendar day.
-        </p>
-      </div>
-
-      <div className="space-y-3 pb-6">
-        {averages.map((average) => (
-          <section
-            className="rounded-2xl border border-neutral-200 bg-surface-raised p-4"
-            key={average.month}
-          >
-            <h2 className="font-serif text-lg text-neutral-700">
-              {average.month}
-            </h2>
-            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6">
-              <div className="rounded-xl bg-feed-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatAverage(average.feedingsPerDay)}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  feeds / day
-                </p>
-              </div>
-              <div className="rounded-xl bg-feed-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatVolume(average.feedVolumeMlPerDay, unit)}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  volume / day
-                </p>
-              </div>
-              <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatAverage(average.daytimeSleepHoursPerDay, "h")}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  daytime sleep
-                </p>
-              </div>
-              <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatAverage(average.napsPerDay)}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  number of naps
-                </p>
-              </div>
-              <div className="rounded-xl bg-sleep-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatAverage(average.nighttimeSleepHoursPerDay, "h")}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  nighttime sleep
-                </p>
-              </div>
-              <div className="rounded-xl bg-diaper-50 px-2 py-3 text-center">
-                <p className="font-sans text-xl tabular-nums text-neutral-700">
-                  {formatAverage(average.diaperChangesPerDay)}
-                </p>
-                <p className="mt-1 text-[10px] text-neutral-500 uppercase tracking-wider">
-                  changes / day
-                </p>
-              </div>
-            </div>
-          </section>
-        ))}
-      </div>
+      <TypicalDay babyName={baby.name} report={state.report} unit={unit} />
     </div>
   );
 }

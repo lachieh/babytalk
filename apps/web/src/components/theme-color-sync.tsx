@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 
-const LIGHT_COLOR = "#ede8df";
-const DARK_COLOR = "#262420";
+const LIGHT_COLOR = "#f8f1e7";
+const DARK_COLOR = "#0e0b05";
 
 function setThemeColor(color: string): void {
   let meta = document.querySelector<HTMLMetaElement>(

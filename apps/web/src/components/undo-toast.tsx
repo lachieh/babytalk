@@ -1,13 +1,19 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-import { useBabyContext } from "@/lib/baby-context";
+import { floatingBottom } from "@/components/sync-status";
+import { UNDO_DURATION, useBabyContext } from "@/lib/baby-context";
 import { EventIcon } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
+import { buildToastCopy } from "@/lib/toast-copy";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 export const UndoToast = () => {
-  const { undoableAction, dismissUndo, deleteEvent } = useBabyContext();
+  const pathname = usePathname();
+  const { undoableAction, undo } = useBabyContext();
+  const { unit } = useVolumeUnit();
   const [progress, setProgress] = useState(100);
   const [visible, setVisible] = useState(false);
 
@@ -26,7 +32,7 @@ export const UndoToast = () => {
         clearInterval(interval);
         return;
       }
-      setProgress((remaining / 5000) * 100);
+      setProgress((remaining / UNDO_DURATION) * 100);
     }, 50);
 
     return () => clearInterval(interval);
@@ -35,36 +41,43 @@ export const UndoToast = () => {
   const handleUndo = useCallback(() => {
     if (!undoableAction) return;
     triggerFeedback("logged");
-    deleteEvent(undoableAction.eventId);
-    dismissUndo();
-  }, [undoableAction, deleteEvent, dismissUndo]);
+    undo();
+  }, [undoableAction, undo]);
 
-  if (!visible || !undoableAction) return null;
+  const action = visible ? undoableAction : null;
 
   return (
-    <div className="animate-fade-up fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-sm">
-      <div className="relative overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <EventIcon type={undoableAction.label} />
-          <span className="flex-1 text-sm font-medium capitalize text-neutral-700">
-            {undoableAction.label} logged
-          </span>
-          <button
-            className="min-h-[44px] rounded-lg px-4 py-2 text-sm font-semibold text-primary-500 transition-colors hover:bg-primary-50 active:scale-[0.96]"
-            onClick={handleUndo}
-            type="button"
-          >
-            Undo
-          </button>
+    <div
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-4 z-50 mx-auto max-w-sm"
+      role="status"
+      style={{ bottom: floatingBottom(pathname) }}
+    >
+      {action ? (
+        <div className="animate-fade-up pointer-events-auto relative overflow-hidden rounded-xl border border-neutral-200 bg-surface-raised shadow-lg">
+          <div className="flex min-h-14 items-center gap-3 py-1.5 pl-4 pr-1.5">
+            <EventIcon type={action.label} />
+            <span className="flex-1 font-medium text-neutral-700 text-sm">
+              {buildToastCopy(action.event, action.phase, unit)}
+            </span>
+            {action.canUndo ? (
+              <button
+                className="min-h-[44px] rounded-lg px-4 py-2 font-semibold text-primary-ink text-sm transition-colors hover:bg-primary-50 active:scale-[0.96] motion-reduce:active:scale-100"
+                onClick={handleUndo}
+                type="button"
+              >
+                Undo
+              </button>
+            ) : null}
+          </div>
+          <div className="absolute bottom-0 left-0 h-0.5 w-full bg-primary-100">
+            <div
+              className="h-full bg-primary-400 transition-[width] duration-100 ease-linear"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-        {/* Progress bar */}
-        <div className="absolute bottom-0 left-0 h-0.5 bg-primary-100 w-full">
-          <div
-            className="h-full bg-primary-400 transition-[width] duration-100 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-      </div>
+      ) : null}
     </div>
   );
 };

@@ -7,9 +7,6 @@ export interface Config {
   apiUrl: string;
   /** Source code link shown on the homepage (hidden if unset) */
   sourceUrl?: string;
-  tamboApiKey?: string;
-  /** Tambo API URL */
-  tamboUrl: string;
 }
 
-export type PublicConfig = Pick<Config, "apiUrl" | "sourceUrl" | "tamboUrl" | "tamboApiKey">;
+export type PublicConfig = Pick<Config, "apiUrl" | "sourceUrl">;
