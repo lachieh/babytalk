@@ -15,7 +15,12 @@ import {
 import { SyncStatus } from "@/components/sync-status";
 import { takesAmount } from "@/lib/daily-totals";
 import type { BabyEvent, EventChanges, EventsAction } from "@/lib/event-outbox";
-import { canRecord, deriveEvents, unsavedCounts } from "@/lib/event-outbox";
+import {
+  canRecord,
+  deriveEvents,
+  unsavedCounts,
+  unsavedTotal,
+} from "@/lib/event-outbox";
 import { currentUserId, gqlRequest } from "@/lib/gql-request";
 import { RECENT_EVENTS_LIMIT } from "@/lib/history-days";
 import {
@@ -23,6 +28,7 @@ import {
   dispatchOutbox as dispatch,
   getOutboxState,
   getServerOutboxState,
+  isOutboxDurable,
   setOutboxBaby,
   startOutbox,
   subscribeOutbox,
@@ -54,6 +60,8 @@ export interface SyncSummary {
   online: boolean;
   queued: number;
   failed: number;
+  /** Unsaved entries this device could not store: lost if the page closes. */
+  unstored: number;
 }
 
 interface BabyContextValue {
@@ -144,6 +152,11 @@ export const BabyContextProvider = ({
     subscribeOutbox,
     getOutboxState,
     getServerOutboxState
+  );
+  const durable = useSyncExternalStore(
+    subscribeOutbox,
+    isOutboxDurable,
+    isOutboxDurable
   );
   const [loading, setLoading] = useState(true);
   const [online, setOnline] = useState(true);
@@ -404,7 +417,8 @@ export const BabyContextProvider = ({
       const { _startedAt, _endedAt, ...cleanMeta } = meta;
       const event: BabyEvent = {
         endedAt: typeof _endedAt === "string" ? _endedAt : null,
-        id: `local-${crypto.randomUUID()}`,
+        // The event's id for good: the server stores the row under it.
+        id: crypto.randomUUID(),
         metadata: JSON.stringify(cleanMeta),
         startedAt:
           typeof _startedAt === "string"
@@ -430,8 +444,9 @@ export const BabyContextProvider = ({
 
   const sync = useMemo((): SyncSummary => {
     const counts = unsavedCounts(state);
-    return { ...counts, online };
-  }, [state, online]);
+    const unstored = durable ? 0 : unsavedTotal(state);
+    return { ...counts, online, unstored };
+  }, [state, online, durable]);
 
   const value = useMemo(
     (): BabyContextValue => ({

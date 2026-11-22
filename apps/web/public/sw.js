@@ -61,6 +61,11 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Mutations this worker is still handling: sent to the network and not yet
+// answered, or being queued. A page that died mid-request learns from the
+// report that its request may still land, and waits before sending the next.
+const handling = new Set();
+
 // Fetch strategies:
 // - GraphQL API: network-first, queue mutations when offline
 // - HTML navigations: network-only (never cache — see CACHE_NAME comment)
@@ -76,29 +81,35 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.includes("/graphql")) {
     event.respondWith(
       // Read the body before the network attempt consumes the request.
-      readQueueableBody(request).then((body) =>
-        fetch(request).catch(() => {
-          if (body) {
-            return queueMutation(body, request).then(
-              () =>
-                new Response(
-                  JSON.stringify({
-                    data: null,
-                    message: "Saved offline. Will sync when back online.",
-                    queued: true,
-                  }),
-                  {
-                    headers: { "Content-Type": "application/json" },
-                  }
-                )
+      readQueueableBody(request).then((body) => {
+        const id = body ? body.variables.clientMutationId : null;
+        if (id) handling.add(id);
+        return fetch(request)
+          .catch(() => {
+            if (body) {
+              return queueMutation(body, request).then(
+                () =>
+                  new Response(
+                    JSON.stringify({
+                      data: null,
+                      message: "Saved offline. Will sync when back online.",
+                      queued: true,
+                    }),
+                    {
+                      headers: { "Content-Type": "application/json" },
+                    }
+                  )
+              );
+            }
+            return new Response(
+              JSON.stringify({ errors: [{ message: "Offline" }] }),
+              { headers: { "Content-Type": "application/json" } }
             );
-          }
-          return new Response(
-            JSON.stringify({ errors: [{ message: "Offline" }] }),
-            { headers: { "Content-Type": "application/json" } }
-          );
-        })
-      )
+          })
+          .finally(() => {
+            if (id) handling.delete(id);
+          });
+      })
     );
     return;
   }
@@ -356,11 +367,15 @@ async function notifyClients(message) {
 // Tell every page what is still queued and what has finished, so a page that
 // was closed when a request finished can still learn its outcome.
 async function reportToClients() {
-  const report = await withStore(async () => ({
-    pending: (await readJson(QUEUE_PATH)).map((i) => i.id),
-    results: await readJson(RESULTS_PATH),
-    type: "QUEUE_REPORT",
-  }));
+  const report = await withStore(async () => {
+    const queue = await readJson(QUEUE_PATH);
+    return {
+      at: Date.now(),
+      pending: [...queue.map((i) => i.id), ...handling],
+      results: await readJson(RESULTS_PATH),
+      type: "QUEUE_REPORT",
+    };
+  });
   await notifyClients(report);
 }
 

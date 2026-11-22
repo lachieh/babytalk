@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 
 import { babies, db, events, households, users } from "@bubsie/db";
-import { and, eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { createYoga } from "graphql-yoga";
 
 /* Runs the real resolvers against Postgres. Needs DATABASE_URL pointing at a
@@ -12,10 +12,27 @@ import { createYoga } from "graphql-yoga";
 const databaseUrl = process.env.DATABASE_URL;
 
 const LOG_EVENT = `
-  mutation LogEvent($babyId: String!, $startedAt: String, $feedMeta: FeedMetadataInput) {
-    logEvent(babyId: $babyId, type: feed, startedAt: $startedAt, feedMeta: $feedMeta) {
-      id
+  mutation LogEvent(
+    $id: String
+    $babyId: String!
+    $startedAt: String
+    $feedMeta: FeedMetadataInput
+  ) {
+    logEvent(
+      id: $id
+      babyId: $babyId
+      type: feed
+      startedAt: $startedAt
+      feedMeta: $feedMeta
+    ) {
+      id endedAt metadata
     }
+  }
+`;
+
+const UPDATE_EVENT = `
+  mutation UpdateEvent($id: String!, $endedAt: String) {
+    updateEvent(id: $id, endedAt: $endedAt) { id }
   }
 `;
 
@@ -23,12 +40,48 @@ const DELETE_EVENT = `
   mutation DeleteEvent($id: String!) { deleteEvent(id: $id) }
 `;
 
+interface Family {
+  babyId: string;
+  householdId: string;
+  parent: string;
+  partner: string;
+}
+
 describe.skipIf(!databaseUrl)("event mutations", () => {
-  let post: (body: string) => Promise<Response> | Response;
-  const tag = randomUUID().slice(0, 8);
-  let babyId = "";
-  let userId = "";
-  let householdId = "";
+  let post: (body: string, user: string) => Promise<Response> | Response;
+  const families: Family[] = [];
+  let home: Family;
+  let neighbours: Family;
+
+  const createFamily = async (tag: string): Promise<Family> => {
+    const [household] = await db
+      .insert(households)
+      .values({ inviteCode: `test-${tag}` })
+      .returning();
+    const [parent, partner] = await db
+      .insert(users)
+      .values([
+        { email: `parent-${tag}@bubsie.test`, householdId: household.id },
+        { email: `partner-${tag}@bubsie.test`, householdId: household.id },
+      ])
+      .returning();
+    const [baby] = await db
+      .insert(babies)
+      .values({
+        birthDate: "2026-10-01",
+        householdId: household.id,
+        name: "Test",
+      })
+      .returning();
+    const family = {
+      babyId: baby.id,
+      householdId: household.id,
+      parent: parent.id,
+      partner: partner.id,
+    };
+    families.push(family);
+    return family;
+  };
 
   beforeAll(async () => {
     process.env.SKIP_MIGRATIONS = "1";
@@ -39,48 +92,44 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
     process.env.BUBSIE_API_SMTP_FROM ??= "test@bubsie.test";
     const { schema } = await import("./index");
     const yoga = createYoga({
-      context: () => ({ currentUser: { email: "", sub: userId }, db }),
+      context: ({ request }) => ({
+        currentUser: { email: "", sub: request.headers.get("x-user") ?? "" },
+        db,
+      }),
       maskedErrors: false,
       schema,
     });
-    post = (body) =>
+    post = (body, user) =>
       yoga.fetch("http://test/graphql", {
         body,
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-user": user },
         method: "POST",
       });
 
-    const [household] = await db
-      .insert(households)
-      .values({ inviteCode: `test-${tag}` })
-      .returning();
-    householdId = household.id;
-    const [user] = await db
-      .insert(users)
-      .values({ email: `events-${tag}@bubsie.test`, householdId })
-      .returning();
-    userId = user.id;
-    const [baby] = await db
-      .insert(babies)
-      .values({ birthDate: "2026-10-01", householdId, name: "Test" })
-      .returning();
-    babyId = baby.id;
+    const tag = randomUUID().slice(0, 8);
+    home = await createFamily(`${tag}-home`);
+    neighbours = await createFamily(`${tag}-next-door`);
   });
 
   afterAll(async () => {
-    if (!babyId) return;
-    await db.delete(events).where(eq(events.babyId, babyId));
-    await db.delete(babies).where(eq(babies.id, babyId));
-    await db.delete(users).where(eq(users.id, userId));
-    await db.delete(households).where(eq(households.id, householdId));
+    for (const family of families) {
+      await db.delete(events).where(eq(events.babyId, family.babyId));
+      await db.delete(babies).where(eq(babies.id, family.babyId));
+      await db
+        .delete(users)
+        .where(inArray(users.id, [family.parent, family.partner]));
+      await db.delete(households).where(eq(households.id, family.householdId));
+    }
   });
 
   const run = async (
     source: string,
-    variableValues: Record<string, unknown>
+    variables: Record<string, unknown>,
+    user = home.parent
   ) => {
     const response = await post(
-      JSON.stringify({ query: source, variables: variableValues })
+      JSON.stringify({ query: source, variables }),
+      user
     );
     const result = (await response.json()) as {
       data?: Record<string, unknown>;
@@ -90,50 +139,104 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
     return result.data as Record<string, unknown>;
   };
 
-  const logFeed = (startedAt: string, side = "left") =>
-    run(LOG_EVENT, {
-      babyId,
-      feedMeta: { method: "breast", side },
-      startedAt,
-    }).then((data) => (data.logEvent as { id: string }).id);
+  const logFeed = ({
+    babyId = home.babyId,
+    id,
+    side = "left",
+    user = home.parent,
+  }: {
+    babyId?: string;
+    id?: string;
+    side?: string;
+    user?: string;
+  }) =>
+    run(
+      LOG_EVENT,
+      {
+        babyId,
+        feedMeta: { method: "breast", side },
+        id,
+        startedAt: "2026-11-21T03:00:00.123Z",
+      },
+      user
+    ).then(
+      (data) =>
+        data.logEvent as {
+          endedAt: string | null;
+          id: string;
+          metadata: string;
+        }
+    );
 
-  const storedAt = async (startedAt: string) => {
-    const rows = await db
-      .select({ id: events.id })
-      .from(events)
-      .where(
-        and(
-          eq(events.babyId, babyId),
-          eq(events.startedAt, new Date(startedAt))
-        )
-      );
-    return rows.map((row) => row.id);
-  };
+  const rowsWithId = (id: string) =>
+    db.select().from(events).where(eq(events.id, id));
 
-  it("returns the stored event when the same create is sent again", async () => {
-    const startedAt = "2026-11-21T03:00:00.123Z";
-    const first = await logFeed(startedAt);
-    await expect(logFeed(startedAt)).resolves.toBe(first);
-    await expect(storedAt(startedAt)).resolves.toStrictEqual([first]);
+  it("stores a create under the id the client chose", async () => {
+    const id = randomUUID();
+    await expect(logFeed({ id })).resolves.toMatchObject({ id });
+    await expect(rowsWithId(id)).resolves.toHaveLength(1);
+  });
+
+  it("returns the stored event when a create is resent after someone edited it", async () => {
+    const id = randomUUID();
+    await logFeed({ id });
+    const endedAt = "2026-11-21T03:20:00.000Z";
+    await run(UPDATE_EVENT, { endedAt, id }, home.partner);
+
+    const resent = await logFeed({ id });
+    expect(resent.id).toBe(id);
+    expect(Date.parse(resent.endedAt ?? "")).toBe(Date.parse(endedAt));
+    await expect(rowsWithId(id)).resolves.toHaveLength(1);
   });
 
   it("stores one event when two copies of a create race", async () => {
-    const startedAt = "2026-11-21T05:00:00.456Z";
-    const [a, b] = await Promise.all([logFeed(startedAt), logFeed(startedAt)]);
-    expect(a).toBe(b);
-    await expect(storedAt(startedAt)).resolves.toStrictEqual([a]);
+    const id = randomUUID();
+    const copies = await Promise.all([logFeed({ id }), logFeed({ id })]);
+    expect(copies.map((c) => c.id)).toStrictEqual([id, id]);
+    await expect(rowsWithId(id)).resolves.toHaveLength(1);
   });
 
-  it("still stores a different log that starts at the same moment", async () => {
-    const startedAt = "2026-11-21T09:00:00.789Z";
-    const left = await logFeed(startedAt, "left");
-    const right = await logFeed(startedAt, "right");
-    expect(right).not.toBe(left);
-    await expect(storedAt(startedAt)).resolves.toHaveLength(2);
+  it("keeps two separate creates with the same details apart", async () => {
+    const first = await logFeed({ id: randomUUID() });
+    const second = await logFeed({ id: randomUUID() });
+    expect(second.id).not.toBe(first.id);
+  });
+
+  it("still stores a create from a client that sends no id", async () => {
+    const a = await logFeed({});
+    const b = await logFeed({});
+    expect(a.id).not.toBe(b.id);
+  });
+
+  it("refuses another household's id without revealing that event", async () => {
+    const id = randomUUID();
+    await logFeed({ id, side: "right" });
+    const attempt = logFeed({
+      babyId: neighbours.babyId,
+      id,
+      user: neighbours.parent,
+    });
+    await expect(attempt).rejects.toThrow("Event could not be saved");
+    const [row] = await rowsWithId(id);
+    expect(row.babyId).toBe(home.babyId);
+  });
+
+  it("refuses an id logged by someone else, even in the same household", async () => {
+    const id = randomUUID();
+    await logFeed({ id });
+    await expect(logFeed({ id, user: home.partner })).rejects.toThrow(
+      "Event could not be saved"
+    );
+  });
+
+  it("refuses an id that is not a UUID", async () => {
+    await expect(logFeed({ id: "local-123" })).rejects.toThrow(
+      "Event id must be a UUID"
+    );
   });
 
   it("treats deleting an event that is already gone as done", async () => {
-    const id = await logFeed("2026-11-21T07:00:00.000Z");
+    const { id } = await logFeed({ id: randomUUID() });
     await run(DELETE_EVENT, { id });
     await expect(run(DELETE_EVENT, { id })).resolves.toStrictEqual({
       deleteEvent: true,

@@ -18,7 +18,6 @@ import {
   PumpMetadataInput,
   SleepMetadataInput,
 } from "./household-types";
-import { logEventOnce } from "./log-event-once";
 
 const requireAuth = (ctx: Context): string => {
   if (!ctx.currentUser) throw new Error("Not authenticated");
@@ -211,6 +210,8 @@ builder.mutationField("updateBaby", (t) =>
 
 // --- Events ---
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const buildMetadata = (
   type: string,
   args: {
@@ -268,6 +269,9 @@ builder.mutationField("logEvent", (t) =>
       diaperMeta: t.arg({ required: false, type: DiaperMetadataInput }),
       endedAt: t.arg.string({ required: false }),
       feedMeta: t.arg({ required: false, type: FeedMetadataInput }),
+      // Chosen by the client so a resent create is the same event. Optional
+      // for clients (and queued requests) from before it existed.
+      id: t.arg.string({ required: false }),
       noteMeta: t.arg({ required: false, type: NoteMetadataInput }),
       pumpMeta: t.arg({ required: false, type: PumpMetadataInput }),
       sleepMeta: t.arg({ required: false, type: SleepMetadataInput }),
@@ -275,6 +279,9 @@ builder.mutationField("logEvent", (t) =>
       type: t.arg({ required: true, type: EventTypeEnum }),
     },
     resolve: async (_root, args, ctx) => {
+      if (args.id && !UUID.test(args.id)) {
+        throw new Error("Event id must be a UUID");
+      }
       const { householdId, userId } = await requireHousehold(ctx);
       await requireBabyAccess(ctx, args.babyId, householdId);
 
@@ -286,19 +293,33 @@ builder.mutationField("logEvent", (t) =>
         args.endedAt ? new Date(args.endedAt) : null
       );
 
-      const values = {
-        babyId: args.babyId,
-        endedAt,
-        loggedById: userId,
-        metadata,
-        startedAt,
-        type: args.type,
-      };
-      // A client-chosen start time makes a resent request recognisable; a
-      // request without one cannot be told apart from a new log.
-      if (args.startedAt) return logEventOnce(ctx.db, values);
-      const [event] = await ctx.db.insert(events).values(values).returning();
-      return event;
+      const [created] = await ctx.db
+        .insert(events)
+        .values({
+          babyId: args.babyId,
+          endedAt,
+          loggedById: userId,
+          metadata,
+          startedAt,
+          type: args.type,
+          ...(args.id ? { id: args.id } : {}),
+        })
+        .onConflictDoNothing({ target: events.id })
+        .returning();
+      if (created) return created;
+
+      // The id is taken: a resend of this person's own create returns the
+      // event as it is now, edits and all. Anything else is refused without
+      // saying whose event it is or what it holds.
+      const [existing] = await ctx.db
+        .select()
+        .from(events)
+        .where(eq(events.id, args.id as string))
+        .limit(1);
+      const ownResend =
+        existing?.babyId === args.babyId && existing.loggedById === userId;
+      if (!ownResend) throw new Error("Event could not be saved");
+      return existing;
     },
     type: BabyEventType,
   })

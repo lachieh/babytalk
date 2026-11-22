@@ -9,11 +9,15 @@
  * provider in the tab shares it, and every change is written to localStorage
  * before `dispatchOutbox` returns, so a reload or a closed app loses nothing.
  *
+ * If a write fails (storage full, blocked, private mode) the outbox keeps
+ * working for this page and `isOutboxDurable()` turns false, so the sync
+ * status can tell the person their unsaved entries are not stored.
+ *
  * Each tab writes only its own key (`bubsie_outbox:<user>:<tab>`) and holds a
  * Web Lock named after it while open. A tab adopts another tab's key only when
- * that lock is free, i.e. the other tab has gone, so two live tabs never send
- * the same entry. Requests are idempotent on the server, so the rare resend
- * after an unknown outcome cannot duplicate a record.
+ * that lock is free, i.e. the other tab has gone, and only removes it once
+ * its own copy is safely written. Without Web Locks a tab cannot tell a
+ * closed tab from an open one, so it adopts nothing.
  */
 
 import type {
@@ -22,24 +26,21 @@ import type {
   EventsState,
   OutboxEntry,
   PersistedOutbox,
-} from "@/lib/event-outbox";
+} from "./event-outbox";
 import {
-  createPayload,
   eventsReducer,
   hasRequest,
   initialEventsState,
   isEmptyOutbox,
-  opToSend,
   toPersisted,
-} from "@/lib/event-outbox";
-import { GraphQLResponseError, gqlRequest } from "@/lib/gql-request";
-import type { WorkerResult } from "@/lib/register-sw";
+} from "./event-outbox";
+import { GraphQLResponseError, gqlRequest } from "./gql-request";
+import type { WorkerResult } from "./register-sw";
 import {
   ackWorkerResults,
-  hasWorkerController,
   onSyncMessage,
   requestWorkerSync,
-} from "@/lib/register-sw";
+} from "./register-sw";
 
 const KEY_PREFIX = "bubsie_outbox:";
 const TAB_ID_KEY = "bubsie_outbox_tab";
@@ -48,6 +49,7 @@ const tabLock = (tab: string) => `bubsie-outbox-tab:${tab}`;
 
 const LOG_EVENT = `
   mutation LogEvent(
+    $id: String
     $babyId: String!
     $type: EventType!
     $startedAt: String
@@ -59,6 +61,7 @@ const LOG_EVENT = `
     $pumpMeta: PumpMetadataInput
   ) {
     logEvent(
+      id: $id
       babyId: $babyId
       type: $type
       startedAt: $startedAt
@@ -116,21 +119,21 @@ const sendEntry = async (
   requestId: string,
   forBaby: string | null
 ): Promise<SendResult> => {
+  const { event, id, op, patch } = entry;
   try {
-    const op = opToSend(entry);
     if (op === "delete") {
       const data = await gqlRequest<{ deleteEvent: boolean } | null>(
         DELETE_EVENT,
-        { clientMutationId: requestId, id: entry.serverId }
+        { clientMutationId: requestId, id }
       );
       return data ? { event: null, kind: "ok" } : { kind: "queued" };
     }
 
     if (op === "create") {
-      const event = createPayload(entry);
       const data = await gqlRequest<{ logEvent: BabyEvent } | null>(LOG_EVENT, {
         babyId: forBaby,
         clientMutationId: requestId,
+        id,
         startedAt: event.startedAt,
         type: event.type,
         ...(event.endedAt ? { endedAt: event.endedAt } : {}),
@@ -139,12 +142,11 @@ const sendEntry = async (
       return data ? { event: data.logEvent, kind: "ok" } : { kind: "queued" };
     }
 
-    const { patch, event } = entry;
     const data = await gqlRequest<{ updateEvent: BabyEvent } | null>(
       UPDATE_EVENT,
       {
         clientMutationId: requestId,
-        id: entry.serverId,
+        id,
         ...(patch.meta ? { [`${event.type}Meta`]: patch.meta } : {}),
         ...(patch.startedAt ? { startedAt: patch.startedAt } : {}),
         ...(patch.endedAt === undefined ? {} : { endedAt: patch.endedAt }),
@@ -167,6 +169,8 @@ let sendingAllowed = false;
 let releaseTab: (() => void) | null = null;
 let flushScheduled = false;
 let stopListening: (() => void) | null = null;
+/** Whether the last write of this tab's outbox reached storage. */
+let durable = true;
 
 const storageKey = (user = owner, tab = tabId) =>
   user && tab ? `${KEY_PREFIX}${user}:${tab}` : null;
@@ -179,8 +183,8 @@ const readPersisted = (key: string): PersistedOutbox | null => {
     const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
     if (
       !isRecord(parsed) ||
+      parsed.v !== 2 ||
       !isRecord(parsed.outbox) ||
-      !isRecord(parsed.aliases) ||
       !Array.isArray(parsed.hidden)
     ) {
       return null;
@@ -191,16 +195,21 @@ const readPersisted = (key: string): PersistedOutbox | null => {
   }
 };
 
-const write = () => {
+/** Write this tab's outbox. Returns whether it reached storage. */
+const write = (): boolean => {
   const key = storageKey();
-  if (!key) return;
+  if (!key) return true;
   const persisted = toPersisted(state);
   try {
     if (isEmptyOutbox(persisted)) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(persisted));
+    durable = true;
   } catch {
-    /* storage full or blocked: the outbox still works for this page */
+    // Storage full or blocked. The outbox still works for this page, and
+    // the sync status warns that unsaved entries are not stored.
+    durable = false;
   }
+  return durable;
 };
 
 const notify = () => {
@@ -211,17 +220,15 @@ export const dispatchOutbox = (action: EventsAction) => {
   const before = state;
   state = eventsReducer(state, action);
   if (state === before) return;
-  if (
-    state.outbox !== before.outbox ||
-    state.hidden !== before.hidden ||
-    state.aliases !== before.aliases
-  ) {
+  if (state.outbox !== before.outbox || state.hidden !== before.hidden) {
     write();
   }
   notify();
 };
 
 export const getOutboxState = () => state;
+
+export const isOutboxDurable = () => durable;
 
 export const getServerOutboxState = () => initialEventsState;
 
@@ -234,24 +241,24 @@ export const subscribeOutbox = (listener: () => void) => {
 
 /* ── Sending ───────────────────────────────────────────────── */
 
-const send = async (key: string, requestId: string, forBaby: string | null) => {
-  const entry = state.outbox[key];
+const send = async (id: string, requestId: string, forBaby: string | null) => {
+  const entry = state.outbox[id];
   if (!entry) return;
   const result = await sendEntry(entry, requestId, forBaby);
   if (result.kind === "ok") {
     dispatchOutbox({
       at: Date.now(),
-      key,
+      id,
       requestId,
       result: result.event,
       type: "send-ok",
     });
   } else if (result.kind === "queued") {
-    dispatchOutbox({ key, requestId, type: "send-queued" });
+    dispatchOutbox({ at: Date.now(), id, requestId, type: "send-queued" });
   } else {
     dispatchOutbox({
       definite: result.definite,
-      key,
+      id,
       requestId,
       type: "send-failed",
     });
@@ -266,10 +273,10 @@ const flush = () => {
   for (const entry of Object.values(state.outbox)) {
     if (entry.status !== "ready") continue;
     // A create waits until the provider knows which baby it is for.
-    if (opToSend(entry) === "create" && !forBaby) continue;
+    if (entry.op === "create" && !forBaby) continue;
     const requestId = crypto.randomUUID();
-    dispatchOutbox({ key: entry.key, requestId, type: "send-start" });
-    void send(entry.key, requestId, forBaby);
+    dispatchOutbox({ id: entry.id, requestId, type: "send-start" });
+    void send(entry.id, requestId, forBaby);
   }
 };
 
@@ -314,7 +321,11 @@ const listenToWorker = () =>
     const mine = results.filter((r) => hasRequest(state, r.id));
     for (const result of mine) applyResult(result);
     if (message.type === "QUEUE_REPORT") {
-      dispatchOutbox({ pending: message.pending, type: "worker-report" });
+      dispatchOutbox({
+        at: message.at,
+        pending: message.pending,
+        type: "worker-report",
+      });
     }
     ackWorkerResults(mine.map((r) => r.id));
   });
@@ -346,21 +357,37 @@ const newTabId = (): string => {
 const ownerKeys = (user: string) => {
   const prefix = `${KEY_PREFIX}${user}:`;
   const keys: { key: string; tab: string }[] = [];
-  for (let i = 0; i < localStorage.length; i += 1) {
-    const key = localStorage.key(i);
-    if (key?.startsWith(prefix))
-      keys.push({ key, tab: key.slice(prefix.length) });
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key?.startsWith(prefix)) {
+        keys.push({ key, tab: key.slice(prefix.length) });
+      }
+    }
+  } catch {
+    /* storage unavailable: nothing to adopt */
   }
   return keys;
 };
 
+/** Move a closed tab's entries into this tab's outbox. The closed tab's copy
+ * is removed only once ours is safely written; otherwise this tab leaves it
+ * where it is, durable, for a later attempt. */
 const adoptKey = (key: string) => {
   const persisted = readPersisted(key);
-  if (persisted) dispatchOutbox({ persisted, type: "adopt" });
+  if (!persisted) return;
+  const before = state;
+  state = eventsReducer(state, { persisted, type: "adopt" });
+  if (!write()) {
+    state = before;
+    notify();
+    return;
+  }
+  notify();
   try {
     localStorage.removeItem(key);
   } catch {
-    /* adopted; a leftover copy is resent idempotently at worst */
+    /* a leftover copy is adopted again later; resends are idempotent */
   }
 };
 
@@ -393,13 +420,9 @@ const holdTabLock = (locks: LockManager, tab: string) =>
 
 const claimTab = async (user: string) => {
   const { locks } = navigator;
-  if (!locks) {
-    // No way to tell a closed tab from an open one: assume a single tab.
-    for (const { key, tab } of ownerKeys(user)) {
-      if (tab !== tabId) adoptKey(key);
-    }
-    return;
-  }
+  // Without Web Locks a closed tab cannot be told from an open one, and
+  // adopting an open tab's outbox would commit its pending discards.
+  if (!locks) return;
   if (!(await holdTabLock(locks, tabId as string))) {
     // Another live tab owns this outbox. Start a fresh one of our own.
     tabId = newTabId();
@@ -423,6 +446,7 @@ export const startOutbox = (user: string | null) => {
   const key = storageKey();
   const own = key ? readPersisted(key) : null;
   if (own) state = eventsReducer(state, { persisted: own, type: "adopt" });
+  durable = true;
   write();
   notify();
   stopListening ??= listenToWorker();
@@ -434,12 +458,15 @@ export const startOutbox = (user: string | null) => {
     }
     if (owner !== user) return;
     sendingAllowed = true;
-    if (!hasWorkerController()) {
-      // Nothing can be holding requests for us: resend anything queued.
-      dispatchOutbox({ pending: [], type: "worker-report" });
-    }
     scheduleFlush();
-    void requestWorkerSync();
+    if (!(await requestWorkerSync())) {
+      // No worker at all, so nothing can be holding a request for us.
+      dispatchOutbox({
+        at: Number.POSITIVE_INFINITY,
+        pending: [],
+        type: "worker-report",
+      });
+    }
   })();
 };
 

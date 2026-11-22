@@ -12,7 +12,13 @@ export type WorkerResult =
 
 export type SyncMessage =
   | WorkerResult
-  | { type: "QUEUE_REPORT"; pending: string[]; results: WorkerResult[] };
+  | {
+      type: "QUEUE_REPORT";
+      /** When the worker took the snapshot. */
+      at: number;
+      pending: string[];
+      results: WorkerResult[];
+    };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -50,7 +56,9 @@ export const parseSyncMessage = (data: unknown): SyncMessage | null => {
     const results = Array.isArray(data.results)
       ? data.results.flatMap((r) => parseResult(r) ?? [])
       : [];
-    return { pending, results, type: "QUEUE_REPORT" };
+    // A report with no time cannot be ordered against this page's sends.
+    const at = typeof data.at === "number" ? data.at : 0;
+    return { at, pending, results, type: "QUEUE_REPORT" };
   }
   return parseResult(data);
 };
@@ -74,28 +82,43 @@ export const onSyncMessage = (
   return () => navigator.serviceWorker.removeEventListener("message", listener);
 };
 
-/** Whether a worker is holding this page's queued requests. */
-export const hasWorkerController = () =>
-  workerAvailable() && navigator.serviceWorker.controller !== null;
+/** The worker that holds queued requests, controlling this page or not (a
+ * hard reload bypasses it, but it still holds what it queued). */
+const activeWorker = async (): Promise<ServiceWorker | null> => {
+  if (!workerAvailable()) return null;
+  if (navigator.serviceWorker.controller) {
+    return navigator.serviceWorker.controller;
+  }
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    return registration?.active ?? null;
+  } catch {
+    return null;
+  }
+};
 
-const postToWorker = (message: unknown) => {
+const postToWorker = async (message: unknown): Promise<boolean> => {
+  const worker = await activeWorker();
   // eslint-disable-next-line unicorn/require-post-message-target-origin -- ServiceWorker.postMessage has no targetOrigin param
-  navigator.serviceWorker.controller?.postMessage(message);
+  worker?.postMessage(message);
+  return worker !== null;
 };
 
 /** Ask the worker to replay its queue with a fresh session, then report what
  * it still holds and what it has finished. Access tokens last 15 minutes, so
- * the token captured when a request was queued is often expired by now. */
-export const requestWorkerSync = async () => {
-  if (!hasWorkerController()) return;
+ * the token captured when a request was queued is often expired by now.
+ * Resolves `false` when there is no worker to ask. */
+export const requestWorkerSync = async (): Promise<boolean> => {
+  if (!(await activeWorker())) return false;
   if (navigator.onLine) await restoreSession();
-  postToWorker({ authorization: currentAuthorization(), type: "SYNC_NOW" });
+  return postToWorker({
+    authorization: currentAuthorization(),
+    type: "SYNC_NOW",
+  });
 };
 
 export const ackWorkerResults = (ids: string[]) => {
-  if (ids.length > 0 && hasWorkerController()) {
-    postToWorker({ ids, type: "ACK_RESULTS" });
-  }
+  if (ids.length > 0) void postToWorker({ ids, type: "ACK_RESULTS" });
 };
 
 type SyncRegistration = ServiceWorkerRegistration & {

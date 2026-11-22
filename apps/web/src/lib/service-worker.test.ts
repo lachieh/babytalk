@@ -33,6 +33,7 @@ const createWorker = (source = WORKER_SOURCE) => {
   const pages: unknown[][] = [];
   const sent: Sent[] = [];
   let reply: Reply | null = null;
+  let pageNetwork: (() => Promise<Response>) | null = null;
 
   const caches = {
     delete: async (name: string) => {
@@ -65,7 +66,10 @@ const createWorker = (source = WORKER_SOURCE) => {
   };
 
   const fetch = async (input: string | Request, init?: RequestInit) => {
-    if (input instanceof Request) throw new TypeError("offline");
+    if (input instanceof Request) {
+      if (pageNetwork) return await pageNetwork();
+      throw new TypeError("offline");
+    }
     const headers = new Headers(init?.headers);
     const request: Sent = {
       authorization: headers.get("Authorization"),
@@ -153,6 +157,10 @@ const createWorker = (source = WORKER_SOURCE) => {
     sent,
     setReply: (next: Reply | null) => {
       reply = next;
+    },
+    /** How the network answers a page's own request. */
+    setPageNetwork: (next: (() => Promise<Response>) | null) => {
+      pageNetwork = next;
     },
     activate: async () => {
       const pending: Promise<unknown>[] = [];
@@ -304,5 +312,24 @@ describe("service worker queue", () => {
         { id: "older", type: "MUTATION_SYNCED" },
       ],
     });
+  });
+
+  it("reports a page's request as pending while it is still on its way", async () => {
+    const worker = createWorker();
+    const page = worker.openPage();
+    const network = Promise.withResolvers<Response>();
+    worker.setPageNetwork(() => network.promise);
+    const answer = worker.enqueue("in-flight");
+    await tick();
+    await worker.message({ type: "SYNC_NOW" });
+    const report = page.at(-1) as { at: number; pending: string[] };
+    expect([...report.pending]).toStrictEqual(["in-flight"]);
+    expect(report.at).toBeGreaterThan(0);
+
+    network.reject(new TypeError("offline"));
+    await answer;
+    await worker.message({ type: "SYNC_NOW" });
+    expect(page.at(-1)).toMatchObject({ pending: ["in-flight"] });
+    expect(worker.queueIds()).toStrictEqual(["in-flight"]);
   });
 });

@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 
 import { useBabyContext } from "@/lib/baby-context";
+import { syncMessage } from "@/lib/sync-copy";
 
 const NAV_CLEARANCE =
   "calc(max(1.5rem, env(safe-area-inset-bottom)) + 5.375rem)";
@@ -21,9 +22,6 @@ export const floatingBottom = (pathname: string, lift?: string): string => {
 
 const TOAST_LIFT = "4.5rem";
 
-const plural = (count: number) =>
-  `${count} ${count === 1 ? "entry" : "entries"}`;
-
 export const SyncStatus = () => {
   const pathname = usePathname();
   const { sync, retryFailed, undoableAction } = useBabyContext();
@@ -31,17 +29,9 @@ export const SyncStatus = () => {
     pathname.startsWith("/dashboard/setup") ||
     pathname.startsWith("/dashboard/join");
 
-  let message: string | null = null;
-  let canRetry = false;
-  if (!sync.online) {
-    message = "Offline, will save when you're back";
-  } else if (sync.failed > 0) {
-    message = `Couldn't save ${plural(sync.failed)}`;
-    canRetry = true;
-  } else if (sync.queued > 0) {
-    message = `Saving ${plural(sync.queued)}`;
-  }
-  if (onboarding) message = null;
+  const status = onboarding ? null : syncMessage(sync);
+  const message = status?.text ?? null;
+  const canRetry = status?.canRetry ?? false;
 
   return (
     <div
