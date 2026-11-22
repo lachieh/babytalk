@@ -327,23 +327,32 @@ describe("outbox store", () => {
       await expect(store.sendBeforeSignOut(20)).resolves.toBe(2);
     });
 
-    it("forgets this person's unsent changes on this device, and only theirs", async () => {
+    it("removes only this tab's unsent changes: the ones it counted", async () => {
       const local = fakeStorage();
-      local.items.set(keyFor("dead"), persisted({ e9: pendingEntry("e9") }));
-      local.items.set(
-        "bubsie_outbox:someone-else:tab",
-        persisted({ e8: pendingEntry("e8") })
+      const locks = fakeLocks();
+      const other = await openTab({ local, locks, tab: "tab-b" });
+      await settle();
+      other.setOutboxBaby("b");
+      other.dispatchOutbox({ event: pendingEntry("e9").event, type: "create" });
+      await settle();
+      local.items.set(keyFor("closed"), persisted({ e8: pendingEntry("e8") }));
+      locks.held.add(`bubsie-outbox:${USER}:closed`);
+      const kept = [keyFor("tab-b"), keyFor("closed")].map((key) =>
+        local.items.get(key)
       );
-      const store = await loadStore({
-        local,
-        locks: fakeLocks(["bubsie-outbox:parent-a:dead"]),
-      });
-      create(store);
-      store.forgetOutbox();
-      expect([...local.items.keys()]).toStrictEqual([
-        "bubsie_outbox:someone-else:tab",
-      ]);
-      expect(store.getOutboxState().outbox).toStrictEqual({});
+
+      const self = await openTab({ local, locks, tab: "tab-a" });
+      await settle();
+      self.setOutboxBaby("b");
+      self.dispatchOutbox({ event: pendingEntry("e1").event, type: "create" });
+      expect(local.items.has(keyFor("tab-a"))).toBeTruthy();
+      self.forgetOutbox();
+
+      expect(local.items.has(keyFor("tab-a"))).toBeFalsy();
+      expect(
+        [keyFor("tab-b"), keyFor("closed")].map((key) => local.items.get(key))
+      ).toStrictEqual(kept);
+      expect(self.getOutboxState().outbox).toStrictEqual({});
     });
   });
 });

@@ -287,6 +287,15 @@ describe.skipIf(!databaseUrl)("event mutations", () => {
       expect(errors[0]?.extensions?.code).toBe("GRAPHQL_VALIDATION_FAILED");
     });
 
+    it("refuses a refresh token it does not recognise, explicitly", async () => {
+      const { errors } = await errorsOf(
+        "mutation($t: String!) { refreshToken(refreshToken: $t) { token } }",
+        { t: "not-a-real-refresh-token" },
+        null
+      );
+      expect(errors[0]?.extensions?.code).toBe("REFUSED");
+    });
+
     it("hides an unexpected error's details and does not call it a refusal", async () => {
       const { errors } = await errorsOf(DELETE_EVENT, { id: "not-a-uuid" });
       expect(errors[0]?.message).toBe("Unexpected error.");

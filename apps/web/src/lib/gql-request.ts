@@ -21,7 +21,29 @@ const REFRESH_TOKEN_MUTATION = `
   }
 `;
 
-let refreshPromise: Promise<boolean> | null = null;
+/** What a refresh attempt established. Only "rejected" (the server refused
+ * the refresh token) ends the session; "unavailable" (no network, server
+ * error) keeps it, and the request is retried later. "signed-out" means the
+ * person signed out while this was in flight: its result is void. */
+type RefreshOutcome = "refreshed" | "rejected" | "unavailable" | "signed-out";
+
+let refreshPromise: Promise<RefreshOutcome> | null = null;
+
+/* Signing out (here, or in another tab) records when it happened. Anything
+ * started before that, a refresh or a request's retry, is void afterwards. */
+const SIGNED_OUT_AT_KEY = "bubsie_signed_out_at";
+
+const signedOutSince = (startedAt: number) => {
+  const at = Number(localStorage.getItem(SIGNED_OUT_AT_KEY) ?? 0);
+  return at >= startedAt;
+};
+
+/** End the session on this device: every sign-out path goes through here. */
+export const signOut = () => {
+  localStorage.removeItem("bubsie_token");
+  localStorage.removeItem("bubsie_refresh_token");
+  localStorage.setItem(SIGNED_OUT_AT_KEY, String(Date.now()));
+};
 
 /** The server understood the request and refused it, so sending it again
  * will not help. Decided by the error's code (see apps/api/src/schema/
@@ -83,49 +105,99 @@ const isAuthFailure = (status: number, errors: GraphQLErrorShape[]) =>
       e.message === "Not authenticated"
   );
 
-const refreshSession = (apiUrl: string): Promise<boolean> => {
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return Promise.resolve(false);
-  if (!refreshPromise) {
-    refreshPromise = (async () => {
-      try {
-        const res = await fetch(apiUrl, {
-          body: JSON.stringify({
-            query: REFRESH_TOKEN_MUTATION,
-            variables: { refreshToken },
-          }),
-          headers: { "Content-Type": "application/json" },
-          method: "POST",
-        });
-        const json = await res.json();
-        const next = json.data?.refreshToken;
-        if (!res.ok || !next?.token || !next?.refreshToken) return false;
-        localStorage.setItem("bubsie_token", next.token);
-        localStorage.setItem("bubsie_refresh_token", next.refreshToken);
-        return true;
-      } catch {
-        return false;
-      } finally {
-        refreshPromise = null;
-      }
-    })();
+/** One refresh at a time across tabs: two tabs rotating the same refresh
+ * token at once would see the loser's rotation rejected. */
+const withRefreshLock = <T>(task: () => Promise<T>): Promise<T> =>
+  typeof navigator !== "undefined" && navigator.locks
+    ? (navigator.locks.request(
+        "bubsie-session-refresh",
+        task
+      ) as unknown as Promise<T>)
+    : task();
+
+const tryRefresh = async (
+  apiUrl: string,
+  used: string,
+  startedAt: number
+): Promise<RefreshOutcome> => {
+  // Settled while waiting: signed out, or another tab already refreshed.
+  const settled = (): RefreshOutcome | null => {
+    if (signedOutSince(startedAt)) return "signed-out";
+    return getRefreshToken() === used ? null : "refreshed";
+  };
+  const before = settled();
+  if (before) return before;
+
+  let res: Response;
+  try {
+    res = await fetch(apiUrl, {
+      body: JSON.stringify({
+        query: REFRESH_TOKEN_MUTATION,
+        variables: { refreshToken: used },
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    });
+  } catch {
+    return "unavailable";
   }
+  const json = await readJson(res);
+  const after = settled();
+  if (after) return after;
+
+  const errors = Array.isArray(json?.errors) ? json.errors : [];
+  const next = (json?.data as { refreshToken?: unknown } | undefined)
+    ?.refreshToken as { refreshToken?: unknown; token?: unknown } | null;
+  if (
+    res.ok &&
+    typeof next?.token === "string" &&
+    typeof next.refreshToken === "string"
+  ) {
+    localStorage.setItem("bubsie_token", next.token);
+    localStorage.setItem("bubsie_refresh_token", next.refreshToken);
+    return "refreshed";
+  }
+  const refused =
+    errors.some((e) => e.extensions?.code === "REFUSED") ||
+    // An API that predates the refusal code answers a rejected token with
+    // no session and no error.
+    (res.ok && errors.length === 0 && next === null);
+  return refused ? "rejected" : "unavailable";
+};
+
+const refreshSession = (
+  apiUrl: string,
+  startedAt: number
+): Promise<RefreshOutcome> => {
+  const used = getRefreshToken();
+  if (!used) return Promise.resolve("rejected");
+  refreshPromise ??= (async () => {
+    try {
+      return await withRefreshLock(() => tryRefresh(apiUrl, used, startedAt));
+    } finally {
+      refreshPromise = null;
+    }
+  })();
   return refreshPromise;
 };
 
+/** Whether there is a session to continue. During an outage the session is
+ * kept (requests fail and are retried); it ends only when the server rejects
+ * the refresh token. */
 export const restoreSession = async (): Promise<boolean> => {
   if (typeof window === "undefined") return false;
   if (!getRuntimeConfig()) await loadRuntimeConfig();
+  const startedAt = Date.now();
   const token = getToken();
-  const refreshToken = getRefreshToken();
-  if (!token && !refreshToken) return false;
-  if (!token) return refreshSession(getApiUrl());
+  if (!token && !getRefreshToken()) return false;
 
   // A malformed or legacy access token falls through to the refresh token.
-  const payload = tokenPayload(token);
+  const payload = token ? tokenPayload(token) : null;
   if (payload?.exp && payload.exp * 1000 > Date.now() + 30_000) return true;
 
-  return refreshSession(getApiUrl());
+  const outcome = await refreshSession(getApiUrl(), startedAt);
+  if (outcome === "rejected") signOut();
+  return outcome === "refreshed" || outcome === "unavailable";
 };
 export const gqlRequest = async <T = unknown>(
   query: string,
@@ -137,6 +209,7 @@ export const gqlRequest = async <T = unknown>(
     await loadRuntimeConfig();
   }
   const apiUrl = getApiUrl();
+  const startedAt = Date.now();
   const token = getToken();
   const res = await fetch(apiUrl, {
     body: JSON.stringify({ query, variables }),
@@ -151,11 +224,19 @@ export const gqlRequest = async <T = unknown>(
   const errors = Array.isArray(json?.errors) ? json.errors : [];
 
   if (typeof window !== "undefined" && isAuthFailure(res.status, errors)) {
-    if (!hasRetried && (await refreshSession(apiUrl))) {
-      return gqlRequest<T>(query, variables, true);
+    // A token just refreshed and still refused counts as rejected.
+    const outcome = hasRetried
+      ? "rejected"
+      : await refreshSession(apiUrl, startedAt);
+    if (outcome === "signed-out" || signedOutSince(startedAt)) {
+      // The session this request belonged to has ended: no retry.
+      throw new Error("Signed out");
     }
-    localStorage.removeItem("bubsie_token");
-    localStorage.removeItem("bubsie_refresh_token");
+    if (outcome === "refreshed") return gqlRequest<T>(query, variables, true);
+    if (outcome === "unavailable") {
+      throw new Error("Session could not be refreshed; try again");
+    }
+    signOut();
     const returnTo = window.location.pathname + window.location.search;
     window.location.href = `/auth/login?redirect=${encodeURIComponent(returnTo)}`;
     throw new Error("Session expired — redirecting to login");

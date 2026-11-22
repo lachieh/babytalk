@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useState } from "react";
 
-import { gqlRequest } from "@/lib/gql-request";
+import { gqlRequest, signOut } from "@/lib/gql-request";
 import { isSoundEnabled, setSoundEnabled } from "@/lib/haptics";
 import { disableDeviceMode, enableDeviceMode } from "@/lib/use-device-mode";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
@@ -790,8 +790,7 @@ export const ProfileSheet = ({
   }, [household?.inviteCode]);
 
   const handleSignOut = useCallback(() => {
-    localStorage.removeItem("bubsie_token");
-    localStorage.removeItem("bubsie_refresh_token");
+    signOut();
     disableDeviceMode();
     router.replace("/auth/login");
   }, [router]);

@@ -508,23 +508,23 @@ export const sendBeforeSignOut = (withinMs: number): Promise<number> => {
   });
 };
 
-/** The person chose to sign out with changes unsent: remove them, and every
- * other outbox of theirs, from this device. */
+/** The person chose to sign out with this tab's changes unsent: remove
+ * them, and only them. Other tabs' outboxes are theirs (this tab holds no
+ * lock on them); they stay keyed to this person and are adopted the next
+ * time they sign in on this device. */
 export const forgetOutbox = () => {
-  const user = owner;
+  const key = ownsKey ? storageKey() : null;
   releaseTab?.();
   releaseTab = null;
   owner = null;
   ownsKey = false;
   sendingAllowed = false;
   state = initialEventsState;
-  if (user) {
-    for (const { key } of ownerKeys(user)) {
-      try {
-        localStorage.removeItem(key);
-      } catch {
-        /* nothing more can be done for it */
-      }
+  if (key) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      /* nothing more can be done for it */
     }
   }
   notify();

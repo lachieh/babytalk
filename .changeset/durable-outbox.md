@@ -13,3 +13,4 @@ Keep unsaved changes across tab switches and reloads, and stop offline replays l
 - Editing a timed bottle feed keeps its duration, and a solid feed logs instantly from the sheet.
 - The API marks its own refusals with an error code and masks unexpected errors, so database error text no longer reaches clients. A request without a valid session now returns HTTP 401.
 - Temporary server errors are retried automatically, and signing out with unsent entries asks first.
+- A temporary failure while refreshing a session no longer signs the parent out, and a rejected refresh token is now an explicit refusal.

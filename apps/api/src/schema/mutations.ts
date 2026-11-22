@@ -18,7 +18,7 @@ import {
 } from "../auth/passkey";
 import { rotateRefreshToken } from "../auth/session";
 import { builder } from "./builder";
-import { notAuthenticated } from "./errors";
+import { notAuthenticated, refuse } from "./errors";
 import {
   AuthPayloadType,
   DeviceCodePollPayloadType,
@@ -78,18 +78,19 @@ builder.mutationField("refreshToken", (t) =>
     nullable: true,
     resolve: async (_root, args) => {
       const result = await rotateRefreshToken(args.refreshToken);
-      return result
-        ? {
-            refreshToken: result.refreshToken,
-            token: result.token,
-            user: {
-              email: result.user.email,
-              householdId: null,
-              id: result.user.id,
-              name: null,
-            },
-          }
-        : null;
+      // Explicit, so a client ends its session only on this answer and keeps
+      // it through an outage.
+      if (!result) throw refuse("Refresh token rejected");
+      return {
+        refreshToken: result.refreshToken,
+        token: result.token,
+        user: {
+          email: result.user.email,
+          householdId: null,
+          id: result.user.id,
+          name: null,
+        },
+      };
     },
     type: AuthPayloadType,
   })

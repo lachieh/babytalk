@@ -9,7 +9,7 @@ vi.mock(import("./runtime-config"), () => ({
 
 const QUERY = 'mutation { deleteEvent(id: "x") }';
 
-type Answer = () => Response;
+type Answer = () => Response | Promise<Response>;
 
 const answers = (...queue: Answer[]) => {
   const calls: { authorization: string | null; body: string }[] = [];
@@ -19,8 +19,12 @@ const answers = (...queue: Answer[]) => {
       body: String(init.body),
     });
     const next = queue.shift();
-    if (!next) throw new TypeError("offline");
-    return Promise.resolve(next());
+    if (!next) return Promise.reject(new TypeError("offline"));
+    try {
+      return Promise.resolve(next());
+    } catch (error) {
+      return Promise.reject(error);
+    }
   });
   return calls;
 };
@@ -36,21 +40,24 @@ const refreshed = json({
   data: { refreshToken: { refreshToken: "refresh-2", token: "token-2" } },
 });
 
+const unreachable: Answer = () => {
+  throw new TypeError("Failed to fetch");
+};
+
 const load = async () => {
   vi.resetModules();
   const items = new Map<string, string>([
     ["bubsie_token", "token-1"],
     ["bubsie_refresh_token", "refresh-1"],
   ]);
-  vi.stubGlobal("window", {
-    location: { href: "", pathname: "/", search: "" },
-  });
+  const page = { location: { href: "", pathname: "/", search: "" } };
+  vi.stubGlobal("window", page);
   vi.stubGlobal("localStorage", {
     getItem: (key: string) => items.get(key) ?? null,
     removeItem: (key: string) => items.delete(key),
     setItem: (key: string, value: string) => items.set(key, value),
   });
-  return await import("./gql-request");
+  return { ...(await import("./gql-request")), items, page };
 };
 
 describe("gqlRequest", () => {
@@ -150,4 +157,95 @@ describe("gqlRequest", () => {
       expect(calls.at(-1)?.authorization).toBe("Bearer token-2");
     }
   );
+
+  describe("a refresh that cannot reach the server", () => {
+    it.each([
+      ["a network error", unreachable],
+      ["a 503", json({ errors: [{ message: "Service unavailable" }] }, 503)],
+      [
+        "a masked server error",
+        json({
+          data: { refreshToken: null },
+          errors: [
+            {
+              extensions: { code: "INTERNAL_SERVER_ERROR" },
+              message: "Unexpected error.",
+            },
+          ],
+        }),
+      ],
+    ])(
+      "keeps the session after %s and fails the request as retryable",
+      async (_name, answer) => {
+        const { RequestRefusedError, gqlRequest, items, page } = await load();
+        answers(text("Unauthorized", 401), answer);
+        const request = gqlRequest(QUERY);
+        await expect(request).rejects.toThrow(Error);
+        await expect(request).rejects.not.toBeInstanceOf(RequestRefusedError);
+        expect(items.get("bubsie_refresh_token")).toBe("refresh-1");
+        expect(page.location.href).toBe("");
+      }
+    );
+
+    it("lets the app open during an outage without signing out", async () => {
+      const { items, restoreSession } = await load();
+      answers(unreachable);
+      await expect(restoreSession()).resolves.toBeTruthy();
+      expect(items.get("bubsie_refresh_token")).toBe("refresh-1");
+    });
+  });
+
+  describe("a refresh the server rejects", () => {
+    it.each([
+      [
+        "with a refusal",
+        json({
+          data: { refreshToken: null },
+          errors: [
+            {
+              extensions: { code: "REFUSED" },
+              message: "Refresh token rejected",
+            },
+          ],
+        }),
+      ],
+      [
+        "with no session (older server)",
+        json({ data: { refreshToken: null } }),
+      ],
+    ])("ends the session %s", async (_name, answer) => {
+      const { gqlRequest, items, page } = await load();
+      answers(text("Unauthorized", 401), answer);
+      await expect(gqlRequest(QUERY)).rejects.toThrow(Error);
+      expect(items.has("bubsie_refresh_token")).toBeFalsy();
+      expect(page.location.href).toContain("/auth/login");
+    });
+
+    it("sends the app to sign in when it opens with a rejected session", async () => {
+      const { items, restoreSession } = await load();
+      answers(json({ data: { refreshToken: null } }));
+      await expect(restoreSession()).resolves.toBeFalsy();
+      expect(items.has("bubsie_token")).toBeFalsy();
+    });
+  });
+
+  describe("signing out while a refresh is in flight", () => {
+    it("keeps the refresh from storing credentials or retrying the request", async () => {
+      const { gqlRequest, items, signOut } = await load();
+      const slow = Promise.withResolvers<Response>();
+      const calls = answers(
+        text("Unauthorized", 401),
+        () => slow.promise,
+        json({ data: { deleteEvent: true } })
+      );
+      const request = gqlRequest(QUERY);
+      for (let i = 0; i < 10; i += 1) await Promise.resolve();
+      signOut();
+      slow.resolve(refreshed());
+      await expect(request).rejects.toThrow(Error);
+      expect(items.has("bubsie_token")).toBeFalsy();
+      expect(items.has("bubsie_refresh_token")).toBeFalsy();
+      expect(calls).toHaveLength(2);
+    });
+  });
 });
