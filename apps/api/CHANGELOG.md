@@ -1,5 +1,27 @@
 # @bubsie/api
 
+## 0.3.0
+
+### Minor Changes
+
+- 90d6c9e: Remove the AI and voice features (voice input, home-screen insights, pump hints) and the Tambo integration behind them. Logging, timers, history, growth, pumping, and station mode work as before.
+
+  Breaking for self-hosters: the web app no longer reads `BUBSIE_WEB_TAMBO_URL` or `BUBSIE_WEB_TAMBO_API_KEY`. Remove them from your `.env` and compose file; if they stay set they are ignored. The API no longer exposes the `agentThread` query or `updateAgentThread` mutation. The `agent_threads` table is left in place.
+
+### Patch Changes
+
+- 90d6c9e: Keep unsaved changes across tab switches and reloads, and stop offline replays losing or duplicating entries.
+
+  - Pending logs, edits, deletes, and discards are stored durably and resent after a reload.
+  - The page now owns unsent changes and resends them when the app opens, comes back online, or becomes visible. The service worker no longer queues requests, so nothing is sent while the app is closed.
+  - `logEvent` accepts an optional client-generated `id` and returns the existing event when that id is sent again, and `deleteEvent` succeeds when the event is already gone.
+  - Editing or deleting an event from an older week is sent to the server again.
+  - Growth measurements are stored as a calendar day, so they read the same in every timezone.
+  - Editing a timed bottle feed keeps its duration, and a solid feed logs instantly from the sheet.
+  - The API marks its own refusals with an error code and masks unexpected errors, so database error text no longer reaches clients. A request without a valid session now returns HTTP 401.
+  - Temporary server errors are retried automatically, and signing out with unsent entries asks first.
+  - A temporary failure while refreshing a session no longer signs the parent out, and a rejected refresh token is now an explicit refusal.
+
 ## 0.2.0
 
 ### Minor Changes
