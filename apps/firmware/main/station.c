@@ -190,10 +190,7 @@ static bool send_one(bool *failed)
     strlcpy(id, next->event.id, sizeof id);
     bz_op_t op = next->op;
     uint32_t request = bz_ob_send_start(&station->ob, id);
-    char *body = NULL;
-    for (size_t i = 0; i < station->ob.outbox_count; i++) {
-        if (strcmp(station->ob.outbox[i].event.id, id) == 0) body = bz_ob_request_body(&station->ob.outbox[i]);
-    }
+    char *body = bz_ob_request_body(next);
     station->revision++;
     persist();
     station_unlock();
