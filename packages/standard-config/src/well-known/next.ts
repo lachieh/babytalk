@@ -32,6 +32,7 @@ export const createConfigHandler = <T>(
 
       return NextResponse.json(publicConfig, {
         headers: {
+          "access-control-allow-origin": "*",
           "cache-control": `public, max-age=${maxAge}`,
         },
       });

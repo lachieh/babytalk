@@ -16,3 +16,8 @@ export const notAuthenticated = () =>
   createGraphQLError("Not authenticated", {
     extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
   });
+
+export const codeTaken = () =>
+  createGraphQLError("Device code already in use", {
+    extensions: { code: "CODE_TAKEN" },
+  });

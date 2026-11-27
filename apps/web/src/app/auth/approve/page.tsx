@@ -7,6 +7,8 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { gqlRequest } from "@/lib/gql-request";
 import { triggerFeedback } from "@/lib/haptics";
 
+import { OwnServer } from "./own-server";
+
 const APPROVE_DEVICE_CODE = `
   mutation ApproveDeviceCode($code: String!) {
     approveDeviceCode(code: $code)
@@ -134,6 +136,7 @@ const ApproveContent = () => {
           >
             Sign in
           </button>
+          <OwnServer code={code} />
         </div>
       </main>
     );
@@ -165,6 +168,7 @@ const ApproveContent = () => {
         >
           Back to dashboard
         </Link>
+        {phase === "error" && <OwnServer code={code} />}
       </div>
     </main>
   );

@@ -1,0 +1,12 @@
+{
+  "name": "@bubsie/firmware",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Bubsie station firmware for the Waveshare ESP32-S3-Touch-AMOLED-1.75C (ESP-IDF + LVGL).",
+  "scripts": {
+    "test": "scripts/test.sh",
+    "firmware:build": "scripts/build.sh",
+    "firmware:flash": "scripts/flash.sh",
+    "test:emulator": "scripts/emulator-test.sh"
+  }
+}

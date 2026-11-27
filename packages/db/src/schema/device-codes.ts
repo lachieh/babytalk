@@ -11,5 +11,9 @@ export const deviceCodes = pgTable("device_codes", {
     .defaultNow(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   id: uuid("id").primaryKey().defaultRandom(),
+  redirectConfirmedAt: timestamp("redirect_confirmed_at", {
+    withTimezone: true,
+  }),
+  redirectWebUrl: text("redirect_web_url"),
   userId: uuid("user_id").references(() => users.id),
 });
