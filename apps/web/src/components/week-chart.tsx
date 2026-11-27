@@ -60,14 +60,17 @@ const PLOT_PAD = 10;
 const PLOT_INSET_X = 8;
 const COLUMNS_LEFT = GUTTER + PLOT_INSET_X;
 const HIT_RADIUS = 22;
+const COLUMN_GAP = 2;
+const BLOCK_SHARE = 0.8;
+const BLOCK_RADIUS = 2;
+const BLOCK_MIN_HEIGHT = 3;
 const MINUTE = 60_000;
 
 interface Geometry {
-  bandWidth: number;
+  blockWidth: number;
   bottom: number;
   colWidth: number;
   height: number;
-  laneOffset: number;
   markSize: number;
   top: number;
   width: number;
@@ -87,16 +90,12 @@ const n = (value: number) => Math.round(value * 10) / 10;
 
 function makeGeometry(width: number, height: number): Geometry {
   const colWidth = Math.max(0, width - COLUMNS_LEFT - PLOT_INSET_X) / 7;
-  const bandWidth = clamp(colWidth * 0.42, 12, 30);
-  const markSize = clamp(colWidth * 0.16, 6.5, 8.5);
-  const gap = clamp(colWidth * 0.07, 2, 5);
   return {
-    bandWidth,
+    blockWidth: Math.max(0, colWidth - COLUMN_GAP * 2) * BLOCK_SHARE,
     bottom: height - PLOT_PAD,
     colWidth,
     height,
-    laneOffset: bandWidth / 2 + gap + markSize / 2,
-    markSize,
+    markSize: clamp(colWidth * 0.16, 6.5, 8.5),
     top: PLOT_PAD,
     width,
   };
@@ -107,26 +106,30 @@ const yOf = (g: Geometry, hour: number) =>
 const colX = (g: Geometry, dayIdx: number) =>
   COLUMNS_LEFT + g.colWidth * dayIdx;
 
-function laneCenter(g: Geometry, mark: WeekMark): number {
-  const center = colX(g, mark.dayIdx) + g.colWidth / 2;
-  const type = markType(mark.event.type);
-  if (type === "sleep") return center;
-  if (type === "feed" || type === "pump") return center - g.laneOffset;
-  return center + g.laneOffset;
+const isBlock = (type: EventType) =>
+  type === "sleep" || type === "feed" || type === "pump";
+
+function blockLeft(g: Geometry, mark: WeekMark): number {
+  const left = colX(g, mark.dayIdx) + COLUMN_GAP;
+  return markType(mark.event.type) === "sleep"
+    ? left
+    : left + g.colWidth - COLUMN_GAP * 2 - g.blockWidth;
 }
 
 function markBox(g: Geometry, mark: WeekMark): Box {
-  const cx = laneCenter(g, mark);
-  const isSleep = markType(mark.event.type) === "sleep";
-  const w = isSleep ? g.bandWidth : g.markSize;
+  const block = isBlock(markType(mark.event.type));
+  const w = block ? g.blockWidth : g.markSize;
+  const x = block
+    ? blockLeft(g, mark)
+    : colX(g, mark.dayIdx) + g.colWidth / 2 - w / 2;
+  const cx = x + w / 2;
   const y1 = yOf(g, mark.startHour);
   const y2 = yOf(g, mark.endHour);
-  const minHeight = isSleep ? 5 : g.markSize;
-  const h = Math.max(y2 - y1, minHeight);
+  const h = Math.max(y2 - y1, block ? BLOCK_MIN_HEIGHT : g.markSize);
   const pinnedTop = mark.continuesBefore || mark.openEnd;
   const grownY = pinnedTop ? y1 : (y1 + y2) / 2 - h / 2;
   const y = mark.continuesAfter ? y2 - h : clamp(grownY, g.top, g.bottom - h);
-  return { cx, h, w, x: cx - w / 2, y };
+  return { cx, h, w, x, y };
 }
 
 function barPath(
@@ -329,7 +332,7 @@ const MarkShape = ({
     );
   }
 
-  const full = box.w / 2;
+  const full = BLOCK_RADIUS;
   const top = mark.continuesBefore ? 0 : full;
   const bottom = mark.continuesAfter || mark.openEnd ? 0 : full;
 
@@ -389,11 +392,15 @@ const OpenEndFade = ({
   );
 };
 
-const SelectionRing = ({ box }: { box: Box }) => (
+const SelectionRing = ({ box, mark }: { box: Box; mark: WeekMark }) => (
   <rect
     fill="none"
     height={n(box.h + 6)}
-    rx={n(Math.min((box.w + 6) / 2, (box.h + 6) / 2))}
+    rx={
+      isBlock(markType(mark.event.type))
+        ? BLOCK_RADIUS + 3
+        : n(Math.min((box.w + 6) / 2, (box.h + 6) / 2))
+    }
     stroke={RING_INK}
     strokeWidth={1.5}
     width={n(box.w + 6)}
@@ -407,6 +414,17 @@ interface Drawn {
   fadeId: string | null;
   mark: WeekMark;
 }
+
+const PAINT_ORDER: Record<EventType, number> = {
+  diaper: 2,
+  feed: 1,
+  note: 2,
+  pump: 1,
+  sleep: 0,
+};
+const byPaintOrder = (a: Drawn, b: Drawn) =>
+  PAINT_ORDER[markType(a.mark.event.type)] -
+  PAINT_ORDER[markType(b.mark.event.type)];
 
 const nowLabelInGutter = (dayIdx: number) => dayIdx >= 6;
 
@@ -585,7 +603,7 @@ const Plot = ({
         selectedDay={selectedDay}
         showGrid={!isEmpty}
       />
-      {drawn.map((item) => (
+      {drawn.toSorted(byPaintOrder).map((item) => (
         <MarkShape
           box={item.box}
           fadeId={item.fadeId}
@@ -597,7 +615,7 @@ const Plot = ({
       {drawn.map(
         (item) =>
           item.mark.event.id === selectedEventId && (
-            <SelectionRing box={item.box} key={item.mark.id} />
+            <SelectionRing box={item.box} key={item.mark.id} mark={item.mark} />
           )
       )}
     </svg>
@@ -606,9 +624,9 @@ const Plot = ({
 
 const LEGEND_BOX: Record<EventType, Box> = {
   diaper: { cx: 8, h: 8, w: 8, x: 4, y: 4 },
-  feed: { cx: 8, h: 8, w: 8, x: 4, y: 4 },
+  feed: { cx: 8, h: 14, w: 10, x: 3, y: 1 },
   note: { cx: 8, h: 8, w: 8, x: 4, y: 4 },
-  pump: { cx: 8, h: 8, w: 8, x: 4, y: 4 },
+  pump: { cx: 8, h: 14, w: 10, x: 3, y: 1 },
   sleep: { cx: 8, h: 14, w: 10, x: 3, y: 1 },
 };
 
