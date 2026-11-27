@@ -109,18 +109,20 @@ wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms)
     // time, so it ends the wait; anything else gets three tries.
     TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(timeout_ms);
     int failures = 0;
+    // Taken as each failure is seen: the disconnect below reports a reason of its own (36).
+    uint8_t reason = 0;
     while (xTaskGetTickCount() < deadline) {
         EventBits_t bits = xEventGroupWaitBits(events, GOT_ADDRESS | JOIN_FAILED, pdFALSE, pdFALSE,
                                                deadline - xTaskGetTickCount());
         if (bits & GOT_ADDRESS) return WIFI_JOINED;
         if (bits & JOIN_FAILED) {
             xEventGroupClearBits(events, JOIN_FAILED);
-            if (bz_wifi_failure(last_reason) == BZ_WIFI_WRONG_PASSWORD || ++failures >= 3) break;
+            reason = last_reason;
+            if (bz_wifi_failure(reason) == BZ_WIFI_WRONG_PASSWORD || ++failures >= 3) break;
         }
     }
     want_connection = false;
     esp_wifi_disconnect();
-    uint8_t reason = last_reason;
     ESP_LOGI(TAG, "join failed, reason %d", reason);
     return bz_wifi_failure(reason) == BZ_WIFI_WRONG_PASSWORD ? WIFI_WRONG_PASSWORD : WIFI_UNREACHABLE;
 }
