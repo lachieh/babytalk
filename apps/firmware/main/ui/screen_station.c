@@ -538,8 +538,6 @@ void screen_station_refresh(void)
     if (changed) ui_trace(screen);
 }
 
-void screen_station_reset_choice(bz_type_t type) { picked[type] = NULL; }
-
 void screen_station_pick(bz_type_t type, const bz_variant_t *variant)
 {
     if (type < BZ_TYPE_COUNT) picked[type] = variant;

@@ -126,10 +126,3 @@ wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms)
     ESP_LOGI(TAG, "join failed, reason %d", reason);
     return bz_wifi_failure(reason) == BZ_WIFI_WRONG_PASSWORD ? WIFI_WRONG_PASSWORD : WIFI_UNREACHABLE;
 }
-
-bool wifi_connected(void) { return events && (xEventGroupGetBits(events) & GOT_ADDRESS); }
-
-bool wifi_wait_connected(int timeout_ms)
-{
-    return xEventGroupWaitBits(events, GOT_ADDRESS, pdFALSE, pdFALSE, pdMS_TO_TICKS(timeout_ms)) & GOT_ADDRESS;
-}

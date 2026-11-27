@@ -24,6 +24,3 @@ void wifi_init(void);
 int wifi_scan(wifi_ap_t *out, int max);
 /** Join and wait for an address. Remembers nothing; the caller saves what worked. */
 wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms);
-bool wifi_connected(void);
-/** Wait up to `timeout_ms` for an address (after a drop the station rejoins on its own). */
-bool wifi_wait_connected(int timeout_ms);

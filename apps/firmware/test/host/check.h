@@ -35,5 +35,4 @@ extern int check_count;
         }                                                                                           \
     } while (0)
 
-typedef void (*test_fn)(void);
 #define TEST(name) void name(void)
