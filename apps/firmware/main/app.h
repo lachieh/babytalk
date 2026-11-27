@@ -24,3 +24,7 @@ void app_set_server(const char *web_url);
 void app_interrupt(void);
 /** Whether the clock has been set from the network. Timers refuse to start until it has. */
 bool app_clock_synced(void);
+/** The server rejected this device's session: forget it and pair again. */
+void app_signed_out(void);
+/** Unpair (keep the server) or reset (back to the factory server); then pairing starts. */
+void app_unpair(bool reset);

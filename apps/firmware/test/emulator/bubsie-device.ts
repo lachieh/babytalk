@@ -86,6 +86,80 @@ export class Device {
     }
   }
 
+  /** Run until anything logged so far matches, without moving the waitFor cursor. */
+  async seen(pattern: RegExp, maxSeconds = 30): Promise<RegExpMatchArray> {
+    const deadline = this.seconds + maxSeconds;
+    for (;;) {
+      const match = this.board.serial.match(pattern);
+      if (match) return match;
+      if (this.seconds > deadline) assert.fail(`never logged ${pattern}`);
+      await this.run(0.1);
+    }
+  }
+
+  /** Where the firmware last said a touch target with this label is (CONFIG_BUBSIE_UI_TRACE). */
+  async find(
+    label: string | RegExp,
+    maxSeconds = 3
+  ): Promise<[number, number]> {
+    const deadline = this.seconds + maxSeconds;
+    for (;;) {
+      const serial = this.board.serial;
+      const start = serial.lastIndexOf("ui: targets");
+      if (start >= 0) {
+        const lines = [
+          ...serial.slice(start).matchAll(/ui: at (\d+),(\d+) (.*)$/gm),
+        ];
+        for (let i = lines.length - 1; i >= 0; i--) {
+          const text = lines[i]![3]!.trim();
+          if (typeof label === "string" ? text === label : label.test(text))
+            return [Number(lines[i]![1]), Number(lines[i]![2])];
+        }
+      }
+      if (this.seconds > deadline) {
+        const known =
+          start >= 0
+            ? [...serial.slice(start).matchAll(/ui: at \S+ (.*)$/gm)].map(
+                (m) => m[1]
+              )
+            : [];
+        assert.fail(
+          `no touch target ${label}; on screen: ${known.join(" | ")}`
+        );
+      }
+      await this.run(0.1);
+    }
+  }
+
+  /** Find a target, scrolling the list up (then back down) until it is on the glass. */
+  async reach(label: string | RegExp): Promise<[number, number]> {
+    for (const [from, to] of [
+      [0, 0],
+      [330, 190],
+      [330, 190],
+      [330, 190],
+      [140, 380],
+      [140, 380],
+      [140, 380],
+      [140, 380],
+    ]) {
+      if (from) await this.swipe([233, from], [233, to], 0.4);
+      try {
+        const [x, y] = await this.find(label, 0.6);
+        // Keep clear of the top and bottom edge, where the rim and the title sit.
+        if (y > 70 && y < 420) return [x, y];
+      } catch {
+        // not on the glass yet
+      }
+    }
+    return this.find(label, 0.5);
+  }
+
+  async tapLabel(label: string | RegExp): Promise<void> {
+    const [x, y] = await this.reach(label);
+    await this.tap(x, y);
+  }
+
   get seconds(): number {
     return this.board.emulator.cycles / this.board.emulator.cpuHz;
   }

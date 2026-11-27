@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { approve, newFamily } from "./bubsie-api.ts";
+import { approve, gql, newFamily, recentEvents } from "./bubsie-api.ts";
 import { Device } from "./bubsie-device.ts";
 
 const SCREENS = process.env.BUBSIE_SCREENS ?? "screens";
@@ -55,13 +55,167 @@ test("sets up from new: splash, Wi-Fi, time zone, pairing", async () => {
       await device.waitFor(/app: pair: code ([A-Z0-9]{8})/, 30)
     )[1]!;
     // The clock comes from SNTP, in the zone just picked.
-    await device.waitFor(/app: clock set, \d+:\d\d [ap]m \S+/, 30);
+    await device.seen(/app: clock set, \d+:\d\d [ap]m \S+/, 30);
     await device.run(0.8);
     device.screenshot(SCREENS, "06-pairing");
     assert.equal(await approve(code, family.token), true);
     await device.waitFor(/app: pair: approved/, 20);
+    const ada = family.babies[0]!;
+
+    // The station: the first baby, the first page (Feed).
+    await device.waitFor(/sync: babies: 2/, 20);
+    await device.waitFor(/screen: station/, 10);
+    await device.waitFor(/sync: events: 0/, 20);
+    await device.run(1);
+    device.screenshot(SCREENS, "07-station-feed");
+
+    // One tap logs the inferred default: with no history, a left breast feed, as a timer.
+    await device.tapLabel("Feed");
+    await device.waitFor(
+      /sync: log feed \{"method":"breast","side":"left"\}: ok/,
+      5
+    );
+    await device.waitFor(/toast: Feed started · Left \[Undo\]/, 5);
+    await device.run(0.6);
+    device.screenshot(SCREENS, "08-feed-timer-undo");
+    await device.waitFor(/sync: sent create/, 20);
+    let events = await recentEvents(ada.id, family.token);
+    assert.equal(events.length, 1);
+    assert.equal(events[0]!.type, "feed");
+    assert.equal(events[0]!.endedAt, null);
+    assert.deepEqual(JSON.parse(events[0]!.metadata), {
+      method: "breast",
+      side: "left",
+    });
+
+    await device.run(6); // the undo window closes, the timer counts on
+    device.screenshot(SCREENS, "09-feed-timer");
+    await device.tapLabel("Done");
+    await device.waitFor(/sync: stop \S+: ok/, 5);
+    await device.waitFor(/toast: Feed saved/, 5);
+    await device.waitFor(/sync: sent update/, 20);
+    events = await recentEvents(ada.id, family.token);
+    assert.notEqual(events[0]!.endedAt, null, "the stop reached the server");
+
+    // Next time the other side is offered.
+    await device.run(6);
+    await device.find("Breast · Right");
+    device.screenshot(SCREENS, "10-feed-next-side");
+
+    // Sleep, picked: long-press opens the picker; held, 10 minutes ago.
+    await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page sleep/, 5);
     await device.run(0.5);
-    device.screenshot(SCREENS, "07-paired");
+    device.screenshot(SCREENS, "11-station-sleep");
+    const [sx, sy] = await device.find("Sleep");
+    await device.longPress(sx, sy);
+    await device.waitFor(/screen: picker/, 5);
+    await device.tapLabel("10m");
+    await device.waitFor(/screen: picker/, 5);
+    await device.tapLabel("Held");
+    await device.waitFor(/screen: picker/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "12-sleep-picker");
+    await device.tapLabel("Start timer");
+    await device.waitFor(/sync: log sleep \{"location":"held"\}: ok/, 5);
+    await device.waitFor(/screen: station/, 5);
+    await device.run(6);
+    device.screenshot(SCREENS, "13-sleep-timer-10m");
+    await device.waitFor(/sync: sent create/, 20);
+    events = await recentEvents(ada.id, family.token);
+    const sleep = events.find((e) => e.type === "sleep")!;
+    const minutesAgo = (Date.now() - Date.parse(sleep.startedAt)) / 60000;
+    assert.ok(
+      minutesAgo > 9.5 && minutesAgo < 11,
+      `started ${minutesAgo} minutes ago`
+    );
+
+    // Discard, then undo the discard: the timer is back.
+    await device.tapLabel("Discard");
+    await device.waitFor(/toast: Sleep timer discarded · Held \[Undo\]/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "14-sleep-discarded-undo");
+    await device.tapLabel("Undo");
+    await device.waitFor(/sync: undo/, 5);
+    await device.find("Done");
+    await device.tapLabel("Done");
+    await device.waitFor(/sync: sent update/, 20);
+
+    // Diaper: logged at once; undo takes it back.
+    await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page diaper/, 5);
+    await device.tapLabel("Diaper");
+    await device.waitFor(/toast: Diaper saved · Wet \[Undo\]/, 5);
+    await device.tapLabel("Undo");
+    await device.waitFor(/sync: undo/, 5);
+    await device.tapLabel("Diaper");
+    await device.waitFor(/toast: Diaper saved · Wet \[Undo\]/, 5);
+    await device.run(6);
+    device.screenshot(SCREENS, "15-station-diaper");
+    for (
+      let i = 0;
+      i < 3 &&
+      (await recentEvents(ada.id, family.token)).filter(
+        (e) => e.type === "diaper"
+      ).length !== 1;
+      i++
+    ) {
+      await device.run(3);
+    }
+    assert.equal(
+      (await recentEvents(ada.id, family.token)).filter(
+        (e) => e.type === "diaper"
+      ).length,
+      1
+    );
+
+    // A bottle: picked, timed, then the amount prompt takes its place.
+    await device.swipe([60, 233], [400, 233]);
+    await device.swipe([60, 233], [400, 233]);
+    await device.waitFor(/screen: station page feed/, 5);
+    await device.tapLabel("Breast · Right");
+    await device.waitFor(/screen: picker/, 5);
+    await device.tapLabel("Bottle");
+    await device.waitFor(/screen: picker/, 5);
+    await device.tapLabel("Start timer");
+    await device.waitFor(/sync: log feed \{"method":"bottle"\}: ok/, 5);
+    await device.run(3);
+    await device.tapLabel("Done");
+    await device.waitFor(/sync: stop/, 5);
+    await device.find(/^120/);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "16-bottle-amount");
+    await device.tapLabel(/^120/);
+    await device.tapLabel("Save");
+    await device.waitFor(/sync: amount \S+ 120: ok/, 5);
+    await device.waitFor(/toast: Feed saved · .* · Bottle · 120 ml/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "17-bottle-saved");
+    for (let i = 0; i < 5; i++) {
+      const bottle = (await recentEvents(ada.id, family.token)).find((e) =>
+        e.metadata.includes("bottle")
+      );
+      if (bottle && JSON.parse(bottle.metadata).amountMl === 120) break;
+      assert.ok(i < 4, "the amount reached the server");
+      await device.run(3);
+    }
+
+    // Another device logs a sleep that ended an hour ago: the station picks it up on its next refresh.
+    await gql(
+      "mutation($babyId: String!, $from: String!, $to: String!) { logEvent(babyId: $babyId, type: sleep, startedAt: $from, endedAt: $to, sleepMeta: { location: crib }) { id } }",
+      {
+        babyId: ada.id,
+        from: new Date(Date.now() - 200 * 60_000).toISOString(),
+        to: new Date(Date.now() - 60 * 60_000).toISOString(),
+      },
+      family.token
+    );
+    await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page sleep/, 5);
+    await device.waitFor(/sync: events: 5/, 90);
+    await device.run(1.5);
+    device.screenshot(SCREENS, "18-sleep-from-phone");
+
     assert.equal(
       device.board.log.filter((line) => line.includes("panic")).length,
       0

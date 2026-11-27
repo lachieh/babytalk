@@ -16,8 +16,11 @@ mkdir -p "$build"
 # Sources are globbed: touching the list makes CMake look for new files.
 touch main/CMakeLists.txt
 printf 'CONFIG_BUBSIE_DEFAULT_WEB_URL="%s"\n' "$web_url" > "$build/web-url.defaults"
-# The overlay changes only the factory URL; drop the cached sdkconfig so it is re-read.
-if ! grep -qs "CONFIG_BUBSIE_DEFAULT_WEB_URL=\"$web_url\"" "$build/sdkconfig"; then rm -f "$build/sdkconfig"; fi
+# BUBSIE_UI_TRACE=1: log touch targets so the emulator test can tap by label.
+if [ -n "${BUBSIE_UI_TRACE:-}" ]; then echo "CONFIG_BUBSIE_UI_TRACE=y" >> "$build/web-url.defaults"; fi
+# A different overlay than last time: drop the cached sdkconfig so the defaults are read again.
+if ! cmp -s "$build/web-url.defaults" "$build/web-url.defaults.used"; then rm -f "$build/sdkconfig"; fi
+cp "$build/web-url.defaults" "$build/web-url.defaults.used"
 
 docker run --rm -v "$PWD:/project" -w /project -e HOME=/tmp "$image" \
   idf.py -B "$build" -DSDKCONFIG="$build/sdkconfig" \

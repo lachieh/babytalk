@@ -16,6 +16,7 @@
 #include "freertos/queue.h"
 #include "screens.h"
 #include "settings.h"
+#include "station.h"
 #include "wifi.h"
 
 static const char *TAG = "app";
@@ -166,6 +167,7 @@ void app_set_timezone(const char *name)
 /* ── Pairing ─────────────────────────────────────────────── */
 
 static bz_pairing_t pairing;
+static char signed_out_notice[80];
 static screen_pairing_t pairing_view;
 
 static void show_pairing(void *arg) { screen_pairing_show(&pairing_view); }
@@ -188,6 +190,10 @@ static void publish_pairing(void)
 static bool pair(void)
 {
     bz_pair_start(&pairing, settings.web_url, settings.api_url);
+    if (signed_out_notice[0]) {
+        strlcpy(pairing.notice, signed_out_notice, sizeof pairing.notice);
+        signed_out_notice[0] = '\0';
+    }
     memset(&pairing_view, 0xff, sizeof pairing_view);
     for (;;) {
         bz_pair_act_t act = bz_pair_next(&pairing);
@@ -238,7 +244,10 @@ void app_set_server(const char *web_url)
 
 static void show_timezone(void *arg) { screen_timezone_show(settings.tz); }
 
-static void show_paired(void *arg) { screen_splash_show("Paired"); }
+static void show_station(void *arg)
+{
+    if (!screen_named(lv_screen_active(), "station")) screen_splash_show("");
+}
 
 static void do_continue(void *arg)
 {
@@ -249,7 +258,9 @@ static void do_continue(void *arg)
     }
     start_clock();
     if (!settings.refresh[0] && !pair()) return;
-    ui_do(show_paired, NULL);
+    // The station screen appears once the babies are known (station.c redraw).
+    ui_do(show_station, NULL);
+    station_start();
 }
 
 void app_continue(void) { app_do(do_continue, NULL); }
@@ -268,8 +279,40 @@ static void do_boot(void *arg)
     do_join(join);
 }
 
+static void do_signed_out(void *arg)
+{
+    station_stop();
+    settings_unpair();
+    do_continue(NULL);
+}
+
+void app_signed_out(void)
+{
+    ESP_LOGW(TAG, "signed out by the server");
+    strlcpy(signed_out_notice, "This device was signed out. Pair it again.", sizeof signed_out_notice);
+    app_do(do_signed_out, NULL);
+}
+
+static void do_unpair(void *arg)
+{
+    station_stop();
+    if (arg) {
+        settings_reset();
+    } else {
+        settings_unpair();
+    }
+    do_continue(NULL);
+}
+
+void app_unpair(bool reset)
+{
+    app_interrupt();
+    app_do(do_unpair, reset ? (void *)1 : NULL);
+}
+
 void app_start(void)
 {
+    station_init();
     jobs = xQueueCreate(16, sizeof(job_t));
     signals = xEventGroupCreate();
     bz_tz_apply(settings.tz);

@@ -7,6 +7,10 @@
 
 /** Load `screen` (deleting the old one) and log `screen: <name>` so tests can follow the flow. */
 void ui_load(lv_obj_t *screen, const char *name);
+/** Log the touch targets (CONFIG_BUBSIE_UI_TRACE) once laid out, e.g. after a page changes. */
+void ui_trace(lv_obj_t *screen);
+/** Whether `screen` was loaded under `name`. */
+bool screen_named(lv_obj_t *screen, const char *name);
 
 void screen_splash_show(const char *status);
 
@@ -49,3 +53,29 @@ typedef struct {
 void screen_pairing_show(const screen_pairing_t *view);
 /** Type another server's web address. `back` is where Cancel returns. */
 void screen_server_show(const char *current, app_fn back);
+
+/* ── Station ───────────────────────────────────────────────── */
+
+#include "bz_rules.h"
+
+void screen_station_show(void);
+/** Redraw what changed (from the sync task through ui_do, or after an action). */
+void screen_station_refresh(void);
+/** The variant the next tap of `type` logs, until it does. */
+void screen_station_pick(bz_type_t type, const bz_variant_t *variant);
+void screen_picker_show(bz_type_t type, const bz_variant_t *selected);
+void screen_note_show(void);
+void screen_babies_show(void);
+void screen_settings_show(void);
+/** No baby in the household yet. */
+void screen_no_baby_show(void);
+
+/** Title, three quick amounts around the last one, and the chosen value. */
+typedef void (*ui_amount_cb)(double value, void *user);
+void ui_amount_picker(lv_obj_t *parent, const char *title, int last_ml, double chosen, ui_amount_cb cb, void *user);
+
+/* The undo toast along the bottom of the circle (ui_toast.c), mirroring station->toast. */
+void ui_toast_tick(void);
+void ui_toast_hide(void);
+/** A short note with no undo, e.g. why a tap did nothing. */
+void ui_toast_message(const char *text);

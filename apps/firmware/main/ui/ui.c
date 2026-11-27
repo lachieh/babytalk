@@ -1,12 +1,75 @@
 #include <math.h>
+#include <string.h>
 
 #include "esp_log.h"
+#include "sdkconfig.h"
 #include "screens.h"
 
 static const char *TAG = "screen";
 
+bool screen_named(lv_obj_t *screen, const char *name)
+{
+    const char *loaded = screen ? lv_obj_get_user_data(screen) : NULL;
+    return loaded && strcmp(loaded, name) == 0;
+}
+
+#if CONFIG_BUBSIE_UI_TRACE
+static const char *label_of(lv_obj_t *obj)
+{
+    if (lv_obj_check_type(obj, &lv_label_class)) return lv_label_get_text(obj);
+    uint32_t count = lv_obj_get_child_count(obj);
+    for (uint32_t i = 0; i < count; i++) {
+        const char *text = label_of(lv_obj_get_child(obj, i));
+        if (text && text[0]) return text;
+    }
+    return NULL;
+}
+
+static void trace_targets(lv_obj_t *obj)
+{
+    uint32_t count = lv_obj_get_child_count(obj);
+    for (uint32_t i = 0; i < count; i++) {
+        lv_obj_t *child = lv_obj_get_child(obj, i);
+        if (lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) continue;
+        if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE) && !lv_obj_has_flag(child, LV_OBJ_FLAG_SCROLLABLE)) {
+            lv_area_t a;
+            lv_obj_get_coords(child, &a);
+            int x = (a.x1 + a.x2) / 2, y = (a.y1 + a.y2) / 2;
+            int dx = x - UI_CENTER, dy = y - UI_CENTER;
+            const char *text = label_of(child);
+            if (dx * dx + dy * dy < (UI_CENTER - 8) * (UI_CENTER - 8) && x >= 0 && x < UI_SIZE) {
+                ESP_LOGI("ui", "at %d,%d %s", x, y, text ? text : "(icon)");
+            }
+        }
+        trace_targets(child);
+    }
+}
+
+static void trace_now(lv_timer_t *timer)
+{
+    lv_obj_t *screen = lv_timer_get_user_data(timer);
+    if (lv_screen_active() != screen) return;
+    lv_obj_update_layout(screen);
+    ESP_LOGI("ui", "targets");
+    trace_targets(screen);
+    trace_targets(lv_layer_top());
+}
+
+void ui_trace(lv_obj_t *screen)
+{
+    lv_timer_t *timer = lv_timer_create(trace_now, 30, screen);
+    lv_timer_set_repeat_count(timer, 1);
+}
+
+static void trace_after_scroll(lv_event_t *event) { ui_trace(lv_screen_active()); }
+#else
+void ui_trace(lv_obj_t *screen) {}
+#endif
+
 void ui_load(lv_obj_t *screen, const char *name)
 {
+    lv_obj_set_user_data(screen, (void *)name);
+    ui_trace(screen);
     lv_screen_load_anim(screen, LV_SCREEN_LOAD_ANIM_NONE, 0, 0, true);
     ESP_LOGI(TAG, "%s", name);
 }
@@ -62,6 +125,9 @@ lv_obj_t *ui_round_list(lv_obj_t *screen, int top_pad, int bottom_pad)
     lv_obj_set_scrollbar_mode(list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_scroll_dir(list, LV_DIR_VER);
     lv_obj_add_event_cb(list, follow_curve, LV_EVENT_SCROLL, NULL);
+#if CONFIG_BUBSIE_UI_TRACE
+    lv_obj_add_event_cb(list, trace_after_scroll, LV_EVENT_SCROLL_END, NULL);
+#endif
     return list;
 }
 

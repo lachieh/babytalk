@@ -20,3 +20,20 @@ Wanted: a way for the page and the Node harness to configure the access point li
 `Emulator.boot(..., { wifi: [{ ssid: "emulator" }, { ssid: "Nursery", psk: "goodnight" }, { ssid: "Neighbour", psk: "x", rssi: -80 }] })`,
 where a secured network completes the WPA2 4-way handshake only with the right passphrase and
 deauthenticates with reason 15 (or 2) otherwise.
+
+## 2. The hardware random number generator repeats on every boot
+
+`esp_fill_random()` returns the same bytes on every boot of the same image. The firmware makes each
+event's id with it (a v4 UUID, as the web does with `crypto.randomUUID()`), and the API stores events
+under that id. A second run of the emulator test against the same database logs its first event with
+the id the first run already used, and the API refuses it ("Event could not be saved": the id belongs
+to another person's event).
+
+On the board the RNG is seeded by RF noise while Wi-Fi runs, so this does not happen there. The
+firmware does not mix in other entropy to hide it.
+
+Wanted: `RNG_DATA_REG` (0x6003507C on the ESP32-S3) answering from a host source of randomness (or a
+seed the harness passes, for reproducible runs).
+
+Until then, clear the dev database's events between runs:
+`docker exec <postgres container> psql -U bubsie -d bubsie -c 'DELETE FROM events;'`.
