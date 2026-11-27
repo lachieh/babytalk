@@ -1,5 +1,11 @@
 # @bubsie/web
 
+## 0.3.3
+
+### Patch Changes
+
+- ef98cbf: Editing a feed shows the same Ended and length fields as sleep, so feeds saved as a single moment can be given a finish time. Solid feeds still edit as a single time.
+
 ## 0.3.2
 
 ### Patch Changes
