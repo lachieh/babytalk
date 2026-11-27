@@ -13,6 +13,7 @@ import { ActiveTimer } from "./active-timer";
 import { AmountInput, useDismissedAmountPrompts } from "./amount-input";
 import { EventEditSheet } from "./event-edit-sheet";
 import { PumpStartSegments } from "./pump-start-segments";
+import { EventRowsSkeleton } from "./skeletons";
 
 /* ── Helpers ──────────────────────────────────────────────── */
 
@@ -127,8 +128,9 @@ const sectionHeading =
 
 export const PumpView = () => {
   const {
-    baby,
     events,
+    eventsLoading,
+    canLog,
     activeEvents,
     completeAmount,
     discardEvent,
@@ -255,8 +257,41 @@ export const PumpView = () => {
         >
           Start pumping
         </h2>
-        <PumpStartSegments disabled={baby === null} onStart={handleStart} />
+        <PumpStartSegments disabled={!canLog} onStart={handleStart} />
       </section>
+    );
+  }
+
+  let sessions: React.ReactNode;
+  if (pumpSessions.length > 0) {
+    sessions = (
+      <ul>
+        {pumpSessions.map((e) => (
+          <SessionRow event={e} key={e.id} onEdit={handleEdit} />
+        ))}
+      </ul>
+    );
+  } else if (eventsLoading) {
+    sessions = (
+      <div aria-label="Loading today's sessions" role="status">
+        <EventRowsSkeleton rows={2} />
+      </div>
+    );
+  } else if (activePump) {
+    sessions = (
+      <p className="px-6 py-6 text-center text-neutral-600 text-sm">
+        Pumping now. The session is listed here once you tap Done.
+      </p>
+    );
+  } else {
+    sessions = (
+      <div className="px-6 py-6 text-center">
+        <p className="text-neutral-600 text-sm">No pumping logged today.</p>
+        <p className="mx-auto mt-1 max-w-xs text-neutral-500 text-sm">
+          Choose a side below to start a timer. Finished sessions are listed
+          here with their amounts.
+        </p>
+      </div>
     );
   }
 
@@ -274,28 +309,7 @@ export const PumpView = () => {
               </p>
             )}
           </div>
-          {pumpSessions.length === 0 && activePump ? (
-            <p className="px-6 py-6 text-center text-neutral-600 text-sm">
-              Pumping now. The session is listed here once you tap Done.
-            </p>
-          ) : null}
-          {pumpSessions.length === 0 && !activePump ? (
-            <div className="px-6 py-6 text-center">
-              <p className="text-neutral-600 text-sm">
-                No pumping logged today.
-              </p>
-              <p className="mx-auto mt-1 max-w-xs text-neutral-500 text-sm">
-                Choose a side below to start a timer. Finished sessions are
-                listed here with their amounts.
-              </p>
-            </div>
-          ) : (
-            <ul>
-              {pumpSessions.map((e) => (
-                <SessionRow event={e} key={e.id} onEdit={handleEdit} />
-              ))}
-            </ul>
-          )}
+          {sessions}
         </section>
 
         {breastfeeds.length > 0 && (

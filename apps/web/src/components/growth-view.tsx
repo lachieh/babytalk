@@ -1,14 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { useBabyContext } from "@/lib/baby-context";
 import { gqlRequest } from "@/lib/gql-request";
+import { useCachedQuery } from "@/lib/use-cached-query";
 import { useMeasurementUnit } from "@/lib/use-measurement-unit";
 
 import { MeasurementSheet } from "./growth-measurement-sheet";
 import type { Measurement } from "./growth-model";
 import { GrowthPanel } from "./growth-panel";
+import { GrowthSkeleton } from "./skeletons";
 
 const GET_GROWTH = `
   query Growth($babyId: String!, $limit: Int) {
@@ -29,43 +31,29 @@ const MEASUREMENT_LIMIT = 200;
 export const GrowthView = () => {
   const { baby, loading } = useBabyContext();
   const { imperial, setUnit } = useMeasurementUnit();
-  const [data, setData] = useState<{
-    babyId: string;
-    birthWeightG: number | null;
-    measurements: Measurement[];
-  } | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editing, setEditing] = useState<Measurement | null>(null);
-  const [fetchKey, setFetchKey] = useState(0);
-  const [failedKey, setFailedKey] = useState<number | null>(null);
 
   const babyId = baby?.id ?? null;
 
-  useEffect(() => {
-    if (!babyId) return;
-    let cancelled = false;
-    const load = async () => {
-      try {
-        const result = await gqlRequest<GrowthData>(GET_GROWTH, {
-          babyId,
-          limit: MEASUREMENT_LIMIT,
-        });
-        if (cancelled) return;
-        setData({
-          babyId,
-          birthWeightG:
-            result.myBabies.find((b) => b.id === babyId)?.birthWeightG ?? null,
-          measurements: result.measurements,
-        });
-      } catch {
-        if (!cancelled) setFailedKey(fetchKey);
-      }
+  const load = useCallback(async () => {
+    const result = await gqlRequest<GrowthData>(GET_GROWTH, {
+      babyId,
+      limit: MEASUREMENT_LIMIT,
+    });
+    return {
+      birthWeightG:
+        result.myBabies.find((b) => b.id === babyId)?.birthWeightG ?? null,
+      measurements: result.measurements,
     };
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [babyId, fetchKey]);
+  }, [babyId]);
+
+  const {
+    data,
+    failed,
+    retry: handleSaved,
+    update,
+  } = useCachedQuery(babyId && `growth:${babyId}`, load);
 
   const handleAdd = useCallback(() => {
     setEditing(null);
@@ -78,22 +66,23 @@ export const GrowthView = () => {
   }, []);
 
   const handleClose = useCallback(() => setSheetOpen(false), []);
-  const handleSaved = useCallback(() => setFetchKey((k) => k + 1), []);
-  const handleDeleted = useCallback((id: string) => {
-    setData((prev) =>
-      prev
-        ? {
-            ...prev,
-            measurements: prev.measurements.filter((m) => m.id !== id),
-          }
-        : prev
-    );
-  }, []);
+  const handleDeleted = useCallback(
+    (id: string) => {
+      update((prev) => ({
+        ...prev,
+        measurements: prev.measurements.filter((m) => m.id !== id),
+      }));
+      // A refresh started before the delete would bring it back.
+      handleSaved();
+    },
+    [update, handleSaved]
+  );
 
-  if (loading || !baby) return null;
+  if (loading) return <GrowthSkeleton />;
+  if (!baby) return null;
 
-  if (data?.babyId !== baby.id) {
-    if (failedKey !== fetchKey) return null;
+  if (!data) {
+    if (!failed) return <GrowthSkeleton />;
     return (
       <div className="mx-auto w-full max-w-2xl px-4 pt-6">
         <p className="text-base font-semibold text-neutral-800">

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
+import { AveragesSkeleton } from "@/components/skeletons";
 import type { BabyEvent } from "@/lib/baby-context";
 import { useBabyContext } from "@/lib/baby-context";
 import { gqlRequest } from "@/lib/gql-request";
 import { buildTypicalDay, historyStart } from "@/lib/typical-day-report";
-import type { TypicalDayReport } from "@/lib/typical-day-report";
+import { useCachedQuery } from "@/lib/use-cached-query";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import { TypicalDay } from "./typical-day";
@@ -31,56 +32,32 @@ const EVENTS_IN_RANGE = `
   }
 `;
 
-type LoadState =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { babyId: string; report: TypicalDayReport; status: "ready" };
-
 export default function HistoryAveragesPage() {
   const { unit } = useVolumeUnit();
   const { baby, loading } = useBabyContext();
   const babyId = baby?.id;
   const birthDate = baby?.birthDate;
-  const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [attempt, setAttempt] = useState(0);
-  const retry = useCallback(() => {
-    setState({ status: "loading" });
-    setAttempt((count) => count + 1);
-  }, []);
 
-  useEffect(() => {
-    if (!babyId) return;
-    let cancelled = false;
-
-    const load = async () => {
-      const now = new Date();
-      try {
-        const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
-          EVENTS_IN_RANGE,
-          {
-            babyId,
-            startedAfter: historyStart(now, birthDate).toISOString(),
-            startedBefore: now.toISOString(),
-          }
-        );
-        if (cancelled) return;
-        setState({
-          babyId,
-          report: buildTypicalDay(data.eventsInRange, { birthDate, now }),
-          status: "ready",
-        });
-      } catch {
-        if (!cancelled) setState({ status: "failed" });
+  const load = useCallback(async () => {
+    const now = new Date();
+    const data = await gqlRequest<{ eventsInRange: BabyEvent[] }>(
+      EVENTS_IN_RANGE,
+      {
+        babyId,
+        startedAfter: historyStart(now, birthDate).toISOString(),
+        startedBefore: now.toISOString(),
       }
-    };
+    );
+    return buildTypicalDay(data.eventsInRange, { birthDate, now });
+  }, [babyId, birthDate]);
 
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [babyId, birthDate, attempt]);
+  const {
+    data: report,
+    failed,
+    retry,
+  } = useCachedQuery(babyId ? `averages:${babyId}:${birthDate}` : null, load);
 
-  if (state.status === "failed") {
+  if (failed) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto px-4">
         <div className="mx-auto w-full max-w-xl pt-2 pb-8">
@@ -102,26 +79,13 @@ export default function HistoryAveragesPage() {
     );
   }
 
-  if (
-    loading ||
-    !baby ||
-    state.status === "loading" ||
-    state.babyId !== baby.id
-  ) {
-    return (
-      <div
-        aria-label="Loading averages"
-        className="flex min-h-0 flex-1 items-center justify-center"
-        role="status"
-      >
-        <div className="h-8 w-8 animate-breathe rounded-full bg-primary-200" />
-      </div>
-    );
+  if (loading || !baby || !report) {
+    return <AveragesSkeleton />;
   }
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-4">
-      <TypicalDay babyName={baby.name} report={state.report} unit={unit} />
+      <TypicalDay babyName={baby.name} report={report} unit={unit} />
     </div>
   );
 }

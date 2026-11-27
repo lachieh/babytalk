@@ -382,6 +382,58 @@ body {
   animation: slide-up var(--duration-normal) var(--ease-out) both;
 }
 
+@keyframes page-out {
+  to {
+    opacity: 0;
+    transform: translateX(var(--page-shift, 0));
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--page-shift, 0));
+  }
+}
+
+::view-transition-old(.page-out-to-start),
+::view-transition-old(.page-out-to-end),
+::view-transition-old(.page-fade-out) {
+  animation: page-out var(--duration-fast) var(--ease-in-out) both;
+}
+
+::view-transition-new(.page-in-from-start),
+::view-transition-new(.page-in-from-end),
+::view-transition-new(.page-fade-in) {
+  animation: page-in var(--duration-normal) var(--ease-out) 60ms both;
+}
+
+::view-transition-old(.page-out-to-start) {
+  --page-shift: -1.5rem;
+}
+::view-transition-old(.page-out-to-end) {
+  --page-shift: 1.5rem;
+}
+::view-transition-new(.page-in-from-end) {
+  --page-shift: 1.5rem;
+}
+::view-transition-new(.page-in-from-start) {
+  --page-shift: -1.5rem;
+}
+
+::view-transition-group(.indicator) {
+  animation-duration: var(--duration-normal);
+  animation-timing-function: var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* --- Safe area utilities for notched devices --- */
 .safe-top {
   padding-top: max(calc(var(--spacing) * 10), env(safe-area-inset-top));

@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 // Public config is served at runtime from /.well-known/config, so one image
 // works for any deployment. Nothing environment-specific is baked into the build.
 const nextConfig: NextConfig = {
+  experimental: {
+    viewTransition: true,
+  },
   output: "standalone",
   transpilePackages: [
     "@bubsie/db",

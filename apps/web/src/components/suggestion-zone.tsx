@@ -149,8 +149,8 @@ const HOME_TIMER_TYPES = new Set(["feed", "sleep"]);
 
 export const SuggestionZone = () => {
   const {
-    baby,
     events,
+    canLog,
     activeEvents,
     completeAmount,
     discardEvent,
@@ -219,8 +219,6 @@ export const SuggestionZone = () => {
     dismiss(awaitingAmount.id);
   }, [awaitingAmount, completeAmount, dismiss]);
 
-  const isReady = baby !== null;
-
   return (
     <section aria-labelledby="log-activity-heading">
       <div className="px-4">
@@ -259,7 +257,7 @@ export const SuggestionZone = () => {
         <LogColumn
           defaultVariant={feedDefault}
           isBusy={isFeeding}
-          isReady={isReady}
+          isReady={canLog}
           lastAmount={lastFeedAmount}
           onLog={handleLog}
           type="feed"
@@ -267,7 +265,7 @@ export const SuggestionZone = () => {
         <LogColumn
           defaultVariant={sleepDefault}
           isBusy={isAsleep}
-          isReady={isReady}
+          isReady={canLog}
           lastAmount={null}
           onLog={handleLog}
           type="sleep"
@@ -275,7 +273,7 @@ export const SuggestionZone = () => {
         <LogColumn
           defaultVariant={diaperDefault}
           isBusy={false}
-          isReady={isReady}
+          isReady={canLog}
           lastAmount={null}
           onLog={handleLog}
           type="diaper"
