@@ -22,7 +22,7 @@ static void on_timezone(lv_event_t *event) { screen_timezone_show(settings.tz); 
 
 static void on_night(lv_event_t *event)
 {
-    settings_set_u8("dark", &settings.dark, (uint8_t)((settings.dark + 1) % 3));
+    settings_set_u8("dark", &settings.dark, (night_mode_t)((settings.dark + 1) % NIGHT_MODE_COUNT));
     theme_set_dark(screen_station_want_dark());
     buttons_apply_brightness();
     screen_settings_show();
@@ -83,7 +83,7 @@ void screen_settings_show(void)
         ui_row(list, "Send again", detail, on_retry, NULL);
     }
 
-    ui_row(list, "Night mode", NIGHT[settings.dark % 3], on_night, NULL);
+    ui_row(list, "Night mode", NIGHT[settings.dark % NIGHT_MODE_COUNT], on_night, NULL);
     ui_row(list, "Volume", settings.volume_oz ? "Fluid ounces" : "Millilitres", on_volume, NULL);
     ui_row(list, "Reduce motion", settings.reduced_motion ? "On" : "Off", on_motion, NULL);
     const bz_zone_t *zone = bz_zone_find(settings.tz);

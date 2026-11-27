@@ -14,7 +14,10 @@ static const char *TAG = "screen";
 static const bz_type_t ORDER[] = {BZ_FEED, BZ_SLEEP, BZ_DIAPER, BZ_PUMP, BZ_NOTE};
 #define MAX_PAGES (BZ_TYPE_COUNT + 1)
 
+typedef enum { PAGE_EVENT, PAGE_SETTINGS } page_kind_t;
+
 typedef struct {
+    page_kind_t kind;
     bz_type_t type;
     lv_obj_t *tile;
     lv_obj_t *body;
@@ -330,7 +333,7 @@ static void signature_of(page_t *page, char *out, size_t len, tile_state_t *stat
 {
     *event = NULL;
     *state = STATE_IDLE;
-    if (page->type == BZ_TYPE_UNKNOWN) {
+    if (page->kind == PAGE_SETTINGS) {
         bz_unsaved_t unsaved = bz_ob_unsaved(&station->ob);
         snprintf(out, len, "settings %d %d %d", unsaved.queued, unsaved.failed, station_offline());
         return;
@@ -369,7 +372,7 @@ static bool fill_page(page_t *page, bool force)
     lv_obj_clean(page->body);
     page->digits = NULL;
     page->arc = NULL;
-    if (page->type == BZ_TYPE_UNKNOWN) {
+    if (page->kind == PAGE_SETTINGS) {
         build_settings_page(page);
     } else if (state == STATE_TIMER) {
         build_timer(page, event);
@@ -397,7 +400,7 @@ static void on_page_changed(lv_event_t *event)
     for (int i = 0; i < page_count; i++) {
         if (pages[i].tile == active && current_page != i) {
             current_page = i;
-            ESP_LOGI(TAG, "station page %s", pages[i].type == BZ_TYPE_UNKNOWN ? "settings" : bz_type_name(pages[i].type));
+            ESP_LOGI(TAG, "station page %s", pages[i].kind == PAGE_SETTINGS ? "settings" : bz_type_name(pages[i].type));
             update_dots();
         }
     }
@@ -407,8 +410,8 @@ static void on_scroll_end(lv_event_t *event) { ui_trace(screen); }
 
 bool screen_station_want_dark(void)
 {
-    if (settings.dark == 1) return true;
-    if (settings.dark == 2 || !app_clock_synced()) return false;
+    if (settings.dark == NIGHT_ALWAYS) return true;
+    if (settings.dark == NIGHT_NEVER || !app_clock_synced()) return false;
     return bz_is_dark_hour(bz_local_hour(station_now()), 20, 7);
 }
 
@@ -453,9 +456,11 @@ void screen_station_show(void)
 
     page_count = 0;
     for (size_t i = 0; i < sizeof ORDER / sizeof ORDER[0]; i++) {
-        if (settings.tiles & (1u << ORDER[i])) pages[page_count++].type = ORDER[i];
+        if (!(settings.tiles & (1u << ORDER[i]))) continue;
+        pages[page_count].kind = PAGE_EVENT;
+        pages[page_count++].type = ORDER[i];
     }
-    pages[page_count++].type = BZ_TYPE_UNKNOWN;
+    pages[page_count++].kind = PAGE_SETTINGS;
     if (current_page >= page_count) current_page = 0;
 
     for (int i = 0; i < page_count; i++) {

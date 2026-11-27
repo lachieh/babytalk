@@ -6,6 +6,9 @@
 #define SETTINGS_URL_LEN 160
 #define SETTINGS_TOKEN_LEN 1024
 
+typedef uint8_t night_mode_t;
+enum { NIGHT_AUTO, NIGHT_ALWAYS, NIGHT_NEVER, NIGHT_MODE_COUNT };
+
 typedef struct {
     char web_url[SETTINGS_URL_LEN];
     char api_url[SETTINGS_URL_LEN];
@@ -16,7 +19,7 @@ typedef struct {
     char baby_id[37];
     uint8_t tiles;
     char tz[40];
-    uint8_t dark;
+    night_mode_t dark;
     uint8_t volume_oz;
     uint8_t reduced_motion;
 } settings_t;
