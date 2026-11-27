@@ -18,8 +18,11 @@ import {
   wallClockHours,
   weekDayIndex,
   weekDayStart,
-} from "@/app/history/week/week-data";
-import type { WeekDaySummary, WeekMark } from "@/app/history/week/week-data";
+} from "@/app/(app)/history/week/week-data";
+import type {
+  WeekDaySummary,
+  WeekMark,
+} from "@/app/(app)/history/week/week-data";
 import type { BabyEvent } from "@/lib/baby-context";
 import { EVENT_TYPE_LABELS } from "@/lib/event-meta";
 import type { EventType } from "@/lib/event-styles";
@@ -956,11 +959,13 @@ export const WeekChart = ({
   onTapEvent,
   weekStart: weekStartProp,
   now: nowProp,
+  loading = false,
 }: {
   events: BabyEvent[];
   onTapEvent?: (e: BabyEvent) => void;
   weekStart?: Date;
   now?: Date;
+  loading?: boolean;
 }) => {
   const now = useNow(nowProp);
   const weekStartMs = getWeekStart(weekStartProp ?? new Date(now)).getTime();
@@ -1029,10 +1034,12 @@ export const WeekChart = ({
   ]);
 
   const isEmpty = marks.length === 0;
+  const pending = loading && isEmpty;
   const weekLabel = `${mediumDay(weekStart)} to ${mediumDay(weekDayStart(weekStart, 6))}`;
 
   return (
     <section
+      aria-busy={pending}
       aria-label={`Week pattern, ${weekLabel}: sleep, feeds, diapers and pumps by time of day`}
       className="mx-auto flex h-full w-full max-w-[36rem] flex-col overflow-y-auto px-2"
     >
@@ -1053,7 +1060,7 @@ export const WeekChart = ({
       </div>
 
       <div
-        className="relative max-h-[36rem] min-h-[12rem] flex-1"
+        className={`relative max-h-[36rem] min-h-[12rem] flex-1 ${pending ? "animate-breathe" : ""}`}
         ref={plotRef}
       >
         {size.width > 0 && size.height > 0 && (
@@ -1067,7 +1074,7 @@ export const WeekChart = ({
             todayIdx={todayIdx}
           />
         )}
-        {isEmpty && (
+        {isEmpty && !pending && (
           <div
             className="pointer-events-none absolute inset-y-0 right-0 flex items-center justify-center px-3"
             style={{ left: GUTTER }}

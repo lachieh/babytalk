@@ -16,6 +16,7 @@ import { useBabyContext } from "@/lib/baby-context";
 import { startOfDay } from "@/lib/daily-totals";
 import { gqlRequest } from "@/lib/gql-request";
 import { parseYmd, ymd } from "@/lib/history-days";
+import { useCachedQuery } from "@/lib/use-cached-query";
 
 import { useHistorySheet } from "../_context";
 import { filterWeekEvents, getWeekStart } from "./week-data";
@@ -310,6 +311,8 @@ const WeekPicker = ({
   );
 };
 
+const NO_EVENTS: BabyEvent[] = [];
+
 /* ── Week page ───────────────────────────────────────────── */
 
 export default function HistoryWeekPage() {
@@ -369,39 +372,26 @@ export default function HistoryWeekPage() {
     [setWeek, closePicker]
   );
 
-  const [events, setEvents] = useState<BabyEvent[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
-
-  useEffect(() => {
-    if (!baby) return;
-    let cancelled = false;
-    const rangeStart = weekStart.toISOString();
+  const babyId = baby?.id ?? null;
+  const loadWeek = useCallback(async () => {
     const weekEnd = new Date(weekStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
-    const rangeEnd = weekEnd.toISOString();
-
-    const load = async () => {
-      setEventsLoading(true);
-      try {
-        const data = await gqlRequest<WeekEventsResponse>(
-          EVENTS_OVERLAPPING_RANGE_QUERY,
-          { babyId: baby.id, rangeEnd, rangeStart }
-        );
-        if (!cancelled) {
-          setEvents(filterWeekEvents(data));
-        }
-      } catch {
-        if (!cancelled) setEvents([]);
-      } finally {
-        if (!cancelled) setEventsLoading(false);
+    const data = await gqlRequest<WeekEventsResponse>(
+      EVENTS_OVERLAPPING_RANGE_QUERY,
+      {
+        babyId,
+        rangeEnd: weekEnd.toISOString(),
+        rangeStart: weekStart.toISOString(),
       }
-    };
-    load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [baby, weekStart]);
+    );
+    return filterWeekEvents(data);
+  }, [babyId, weekStart]);
+  const week = useCachedQuery(
+    babyId && `week:${babyId}:${ymd(weekStart)}`,
+    loadWeek
+  );
+  const events = week.data ?? NO_EVENTS;
+  const eventsLoading = week.data === undefined && !week.failed;
 
   const atCurrentWeek = isCurrentWeek(weekStart);
 
@@ -465,17 +455,12 @@ export default function HistoryWeekPage() {
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        {eventsLoading && events.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="h-6 w-6 animate-breathe rounded-full bg-primary-200" />
-          </div>
-        ) : (
-          <WeekChart
-            events={events}
-            onTapEvent={openEdit}
-            weekStart={weekStart}
-          />
-        )}
+        <WeekChart
+          events={events}
+          loading={eventsLoading}
+          onTapEvent={openEdit}
+          weekStart={weekStart}
+        />
       </div>
 
       {pickerOpen && (

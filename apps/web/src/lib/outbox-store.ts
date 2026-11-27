@@ -26,6 +26,10 @@
  * is adopted.
  */
 
+import type { ZodType } from "zod";
+import { z } from "zod";
+
+import { readDevice, writeDevice } from "./app-cache";
 import type {
   BabyEvent,
   EventsAction,
@@ -37,6 +41,7 @@ import {
   eventsReducer,
   initialEventsState,
   isEmptyOutbox,
+  isRunning,
   toPersisted,
   unsavedTotal,
 } from "./event-outbox";
@@ -224,12 +229,33 @@ const notify = () => {
   for (const listener of listeners) listener();
 };
 
+const EVENTS_CACHE = "events";
+
+const keptEventsSchema = z.array(
+  z.object({
+    endedAt: z.string().nullable(),
+    id: z.string(),
+    metadata: z.string(),
+    startedAt: z.string(),
+    type: z.string(),
+  })
+) satisfies ZodType<BabyEvent[]>;
+
 export const dispatchOutbox = (action: EventsAction) => {
   const before = state;
   state = eventsReducer(state, action);
   if (state === before) return;
   if (state.outbox !== before.outbox || state.hidden !== before.hidden) {
     write();
+  }
+  // Running timers are left out: one may have been stopped on another phone
+  // since, and showing it as running invites stopping it again.
+  if (state.source !== "none" && state.server !== before.server) {
+    writeDevice(
+      owner,
+      EVENTS_CACHE,
+      state.server.filter((event) => !isRunning(event))
+    );
   }
   notify();
 };
@@ -439,6 +465,8 @@ export const startOutbox = (user: string | null) => {
   tabId = readTabId();
   state = initialEventsState;
   durable = true;
+  const kept = readDevice(user, EVENTS_CACHE, keptEventsSchema);
+  if (kept) state = eventsReducer(state, { events: kept, type: "restored" });
   notify();
   void (async () => {
     try {

@@ -6,6 +6,7 @@ import { useMemo } from "react";
 
 import { NothingLoggedYet } from "@/components/days-recap";
 import { HistoryEventTable } from "@/components/history-event-table";
+import { EventRowsSkeleton } from "@/components/skeletons";
 import { useBabyContext } from "@/lib/baby-context";
 import { eventsOverlappingDay } from "@/lib/event-time";
 import { groupEventsByDay, parseYmd, ymd } from "@/lib/history-days";
@@ -26,7 +27,7 @@ function dayLabel(date: Date): string {
 }
 
 export default function HistoryListPage() {
-  const { events, loading } = useBabyContext();
+  const { events, eventsLoading } = useBabyContext();
   const { openEdit } = useHistorySheet();
   const searchParams = useSearchParams();
   const dateParam = searchParams?.get("date") ?? null;
@@ -40,8 +41,6 @@ export default function HistoryListPage() {
       selectedKey: key,
     };
   }, [events, dateParam]);
-
-  if (loading) return null;
 
   const isEmpty = groups.every((g) => g.events.length === 0);
 
@@ -74,9 +73,20 @@ export default function HistoryListPage() {
         </div>
       )}
 
-      {isEmpty && !selectedKey && <NothingLoggedYet />}
+      {isEmpty && eventsLoading && (
+        <div aria-label="Loading entries" role="status">
+          <div
+            aria-hidden="true"
+            className="mx-4 mb-2 h-3 w-16 animate-breathe rounded-md bg-neutral-200"
+          />
+          <EventRowsSkeleton rows={6} />
+        </div>
+      )}
 
-      {(selectedKey || !isEmpty) &&
+      {isEmpty && !eventsLoading && !selectedKey && <NothingLoggedYet />}
+
+      {!(isEmpty && eventsLoading) &&
+        (selectedKey || !isEmpty) &&
         groups.map((group) => (
           <section className="mb-4" key={group.key}>
             <h2 className="mb-1 px-4 font-medium text-neutral-400 text-xs uppercase tracking-wider">

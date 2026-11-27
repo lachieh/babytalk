@@ -16,7 +16,7 @@ import { formatVolume, useVolumeUnit } from "@/lib/use-volume-unit";
 
 type SummaryType = "feed" | "sleep" | "diaper";
 
-const cardBg: Record<SummaryType, string> = {
+export const cardBg: Record<SummaryType, string> = {
   diaper: "bg-diaper-100",
   feed: "bg-feed-100",
   sleep: "bg-sleep-100",
@@ -28,7 +28,7 @@ const activeDot: Record<SummaryType, string> = {
   sleep: "bg-sleep-500",
 };
 
-const blobShapes = [
+export const blobShapes = [
   "60% 40% 45% 55% / 55% 60% 40% 45%",
   "50% 50% 45% 55% / 45% 55% 50% 50%",
   "45% 55% 60% 40% / 50% 45% 55% 50%",

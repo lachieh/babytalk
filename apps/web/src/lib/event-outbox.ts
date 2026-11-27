@@ -24,6 +24,11 @@ export interface BabyEvent {
   syncState?: SyncState;
 }
 
+/** A timer still going. Diapers are instant, though older ones were saved
+ * without an end. */
+export const isRunning = (event: BabyEvent) =>
+  event.endedAt === null && event.type !== "diaper";
+
 export interface EventChanges {
   startedAt?: string;
   endedAt?: string | null;
@@ -72,6 +77,7 @@ export interface PersistedOutbox {
 
 export interface EventsState {
   server: BabyEvent[];
+  source: "none" | "device" | "server";
   outbox: Record<string, OutboxEntry>;
   hidden: string[];
   lastWriteAt: number;
@@ -79,6 +85,7 @@ export interface EventsState {
 
 export type EventsAction =
   | { type: "loaded"; events: BabyEvent[]; requestedAt?: number }
+  | { type: "restored"; events: BabyEvent[] }
   | { type: "create"; event: BabyEvent }
   | { type: "update"; id: string; changes: EventChanges; eventType?: string }
   | { type: "delete"; id: string }
@@ -110,6 +117,7 @@ export const initialEventsState: EventsState = {
   lastWriteAt: 0,
   outbox: {},
   server: [],
+  source: "none",
 };
 
 const applyChanges = (event: BabyEvent, changes: EventChanges): BabyEvent => ({
@@ -373,7 +381,17 @@ export const eventsReducer = (
       const stale =
         action.requestedAt !== undefined &&
         action.requestedAt < state.lastWriteAt;
-      return stale ? state : { ...state, server: action.events };
+      if (stale) {
+        return state.source === "server"
+          ? state
+          : { ...state, source: "server" };
+      }
+      return { ...state, server: action.events, source: "server" };
+    }
+    case "restored": {
+      return state.source === "server"
+        ? state
+        : { ...state, server: action.events, source: "device" };
     }
     case "create": {
       return putEntry(state, newEntry(action.event, "create", {}));

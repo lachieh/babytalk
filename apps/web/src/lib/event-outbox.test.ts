@@ -567,3 +567,52 @@ describe("what the sync status counts", () => {
     expect(unsavedTotal(state)).toBe(1);
   });
 });
+
+describe("where the shown events came from", () => {
+  it("is nowhere before anything arrives, even with changes waiting", () => {
+    const state = run([{ event: feed("mine"), type: "create" }]);
+    expect(state.source).toBe("none");
+  });
+
+  it("is the server after an answer with no events", () => {
+    expect(run([{ events: [], type: "loaded" }]).source).toBe("server");
+  });
+
+  it("is the server after an answer that arrives too late to use", () => {
+    const state = run([
+      { event: feed("mine"), type: "create" },
+      start("mine", "r1"),
+      { at: 2000, ...ok("mine", "r1", feed("mine")) },
+      { events: [], requestedAt: 1000, type: "loaded" },
+    ]);
+    expect(state.source).toBe("server");
+    expect(shown(state).map((e) => e.id)).toStrictEqual(["mine"]);
+  });
+
+  it("shows the copy kept on this device until the server answers", () => {
+    const state = run([{ events: [feed("kept")], type: "restored" }]);
+    expect(state.source).toBe("device");
+    expect(shown(state).map((e) => e.id)).toStrictEqual(["kept"]);
+  });
+
+  it("never lets the device copy replace what the server said", () => {
+    const state = run([
+      { events: [feed("fresh")], type: "loaded" },
+      { events: [feed("kept")], type: "restored" },
+    ]);
+    expect(state.source).toBe("server");
+    expect(shown(state).map((e) => e.id)).toStrictEqual(["fresh"]);
+  });
+
+  it("keeps changes made on this device on top of the device copy", () => {
+    const state = run([
+      { events: [feed("kept")], type: "restored" },
+      { event: feed("mine"), type: "create" },
+    ]);
+    expect(
+      shown(state)
+        .map((e) => e.id)
+        .toSorted()
+    ).toStrictEqual(["kept", "mine"]);
+  });
+});

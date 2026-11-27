@@ -5,18 +5,23 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
+import type { ZodType } from "zod";
+import { z } from "zod";
 
 import { SyncStatus } from "@/components/sync-status";
+import { readDevice, writeDevice } from "@/lib/app-cache";
 import { takesAmount } from "@/lib/daily-totals";
 import type { BabyEvent, EventChanges, EventsAction } from "@/lib/event-outbox";
 import {
   canRecord,
   deriveEvents,
+  isRunning,
   unsavedCounts,
   unsavedTotal,
 } from "@/lib/event-outbox";
@@ -70,6 +75,10 @@ interface BabyContextValue {
   events: BabyEvent[];
   activeEvents: BabyEvent[];
   loading: boolean;
+  eventsLoading: boolean;
+  /** Logging may start: the server has said what is running, or it could
+   * not be asked (offline) and the person must not be held up. */
+  canLog: boolean;
   refreshEvents: () => Promise<void>;
   refreshBaby: () => Promise<void>;
   logEventDirect: (
@@ -144,12 +153,37 @@ export const UNDO_DURATION = 5000;
 
 const BABY_RETRY_MS = 15_000;
 
+const BABY_CACHE = "baby";
+
+const keepIfUnchanged = (prev: Baby | null, next: Baby): Baby =>
+  prev?.id === next.id &&
+  prev.name === next.name &&
+  prev.birthDate === next.birthDate &&
+  prev.gender === next.gender
+    ? prev
+    : next;
+
+/** How long logging waits for the first answer about events before it goes
+ * ahead without one (offline, or a request that never returns). */
+const EVENTS_WAIT_MS = 8000;
+
+const babySchema = z.object({
+  birthDate: z.string(),
+  gender: z.string().nullable(),
+  id: z.string(),
+  name: z.string(),
+}) satisfies ZodType<Baby>;
+
+export const readCachedBaby = () =>
+  readDevice(currentUserId(), BABY_CACHE, babySchema);
+
 export const BabyContextProvider = ({
   children,
 }: {
   children: React.ReactNode;
 }) => {
-  const [baby, setBaby] = useState<Baby | null>(null);
+  const [cachedBaby] = useState(readCachedBaby);
+  const [baby, setBaby] = useState<Baby | null>(cachedBaby);
   const state = useSyncExternalStore(
     subscribeOutbox,
     getOutboxState,
@@ -160,13 +194,14 @@ export const BabyContextProvider = ({
     isOutboxDurable,
     isOutboxDurable
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(cachedBaby === null);
+  const [stoppedWaiting, setStoppedWaiting] = useState(false);
   const [online, setOnline] = useState(true);
   const [undoableAction, setUndoableAction] = useState<UndoableAction | null>(
     null
   );
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const babyRef = useRef<Baby | null>(null);
+  const babyRef = useRef<Baby | null>(cachedBaby);
   const babyRequestRef = useRef<Promise<Baby | null> | null>(null);
   const pendingDiscardRef = useRef<string | null>(null);
 
@@ -179,14 +214,17 @@ export const BabyContextProvider = ({
   const loadBaby = useCallback((): Promise<Baby | null> => {
     if (!babyRequestRef.current) {
       babyRequestRef.current = (async () => {
+        const user = currentUserId();
         try {
           const data = await gqlRequest<{ myBabies: Baby[] } | null>(
             GET_MY_BABIES
           );
           const first = data?.myBabies[0] ?? null;
-          if (first) {
+          // Someone else signed in meanwhile: this answer is not theirs.
+          if (first && currentUserId() === user) {
             babyRef.current = first;
-            setBaby(first);
+            writeDevice(user, BABY_CACHE, first);
+            setBaby((prev) => keepIfUnchanged(prev, first));
           }
           return first ?? babyRef.current;
         } catch {
@@ -211,6 +249,10 @@ export const BabyContextProvider = ({
     return retryUntil(async () => (await loadBaby()) !== null, BABY_RETRY_MS);
   }, [baby, loadBaby]);
 
+  useEffect(() => {
+    if (cachedBaby) loadBaby();
+  }, [cachedBaby, loadBaby]);
+
   const refreshEvents = useCallback(async () => {
     if (!baby) return;
     const requestedAt = Date.now();
@@ -225,11 +267,11 @@ export const BabyContextProvider = ({
         resumeOutbox();
       }
     } catch {
-      /* non-critical: polling tries again */
+      setStoppedWaiting(true);
     }
   }, [baby]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     startOutbox(currentUserId());
   }, []);
 
@@ -242,10 +284,7 @@ export const BabyContextProvider = ({
 
   // Active events = in-progress timers (endedAt is null).
   // Exclude instant event types (diaper) which may have endedAt=null from legacy data.
-  const activeEvents = useMemo(
-    () => events.filter((e) => e.endedAt === null && e.type !== "diaper"),
-    [events]
-  );
+  const activeEvents = useMemo(() => events.filter(isRunning), [events]);
 
   // Poll faster when there are active events (15s) vs idle (60s)
   useEffect(() => {
@@ -455,15 +494,26 @@ export const BabyContextProvider = ({
     return { ...counts, online, unstored };
   }, [state, online, durable]);
 
+  useEffect(() => {
+    if (!baby || state.source === "server") return;
+    const timer = setTimeout(() => setStoppedWaiting(true), EVENTS_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [baby, state.source]);
+
+  const eventsLoading = loading || (baby !== null && state.source === "none");
+  const canLog = baby !== null && (state.source === "server" || stoppedWaiting);
+
   const value = useMemo(
     (): BabyContextValue => ({
       activeEvents,
       baby,
+      canLog,
       completeAmount,
       deleteEvent,
       discardEvent,
       dismissUndo,
       events,
+      eventsLoading,
       loading,
       logEventDirect,
       refreshBaby,
@@ -479,11 +529,13 @@ export const BabyContextProvider = ({
     [
       activeEvents,
       baby,
+      canLog,
       completeAmount,
       deleteEvent,
       discardEvent,
       dismissUndo,
       events,
+      eventsLoading,
       loading,
       logEventDirect,
       refreshBaby,

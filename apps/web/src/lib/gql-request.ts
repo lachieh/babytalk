@@ -1,3 +1,4 @@
+import { clearAppCache } from "./app-cache";
 import {
   getApiUrl,
   getRuntimeConfig,
@@ -49,6 +50,7 @@ export const storeSession = (token: string, refreshToken: string) => {
 
 /** End the session on this device: every sign-out path goes through here. */
 export const signOut = () => {
+  clearAppCache();
   localStorage.removeItem("bubsie_token");
   localStorage.removeItem("bubsie_refresh_token");
   startNewSession();
