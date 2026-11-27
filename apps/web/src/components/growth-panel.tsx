@@ -250,27 +250,31 @@ const DataTable = ({
   points: GrowthPoint[];
   reference: Reference | null;
 }) => (
-  <table className="sr-only">
-    <caption>{caption}</caption>
-    <thead>
-      <tr>
-        <th scope="col">Date</th>
-        <th scope="col">Age</th>
-        <th scope="col">{metric.label}</th>
-        {reference && <th scope="col">Compared with the typical range</th>}
-      </tr>
-    </thead>
-    <tbody>
-      {points.map((point) => (
-        <tr key={point.id}>
-          <th scope="row">{formatDay(point.day)}</th>
-          <td>{formatAge(point.ageDays)}</td>
-          <td>{metric.format(point.value, imperial)}</td>
-          {reference && <td>{positionPhrase(point, reference)}</td>}
+  // A table cannot shrink below its content, so sr-only on the table
+  // leaves it wide enough to scroll the page sideways; the div clips it.
+  <div className="sr-only">
+    <table>
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Age</th>
+          <th scope="col">{metric.label}</th>
+          {reference && <th scope="col">Compared with the typical range</th>}
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {points.map((point) => (
+          <tr key={point.id}>
+            <th scope="row">{formatDay(point.day)}</th>
+            <td>{formatAge(point.ageDays)}</td>
+            <td>{metric.format(point.value, imperial)}</td>
+            {reference && <td>{positionPhrase(point, reference)}</td>}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 );
 
 function chartTitle(

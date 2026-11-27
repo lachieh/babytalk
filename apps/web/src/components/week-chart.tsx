@@ -834,29 +834,35 @@ const SummaryTable = ({
   caption: string;
   summaries: WeekDaySummary[];
 }) => (
-  <table className="sr-only">
-    <caption>{caption}</caption>
-    <thead>
-      <tr>
-        <th scope="col">Day</th>
-        <th scope="col">Sleep</th>
-        <th scope="col">Feeds</th>
-        <th scope="col">Diapers</th>
-        <th scope="col">Pumps</th>
-      </tr>
-    </thead>
-    <tbody>
-      {summaries.map((summary) => (
-        <tr key={summary.date.getTime()}>
-          <th scope="row">{longDay(summary.date)}</th>
-          <td>{summary.sleepMs > 0 ? formatSpan(summary.sleepMs) : "None"}</td>
-          <td>{summary.feeds}</td>
-          <td>{summary.diapers}</td>
-          <td>{summary.pumps}</td>
+  // A table cannot shrink below its content, so sr-only on the table
+  // leaves it wide enough to scroll the page sideways; the div clips it.
+  <div className="sr-only">
+    <table>
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th scope="col">Day</th>
+          <th scope="col">Sleep</th>
+          <th scope="col">Feeds</th>
+          <th scope="col">Diapers</th>
+          <th scope="col">Pumps</th>
         </tr>
-      ))}
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        {summaries.map((summary) => (
+          <tr key={summary.date.getTime()}>
+            <th scope="row">{longDay(summary.date)}</th>
+            <td>
+              {summary.sleepMs > 0 ? formatSpan(summary.sleepMs) : "None"}
+            </td>
+            <td>{summary.feeds}</td>
+            <td>{summary.diapers}</td>
+            <td>{summary.pumps}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
 );
 
 type Selection =
