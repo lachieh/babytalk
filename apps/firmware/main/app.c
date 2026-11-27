@@ -246,7 +246,12 @@ static void show_timezone(void *arg) { screen_timezone_show(settings.tz); }
 
 static void show_station(void *arg)
 {
-    if (!screen_named(lv_screen_active(), "station")) screen_splash_show("");
+    bz_baby_t babies[1];
+    if (station_babies(babies, 1) > 0) {
+        screen_station_show();
+    } else if (!screen_named(lv_screen_active(), "station")) {
+        screen_splash_show("");
+    }
 }
 
 static void do_continue(void *arg)
@@ -282,6 +287,7 @@ static void do_boot(void *arg)
 static void do_signed_out(void *arg)
 {
     station_stop();
+    station_forget();
     settings_unpair();
     do_continue(NULL);
 }
@@ -296,6 +302,7 @@ void app_signed_out(void)
 static void do_unpair(void *arg)
 {
     station_stop();
+    station_forget();
     if (arg) {
         settings_reset();
     } else {

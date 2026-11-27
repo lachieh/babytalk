@@ -16,6 +16,8 @@ void station_init(void);
 /** Start syncing for the paired session (loads babies, then events). Idempotent. */
 void station_start(void);
 void station_stop(void);
+/** Forget this session's events and unsent changes (unpair, reset). */
+void station_forget(void);
 
 void station_lock(void);
 void station_unlock(void);

@@ -9,7 +9,7 @@ import { Device } from "./bubsie-device.ts";
 
 const SCREENS = process.env.BUBSIE_SCREENS ?? "screens";
 
-test("sets up from new: splash, Wi-Fi, time zone, pairing", async () => {
+test("sets up from new, then logs, syncs and recovers like the web station", async () => {
   const family = await newFamily(["Ada", "Theo"]);
   const device = await Device.boot("bubsie", { network: true });
   try {
@@ -215,6 +215,121 @@ test("sets up from new: splash, Wi-Fi, time zone, pairing", async () => {
     await device.waitFor(/sync: events: 5/, 90);
     await device.run(1.5);
     device.screenshot(SCREENS, "18-sleep-from-phone");
+
+    // Settings, from the last page.
+    await device.swipe([400, 233], [60, 233]);
+    await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page settings/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "19-station-settings-page");
+    await device.tapLabel("Settings");
+    await device.waitFor(/screen: settings/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "20-settings");
+
+    // Day look: night mode Auto -> Always -> Never.
+    await device.tapLabel("Night mode");
+    await device.waitFor(/screen: settings/, 5);
+    await device.tapLabel("Night mode");
+    await device.waitFor(/screen: settings/, 5);
+    await device.find("Night mode");
+    await device.run(0.5);
+    device.screenshot(SCREENS, "21-settings-day");
+
+    // Show Pump and Note too.
+    await device.tapLabel("Buttons");
+    await device.waitFor(/screen: tiles/, 5);
+    await device.tapLabel("Pump");
+    await device.waitFor(/screen: tiles/, 5);
+    await device.tapLabel("Note");
+    await device.waitFor(/screen: tiles/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "22-buttons");
+
+    // BOOT goes back to the first page of the station.
+    await device.button("boot");
+    await device.waitFor(/screen: station/, 5);
+    await device.run(1);
+    device.screenshot(SCREENS, "23-station-day-feed");
+
+    // Switch baby: tap the name.
+    await device.tapLabel("Ada");
+    await device.waitFor(/screen: babies/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "24-babies");
+    await device.tapLabel("Theo");
+    await device.waitFor(/sync: baby /, 5);
+    await device.waitFor(/sync: events: 0/, 20);
+    await device.find("Theo");
+    await device.run(0.5);
+    device.screenshot(SCREENS, "25-station-theo");
+    const theo = family.babies[1]!;
+
+    // A note for Theo, typed on the keyboard.
+    for (let i = 0; i < 4; i++) await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page note/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "26-station-note");
+    await device.tapLabel("Note");
+    await device.waitFor(/screen: note/, 5);
+    for (const x of [104, 135, 166]) await device.tap(x, 176); // q w e
+    await device.run(0.5);
+    device.screenshot(SCREENS, "27-note-keyboard");
+    await device.tap(384, 350); // OK
+    const note = (await device.waitFor(/sync: log note (\{.*\}): ok/, 5))[1]!;
+    assert.ok(JSON.parse(note).text.length > 0, note);
+    await device.waitFor(/sync: sent create/, 20);
+    const theoEvents = await recentEvents(theo.id, family.token);
+    assert.equal(theoEvents.length, 1);
+    assert.equal(theoEvents[0]!.type, "note");
+    assert.equal(
+      (await recentEvents(ada.id, family.token)).filter(
+        (e) => e.type === "note"
+      ).length,
+      0
+    );
+
+    // Offline: the change is kept, shown as waiting, survives a restart, and goes when the network is back.
+    device.disconnect();
+    await device.button("boot");
+    await device.waitFor(/screen: station/, 5);
+    await device.swipe([400, 233], [60, 233]); // sleep
+    await device.swipe([400, 233], [60, 233]); // diaper
+    await device.waitFor(/screen: station page diaper/, 5);
+    await device.tapLabel("Diaper");
+    await device.waitFor(/sync: log diaper .*: ok/, 5);
+    await device.waitFor(/sync: not sent \S+ \(will retry\)/, 30);
+    await device.run(6);
+    for (let i = 0; i < 3; i++) await device.swipe([400, 233], [60, 233]);
+    await device.waitFor(/screen: station page settings/, 5);
+    await device.run(1.5);
+    device.screenshot(SCREENS, "28-offline-waiting");
+    await device.tapLabel("Settings");
+    await device.waitFor(/screen: settings/, 5);
+    await device.tapLabel("Restart");
+    device.reconnect();
+    await device.waitFor(/sync: restored 1 unsent/, 30);
+    await device.waitFor(/screen: station/, 40);
+    await device.waitFor(/sync: sent create/, 30);
+    assert.equal(
+      (await recentEvents(theo.id, family.token)).filter(
+        (e) => e.type === "diaper"
+      ).length,
+      1
+    );
+    await device.run(1);
+    device.screenshot(SCREENS, "29-after-restart");
+
+    // Unpair asks first, then the device is back at pairing.
+    for (let i = 0; i < 5; i++) await device.swipe([400, 233], [60, 233]);
+    await device.tapLabel("Settings");
+    await device.waitFor(/screen: settings/, 5);
+    await device.tapLabel("Unpair");
+    await device.waitFor(/screen: confirm-unpair/, 5);
+    await device.run(0.5);
+    device.screenshot(SCREENS, "30-confirm-unpair");
+    await device.tapLabel(/^Unpair$/);
+    await device.waitFor(/app: pair: code/, 30);
 
     assert.equal(
       device.board.log.filter((line) => line.includes("panic")).length,

@@ -31,7 +31,8 @@ static void trace_targets(lv_obj_t *obj)
     for (uint32_t i = 0; i < count; i++) {
         lv_obj_t *child = lv_obj_get_child(obj, i);
         if (lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) continue;
-        if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE) && !lv_obj_has_flag(child, LV_OBJ_FLAG_SCROLLABLE)) {
+        // A target is something that answers a touch: clickable, with a handler of its own.
+        if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE) && lv_obj_get_event_count(child) > 0) {
             lv_area_t a;
             lv_obj_get_coords(child, &a);
             int x = (a.x1 + a.x2) / 2, y = (a.y1 + a.y2) / 2;

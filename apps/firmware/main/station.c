@@ -271,7 +271,10 @@ static void sync_task(void *arg)
         }
         station_lock();
         bool waiting = bz_ob_has_waiting(&station->ob);
+        bool ready = bz_ob_next(&station->ob) != NULL;
         station_unlock();
+        // A reload that got through resumes what was waiting: send it now.
+        if (ready && !failed) continue;
         if (waiting && station_now() >= retry_at) {
             station_lock();
             bz_ob_resume(&station->ob);
@@ -294,6 +297,8 @@ void station_start(void)
         wake();
         return;
     }
+    // A task told to stop may still be finishing its last request.
+    while (task) vTaskDelay(pdMS_TO_TICKS(20));
     signed_out = false;
     baby_count = -1;
     station_lock();
@@ -307,6 +312,16 @@ void station_stop(void)
 {
     running = false;
     wake();
+}
+
+void station_forget(void)
+{
+    station_lock();
+    bz_st_init(station);
+    persisted_revision = UINT32_MAX;
+    persist();
+    baby_count = -1;
+    station_unlock();
 }
 
 /* ── Actions ─────────────────────────────────────────────── */

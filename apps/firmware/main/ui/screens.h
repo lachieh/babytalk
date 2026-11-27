@@ -59,6 +59,10 @@ void screen_server_show(const char *current, app_fn back);
 #include "bz_rules.h"
 
 void screen_station_show(void);
+/** Night mode as settings and the clock say now (dark 8 pm to 7 am on Auto). */
+bool screen_station_want_dark(void);
+/** The station's first page. */
+void screen_station_home(void);
 /** Redraw what changed (from the sync task through ui_do, or after an action). */
 void screen_station_refresh(void);
 /** The variant the next tap of `type` logs, until it does. */
@@ -67,6 +71,9 @@ void screen_picker_show(bz_type_t type, const bz_variant_t *selected);
 void screen_note_show(void);
 void screen_babies_show(void);
 void screen_settings_show(void);
+void screen_tiles_show(void);
+/** Confirm Unpair (`reset` false) or Reset device. */
+void screen_confirm_show(bool reset);
 /** No baby in the household yet. */
 void screen_no_baby_show(void);
 

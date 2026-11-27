@@ -2,6 +2,7 @@
 // this file into the emulator's web/test/ (it imports the emulator's own harness from there).
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { deflateSync } from "node:zlib";
 
@@ -13,8 +14,8 @@ const untilNextTurn = () => new Promise((resolve) => setTimeout(resolve, 1));
 
 export class Device {
   readonly board: TestBoard;
-  readonly #link: NetLink | undefined;
-  readonly #relay: { close(): Promise<void> } | undefined;
+  #link: NetLink | undefined;
+  readonly #relay: { port: number; close(): Promise<void> } | undefined;
   readonly relayLog: string[];
   /** Where the serial log has been read up to by `waitFor`. */
   #cursor = 0;
@@ -53,6 +54,21 @@ export class Device {
     return new Device(board, link, relay, relayLog);
   }
 
+  /** Take the network away: every connection past the access point fails, as with no internet. */
+  disconnect(): void {
+    this.#link?.close();
+  }
+
+  /** Bring the network back through the same relay. */
+  reconnect(): void {
+    if (!this.#relay) return;
+    this.#link = new NetLink(
+      this.board.emulator,
+      `ws://127.0.0.1:${this.#relay.port}`,
+      () => {}
+    );
+  }
+
   async close(): Promise<void> {
     this.#link?.close();
     await this.#relay?.close();
@@ -79,7 +95,7 @@ export class Device {
       }
       if (this.seconds > deadline) {
         assert.fail(
-          `no ${pattern} within ${maxSeconds} s. Serial tail:\n${this.board.serial.slice(-3000)}\nrelay: ${this.relayLog.slice(-10).join(" | ")}`
+          `no ${pattern} within ${maxSeconds} s (log: ${this.saveLogs()}). Serial tail:\n${this.board.serial.slice(-3000)}\nrelay: ${this.relayLog.slice(-10).join(" | ")}`
         );
       }
       await this.run(0.1);
@@ -124,7 +140,7 @@ export class Device {
               )
             : [];
         assert.fail(
-          `no touch target ${label}; on screen: ${known.join(" | ")}`
+          `no touch target ${label} (log: ${this.saveLogs()}); on screen: ${known.join(" | ")}`
         );
       }
       await this.run(0.1);
@@ -133,21 +149,16 @@ export class Device {
 
   /** Find a target, scrolling the list up (then back down) until it is on the glass. */
   async reach(label: string | RegExp): Promise<[number, number]> {
-    for (const [from, to] of [
-      [0, 0],
-      [330, 190],
-      [330, 190],
-      [330, 190],
-      [140, 380],
-      [140, 380],
-      [140, 380],
-      [140, 380],
-    ]) {
+    const up: [number, number][] = Array.from({ length: 7 }, () => [340, 150]);
+    const down: [number, number][] = Array.from({ length: 8 }, () => [
+      140, 330,
+    ]);
+    for (const [from, to] of [[0, 0] as [number, number], ...up, ...down]) {
       if (from) await this.swipe([233, from], [233, to], 0.4);
       try {
         const [x, y] = await this.find(label, 0.6);
         // Keep clear of the top and bottom edge, where the rim and the title sit.
-        if (y > 70 && y < 420) return [x, y];
+        if (y > 40 && y < 430) return [x, y];
       } catch {
         // not on the glass yet
       }
@@ -158,6 +169,17 @@ export class Device {
   async tapLabel(label: string | RegExp): Promise<void> {
     const [x, y] = await this.reach(label);
     await this.tap(x, y);
+  }
+
+  /** The whole serial log and the emulator's own log, for reading after a failure. */
+  saveLogs(): string {
+    const file =
+      process.env.BUBSIE_LOG ?? path.join(tmpdir(), "bubsie-serial.log");
+    writeFileSync(
+      file,
+      `${this.board.serial}\n--- emulator ---\n${this.board.log.join("\n")}\n`
+    );
+    return file;
   }
 
   get seconds(): number {

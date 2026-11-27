@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "app.h"
+#include "buttons.h"
 #include "bz_time.h"
 #include "esp_log.h"
 #include "screens.h"
@@ -72,9 +73,23 @@ static lv_obj_t *bare(lv_obj_t *parent)
 
 /* ── Idle: the big button ────────────────────────────────── */
 
+static lv_point_t pressed_at;
+
+static void on_main_press(lv_event_t *event) { lv_indev_get_point(lv_indev_active(), &pressed_at); }
+
+/* A drag that started on the button (a swipe that went the wrong way) is not a tap. */
+static bool moved(void)
+{
+    lv_point_t now;
+    lv_indev_get_point(lv_indev_active(), &now);
+    int dx = now.x - pressed_at.x, dy = now.y - pressed_at.y;
+    return dx * dx + dy * dy > 28 * 28;
+}
+
 static void on_main_tap(lv_event_t *event)
 {
     bz_type_t type = (bz_type_t)(intptr_t)lv_event_get_user_data(event);
+    if (moved()) return;
     if (type == BZ_NOTE) {
         screen_note_show();
         return;
@@ -91,6 +106,7 @@ static void on_main_tap(lv_event_t *event)
 static void on_open_picker(lv_event_t *event)
 {
     bz_type_t type = (bz_type_t)(intptr_t)lv_event_get_user_data(event);
+    if (lv_event_get_code(event) == LV_EVENT_LONG_PRESSED && moved()) return;
     if (type == BZ_NOTE) {
         screen_note_show();
         return;
@@ -140,6 +156,7 @@ static void build_idle(page_t *page)
     if (!theme_reduced_motion()) lv_obj_set_style_transform_scale(button, 246, LV_STATE_PRESSED);
     lv_obj_set_style_transform_pivot_x(button, 118, 0);
     lv_obj_set_style_transform_pivot_y(button, 118, 0);
+    lv_obj_add_event_cb(button, on_main_press, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(button, on_main_tap, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)type);
     lv_obj_add_event_cb(button, on_open_picker, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)type);
     if (!station->baby_id[0]) lv_obj_add_state(button, LV_STATE_DISABLED);
@@ -150,7 +167,7 @@ static void build_idle(page_t *page)
     lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 108);
     char line[96];
     bz_last_line(station->view, station->view_count, type, station_now(), settings.volume_oz, line, sizeof line);
-    if (!line[0]) snprintf(line, sizeof line, "%s", type == BZ_NOTE ? "Tap to write" : "Not yet today");
+    if (!line[0]) snprintf(line, sizeof line, "%s", type == BZ_NOTE ? "Tap to write" : "Nothing yet");
     lv_obj_t *last = ui_label(button, &font_sans_20, ui_pal.muted, line);
     lv_obj_set_width(last, 176);
     lv_label_set_long_mode(last, LV_LABEL_LONG_WRAP);
@@ -414,7 +431,7 @@ static void update_dots(void)
 
 static void on_page_changed(lv_event_t *event)
 {
-    lv_obj_t *active = lv_tileview_get_tile_active(tileview);
+    lv_obj_t *active = lv_tileview_get_tile_active(lv_event_get_target(event));
     for (int i = 0; i < page_count; i++) {
         if (pages[i].tile == active && current_page != i) {
             current_page = i;
@@ -426,7 +443,7 @@ static void on_page_changed(lv_event_t *event)
 
 static void on_scroll_end(lv_event_t *event) { ui_trace(screen); }
 
-static bool want_dark(void)
+bool screen_station_want_dark(void)
 {
     if (settings.dark == 1) return true;
     if (settings.dark == 2 || !app_clock_synced()) return false;
@@ -436,7 +453,7 @@ static bool want_dark(void)
 static void on_tick(lv_timer_t *timer)
 {
     if (lv_screen_active() != screen) return;
-    if (want_dark() != shown_dark) {
+    if (screen_station_want_dark() != shown_dark) {
         screen_station_show();
         return;
     }
@@ -448,6 +465,8 @@ static void on_tick(lv_timer_t *timer)
 
 static void on_delete(lv_event_t *event)
 {
+    // A rebuilt station loads before the old one goes: only forget what belongs to this one.
+    if (lv_event_get_target(event) != screen) return;
     if (ticker) lv_timer_delete(ticker);
     ticker = NULL;
     screen = NULL;
@@ -456,8 +475,11 @@ static void on_delete(lv_event_t *event)
 
 void screen_station_show(void)
 {
-    shown_dark = want_dark();
+    shown_dark = screen_station_want_dark();
     theme_set_dark(shown_dark);
+    buttons_apply_brightness();
+    if (ticker) lv_timer_delete(ticker);
+    ticker = NULL;
     screen = ui_screen();
     lv_obj_add_event_cb(screen, on_delete, LV_EVENT_DELETE, NULL);
 
@@ -521,4 +543,10 @@ void screen_station_reset_choice(bz_type_t type) { picked[type] = NULL; }
 void screen_station_pick(bz_type_t type, const bz_variant_t *variant)
 {
     if (type < BZ_TYPE_COUNT) picked[type] = variant;
+}
+
+void screen_station_home(void)
+{
+    current_page = 0;
+    screen_station_show();
 }

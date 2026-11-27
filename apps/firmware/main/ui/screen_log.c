@@ -290,7 +290,7 @@ void screen_babies_show(void)
 {
     lv_obj_t *screen = ui_screen();
     lv_obj_t *list = ui_round_list(screen, 110, 110);
-    ui_title(screen, "Who are you logging for?");
+    ui_title(screen, "Baby");
     ui_back_button(screen, on_back, NULL);
     int count = station_babies(baby_list, STATION_BABIES_MAX);
     for (int i = 0; i < count; i++) {
