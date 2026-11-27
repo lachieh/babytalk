@@ -60,15 +60,6 @@ export function entryShape(type: string, method?: unknown): EntryShape {
   return "instant";
 }
 
-export function editShape(
-  stored: Pick<BabyEvent, "endedAt" | "startedAt"> | null,
-  type: string,
-  method?: unknown
-): EntryShape {
-  if (!stored || type !== "feed") return entryShape(type, method);
-  return stored.endedAt === stored.startedAt ? "instant" : "span";
-}
-
 export type TimeChoice =
   | { kind: "ago"; minutes: number }
   | { kind: "at"; local: string };

@@ -4,7 +4,6 @@ import {
   changeTiming,
   dayRange,
   durationWithinRange,
-  editShape,
   entryShape,
   eventOverlapsRange,
   eventsOverlappingDay,
@@ -309,7 +308,7 @@ describe("editing a stored entry", () => {
   ];
 
   const reopen = (e: BabyEvent) => {
-    const shape = editShape(e, e.type, JSON.parse(e.metadata).method);
+    const shape = entryShape(e.type, JSON.parse(e.metadata).method);
     return { shape, timing: timingFromEvent(e, shape, [5, 10, 15, 20, 30]) };
   };
 
@@ -338,12 +337,21 @@ describe("editing a stored entry", () => {
     expect(timing.running).toBeTruthy();
   });
 
-  it("times new feeds except solids, and keeps a stored feed's shape", () => {
-    for (const method of ["breast", "bottle", "formula"]) {
-      expect(editShape(null, "feed", method)).toBe("span");
-    }
-    expect(editShape(null, "feed", "solid")).toBe("instant");
-    expect(editShape(STORED[2], "feed", "bottle")).toBe("instant");
+  it("lets a feed saved as a single moment be given a finish time", () => {
+    const { shape, timing } = reopen(STORED[2]);
+    expect(shape).toBe("span");
+    const edited = changeTiming(timing, {
+      length: { kind: "minutes", minutes: 15 },
+      time: { kind: "at", local: "2026-08-14T03:20" },
+    });
+    const ended = new Date("2026-08-14T03:20").getTime();
+    expect(
+      resolveEntryTiming(shape, edited, Date.parse("2026-08-14T12:00:00Z"))
+    ).toStrictEqual({
+      endedAt: new Date(ended).toISOString(),
+      ok: true,
+      startedAt: new Date(ended - 15 * 60_000).toISOString(),
+    });
   });
 
   it("uses the new timing once a timing field is changed", () => {

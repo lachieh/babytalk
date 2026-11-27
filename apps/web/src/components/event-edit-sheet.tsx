@@ -8,7 +8,7 @@ import { parseMeta } from "@/lib/event-meta";
 import type { EventType } from "@/lib/event-styles";
 import {
   changeTiming,
-  editShape,
+  entryShape,
   resolveEntryTiming,
   timingFromEvent,
   toLocalInput,
@@ -108,7 +108,7 @@ function formFor(event: BabyEvent | null): EventFormData {
     meta,
     timing: timingFromEvent(
       event,
-      editShape(event, type, meta.method),
+      entryShape(type, meta.method),
       lengthPresets(type)
     ),
     type,
@@ -732,7 +732,7 @@ export const EventEditSheet = ({
     return () => clearTimeout(id);
   }, [confirmDelete]);
 
-  const shape = editShape(event, form.type, form.meta.method);
+  const shape = entryShape(form.type, form.meta.method);
   const canRun = shape === "span" && (isNew || event?.endedAt === null);
   const errors = submitted ? validate(form, shape).errors : {};
 
