@@ -13,6 +13,8 @@ out="${BUBSIE_OUT:-dist}"
 
 if [ "$web_url" = "https://bubsie.app" ]; then build=build; else build=build-custom; fi
 mkdir -p "$build"
+# Sources are globbed: touching the list makes CMake look for new files.
+touch main/CMakeLists.txt
 printf 'CONFIG_BUBSIE_DEFAULT_WEB_URL="%s"\n' "$web_url" > "$build/web-url.defaults"
 # The overlay changes only the factory URL; drop the cached sdkconfig so it is re-read.
 if ! grep -qs "CONFIG_BUBSIE_DEFAULT_WEB_URL=\"$web_url\"" "$build/sdkconfig"; then rm -f "$build/sdkconfig"; fi
