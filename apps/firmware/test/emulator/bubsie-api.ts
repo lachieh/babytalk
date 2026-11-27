@@ -1,6 +1,3 @@
-// A Bubsie API for the emulator test to act as the person with the phone: sign in by magic link
-// (through Mailpit at MAILPIT_URL), set up a household and babies, approve the device's code, log
-// from "another device". Every call names the API it goes to.
 const MAILPIT = process.env.MAILPIT_URL ?? "http://localhost:8025";
 
 export async function gql<T>(
@@ -26,7 +23,6 @@ export async function gql<T>(
   return json.data as T;
 }
 
-/** The ids of the messages Mailpit holds for `email`. */
 export async function mailIds(email: string): Promise<Set<string>> {
   const search = (await (
     await fetch(
@@ -36,8 +32,6 @@ export async function mailIds(email: string): Promise<Set<string>> {
   return new Set(search.messages.map((m) => m.ID));
 }
 
-/** The token in the first magic link sent to `email` that is not one of `seen`. Leaves every
- * message in place: the Mailpit may be shared with someone using it. */
 export async function magicToken(
   email: string,
   seen: Set<string> = new Set()
@@ -58,7 +52,6 @@ export async function magicToken(
   throw new Error(`no magic link for ${email}`);
 }
 
-/** Sign in by magic link (a new person the first time). Returns an access token. */
 export async function signIn(email: string, api: string): Promise<string> {
   const seen = await mailIds(email);
   await gql(
@@ -76,8 +69,6 @@ export async function signIn(email: string, api: string): Promise<string> {
   return verifyMagicLink.token;
 }
 
-/** A new person with a household and the named babies, on the API at `api`. Returns their email,
- * access token and baby ids. */
 export async function newFamily(
   babyNames: string[],
   api: string

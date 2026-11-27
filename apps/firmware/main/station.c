@@ -23,14 +23,14 @@ static const char *TAG = "sync";
 
 bz_station_t *station;
 static SemaphoreHandle_t lock;
-static TaskHandle_t task; /* NULL once the sync task has exited; the waits below re-read it across vTaskDelay */
+static TaskHandle_t task;
 static volatile bool running;
 static volatile bool offline;
 static volatile bool force_refresh;
 static uint32_t persisted_revision;
 
 static bz_baby_t babies[STATION_BABIES_MAX];
-static int baby_count = -1; /* -1: not loaded yet */
+static int baby_count = -1;
 
 #define REFRESH_ACTIVE_MS 15000
 #define REFRESH_IDLE_MS 60000
@@ -46,8 +46,6 @@ bz_ms_t station_now(void)
     gettimeofday(&now, NULL);
     return (bz_ms_t)now.tv_sec * 1000 + now.tv_usec / 1000;
 }
-
-/* ── Persistence ─────────────────────────────────────────── */
 
 static void persist(void)
 {
@@ -91,8 +89,6 @@ void station_init(void)
     restore();
     persisted_revision = station->revision;
 }
-
-/* ── Sync task ───────────────────────────────────────────── */
 
 static void redraw(void *arg)
 {
@@ -139,7 +135,7 @@ static bool load_babies(void)
     for (int i = 0; i < count; i++) {
         if (strcmp(found[i].id, settings.baby_id) == 0) chosen = found[i].id;
     }
-    if (!chosen && count > 0) chosen = found[0].id; /* the web shows the first baby */
+    if (!chosen && count > 0) chosen = found[0].id;
     if (chosen && strcmp(chosen, station->baby_id) != 0) {
         settings_save_baby(chosen);
         bz_st_set_baby(station, chosen);
@@ -169,7 +165,6 @@ static bool load_events(void)
     station_lock();
     if (strcmp(baby, station->baby_id) == 0) {
         bz_st_loaded(station, loaded, (size_t)count, requested_at);
-        // The server answered, so whatever was waiting can go now.
         bz_ob_resume(&station->ob);
     }
     station_unlock();
@@ -177,7 +172,6 @@ static bool load_events(void)
     return true;
 }
 
-/* Send one change. Returns false when nothing was ready to send. */
 static bool send_one(bool *failed)
 {
     station_lock();
@@ -236,7 +230,6 @@ static void sync_task(void *arg)
             if (load_babies()) next_babies = now + BABIES_EVERY_MS;
             ui_do(redraw, NULL);
         }
-        // Changes first, oldest first, one at a time.
         bool failed = false;
         while (running && !signed_out && !failed && send_one(&failed)) {
         }
@@ -270,7 +263,6 @@ static void sync_task(void *arg)
         bool waiting = bz_ob_has_waiting(&station->ob);
         bool ready = bz_ob_next(&station->ob) != NULL;
         station_unlock();
-        // A reload that got through resumes what was waiting: send it now.
         if (ready && !failed) continue;
         if (waiting && station_now() >= retry_at) {
             station_lock();
@@ -294,7 +286,6 @@ void station_start(void)
         wake();
         return;
     }
-    // A task told to stop may still be finishing its last request.
     while (task) vTaskDelay(pdMS_TO_TICKS(20));
     signed_out = false;
     baby_count = -1;
@@ -305,7 +296,6 @@ void station_start(void)
     xTaskCreatePinnedToCore(sync_task, "sync", 12 * 1024, NULL, 3, &task, 0);
 }
 
-/* Returns once the sync task has finished, so nothing it is doing (a refresh, say) lands after. */
 void station_stop(void)
 {
     running = false;
@@ -333,8 +323,6 @@ int station_sign_out(void)
     station_unlock();
     return unsent;
 }
-
-/* ── Actions ─────────────────────────────────────────────── */
 
 static const char *err_name(bz_err_t err)
 {
@@ -436,7 +424,6 @@ void station_choose_baby(const char *baby_id)
     after_change();
     station_unlock();
     ESP_LOGI(TAG, "baby %s", baby_id);
-    // Load the new baby's events now rather than at the next poll.
     force_refresh = true;
     wake();
 }

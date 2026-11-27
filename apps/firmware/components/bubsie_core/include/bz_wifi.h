@@ -1,4 +1,3 @@
-// What a failed Wi-Fi join means for the person joining, from the station's disconnect reason.
 #pragma once
 
 /* The ESP-IDF disconnect reasons (wifi_err_reason_t) that mean the password was wrong. A wrong
@@ -10,7 +9,6 @@
 
 typedef enum {
     BZ_WIFI_WRONG_PASSWORD,
-    /** Anything else: out of range, refused, or no answer at all (reason 0). */
     BZ_WIFI_UNREACHABLE,
 } bz_wifi_failure_t;
 

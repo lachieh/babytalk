@@ -101,7 +101,6 @@ builder.mutationField("refreshToken", (t) =>
 builder.mutationField("requestDeviceCode", (t) =>
   t.field({
     args: {
-      // A device sent here from another instance keeps the code it shows.
       code: t.arg.string(),
     },
     resolve: (_root, args) => requestDeviceCode(args.code),
@@ -155,7 +154,6 @@ builder.mutationField("pollDeviceCode", (t) =>
   })
 );
 
-/* Unauthenticated, like approving: holding the code is the authority. */
 builder.mutationField("redirectDeviceCode", (t) =>
   t.field({
     args: {

@@ -58,7 +58,6 @@ TEST(test_time_formats)
 
 TEST(test_time_zones)
 {
-    // 2026-11-27T10:04Z is 9:04 pm in Sydney (daylight time) and 2:04 am in Los Angeles.
     bz_ms_t at = 1795773845123LL;
     char out[16];
     bz_tz_apply("Australia/Sydney");
@@ -71,7 +70,6 @@ TEST(test_time_zones)
     bz_tz_apply("Asia/Kolkata");
     bz_format_clock(at, out, sizeof out);
     CHECK_STR(out, "3:34 pm");
-    // Unknown names fall back to UTC.
     bz_tz_apply("Mars/Olympus");
     bz_format_clock(at, out, sizeof out);
     CHECK_STR(out, "10:04 am");

@@ -1,5 +1,3 @@
-// Settings, from the last station page: what station-settings-sheet.tsx offers (visible buttons,
-// volume unit, leave) and what a device needs (Wi-Fi, time zone, night mode, server, unpair, reset).
 #include <stdio.h>
 #include <string.h>
 
@@ -104,8 +102,6 @@ void screen_settings_show(void)
     ui_load(screen, "settings");
 }
 
-/* ── Visible buttons (station-config.ts) ─────────────────── */
-
 static void on_toggle(lv_event_t *event)
 {
     bz_type_t type = (bz_type_t)(intptr_t)lv_event_get_user_data(event);
@@ -138,8 +134,6 @@ void screen_tiles_show(void)
     ui_round_list_fit(list);
     ui_load(screen, "tiles");
 }
-
-/* ── Unpair / reset ──────────────────────────────────────── */
 
 static bool confirm_reset;
 

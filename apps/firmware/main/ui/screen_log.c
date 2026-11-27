@@ -1,5 +1,3 @@
-// Logging beyond one tap (components/log-sheet.tsx): pick the variant, log it "minutes ago", or log
-// a feed that already finished with its amount. Also the note keyboard and the baby switcher.
 #include <stdio.h>
 #include <string.h>
 
@@ -25,8 +23,6 @@ static void show_result(bz_err_t err)
     screen_station_show();
     ui_toast_error(err);
 }
-
-/* ── Amount picker (amount-input.tsx) ─────────────────────── */
 
 typedef struct {
     ui_amount_cb cb;
@@ -72,8 +68,6 @@ void ui_amount_picker(lv_obj_t *parent, const char *title, int last_ml, double c
         lv_obj_add_event_cb(chip, on_chip, LV_EVENT_CLICKED, &chips[i]);
     }
 }
-
-/* ── "Already finished" with an amount ────────────────────── */
 
 static double finished_amount;
 
@@ -125,8 +119,6 @@ static void show_finished_amount(void)
     lv_obj_align(skip, LV_ALIGN_TOP_MID, 0, 342);
     ui_load(screen, "amount-finished");
 }
-
-/* ── Picker ──────────────────────────────────────────────── */
 
 static void rebuild_picker(void) { screen_picker_show(picker_type, picker_variant); }
 
@@ -239,8 +231,6 @@ void screen_picker_show(bz_type_t type, const bz_variant_t *selected)
     ui_load(screen, "picker");
 }
 
-/* ── Note ────────────────────────────────────────────────── */
-
 static void on_note_done(lv_event_t *event)
 {
     lv_obj_t *keyboard = lv_event_get_target(event);
@@ -259,7 +249,7 @@ static void on_note_done(lv_event_t *event)
     char json[BZ_META_LEN];
     bool ok = cJSON_PrintPreallocated(meta, json, sizeof json, false);
     cJSON_Delete(meta);
-    if (!ok) return; // too long for one note: keep the text so it can be shortened
+    if (!ok) return;
     show_result(station_log(BZ_NOTE, json, 0, true, 0));
 }
 
@@ -271,8 +261,6 @@ void screen_note_show(void)
     lv_textarea_set_max_length(entry.field, 200);
     ui_load(screen, "note");
 }
-
-/* ── Babies ──────────────────────────────────────────────── */
 
 static bz_baby_t baby_list[STATION_BABIES_MAX];
 
@@ -298,8 +286,6 @@ void screen_babies_show(void)
     ui_round_list_fit(list);
     ui_load(screen, "babies");
 }
-
-/* ── No baby yet ─────────────────────────────────────────── */
 
 void screen_no_baby_show(void)
 {

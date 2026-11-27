@@ -1,12 +1,3 @@
-// Runs Bubsie instances (API + web) for the emulator tests, each on its own fresh database in the
-// dev Postgres. Needs the API and web built (`pnpm --filter @bubsie/api build`, `pnpm --filter
-// @bubsie/web build`) and `pnpm docker:dev:up` (Postgres and Mailpit).
-//   BUBSIE_REPO        the Bubsie checkout (set by scripts/emulator-test.sh)
-//   BUBSIE_HOST        an address of this machine the emulator's relay and the browser both reach
-//   BUBSIE_PG          the Postgres container (default bubsie-postgres-1)
-//   BUBSIE_API_PORT, BUBSIE_WEB_PORT
-//                      where the first instance listens (default 4417 and 3417); the firmware's web
-//                      URL is http://$BUBSIE_HOST:$BUBSIE_WEB_PORT. Others take the ports after.
 import { type ChildProcess, execFileSync, spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,18 +9,15 @@ const PG = process.env.BUBSIE_PG ?? "bubsie-postgres-1";
 const API_PORT = Number(process.env.BUBSIE_API_PORT ?? 4417);
 const WEB_PORT = Number(process.env.BUBSIE_WEB_PORT ?? 3417);
 
-/** The ports of the `n`th instance (0: the one the firmware is built for). */
 export const ports = (n: number) => ({
   apiPort: API_PORT + n,
   webPort: WEB_PORT + n,
 });
 
 export interface InstanceOptions {
-  /** Database name, starting bubsie_fw_; dropped and created afresh. */
   name: string;
   apiPort: number;
   webPort: number;
-  /** A checkout whose apps/api/dist is the API to run (default: this one). */
   apiCheckout?: string;
 }
 
@@ -54,7 +42,6 @@ export class Instance {
 
   static async start(options: InstanceOptions): Promise<Instance> {
     if (!REPO || !HOST) throw new Error("set BUBSIE_REPO and BUBSIE_HOST");
-    // Only ever drop a database these tests made.
     if (!/^bubsie_fw_\w+$/.test(options.name))
       throw new Error(`${options.name} is not a test database`);
     const instance = new Instance(options);
@@ -78,7 +65,6 @@ export class Instance {
     return instance;
   }
 
-  /** Start the API (again, after `stopApi`). */
   async startApi(): Promise<void> {
     const { name, apiPort, webPort, apiCheckout = REPO } = this.options;
     this.#api = run(
@@ -98,12 +84,10 @@ export class Instance {
     await until(`http://${HOST}:${apiPort}/livez`);
   }
 
-  /** Stop the API, as in an outage: the device's requests to it fail. */
   async stopApi(): Promise<void> {
     await stop(this.#api);
   }
 
-  /** Restart the API with a new JWT secret: every access token it issued stops working. */
   async rotateJwtSecret(): Promise<void> {
     await stop(this.#api);
     this.#secret = this.#secret.replace(
@@ -113,7 +97,6 @@ export class Instance {
     await this.startApi();
   }
 
-  /** Run SQL against this instance's database; rows as tab-separated lines. */
   sql(query: string): string[] {
     return psql(this.options.name, query);
   }
@@ -173,9 +156,7 @@ async function until(url: string, seconds = 60): Promise<void> {
   for (;;) {
     try {
       if ((await fetch(url)).ok) return;
-    } catch {
-      // not up yet
-    }
+    } catch {}
     if (Date.now() > deadline) throw new Error(`${url} did not come up`);
     await new Promise((resolve) => setTimeout(resolve, 250));
   }

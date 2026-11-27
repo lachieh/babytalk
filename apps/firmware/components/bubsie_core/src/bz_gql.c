@@ -7,8 +7,6 @@
 #include "bz_time.h"
 #include "cJSON.h"
 
-/* ── Requests ─────────────────────────────────────────────── */
-
 static char *body(const char *query, cJSON *variables)
 {
     cJSON *root = cJSON_CreateObject();
@@ -71,7 +69,6 @@ char *bz_gql_refresh_token(const char *refresh_token)
 static const char *META_TYPES[BZ_TYPE_COUNT] = {"FeedMetadataInput", "SleepMetadataInput", "DiaperMetadataInput",
                                                 "PumpMetadataInput", "NoteMetadataInput"};
 
-/* The metadata object as the API's input type takes it: only the fields that input declares. */
 static cJSON *meta_input(const bz_event_t *event)
 {
     static const char *const FIELDS[BZ_TYPE_COUNT][6] = {
@@ -160,8 +157,6 @@ char *bz_gql_delete_event(const char *id)
     cJSON_AddStringToObject(vars, "id", id);
     return body("mutation DeleteEvent($id: String!) { deleteEvent(id: $id) }", vars);
 }
-
-/* ── Replies ──────────────────────────────────────────────── */
 
 static const char *const REFUSAL_CODES[] = {"REFUSED", "BAD_USER_INPUT", "GRAPHQL_PARSE_FAILED",
                                             "GRAPHQL_VALIDATION_FAILED", NULL};
@@ -273,7 +268,6 @@ int bz_parse_events(const char *text, const char *field, bz_event_t *out, int ma
         cJSON_ArrayForEach(item, list)
         {
             if (count >= max) break;
-            // Types the device does not show (growth, ...) are skipped.
             if (bz_event_from_json(item, &out[count])) count++;
         }
     }
@@ -307,7 +301,6 @@ bool bz_parse_poll(const char *text, bz_poll_t *out)
         copy_str(poll, "token", out->token, sizeof out->token);
         copy_str(poll, "refreshToken", out->refresh, sizeof out->refresh);
         copy_str(poll, "webUrl", out->web_url, sizeof out->web_url);
-        // An approval without tokens, or a redirect without a destination, cannot be acted on.
         if (out->status == BZ_POLL_APPROVED && (!out->token[0] || !out->refresh[0])) out->status = BZ_POLL_UNKNOWN;
         if (out->status == BZ_POLL_REDIRECTED && !out->web_url[0]) out->status = BZ_POLL_UNKNOWN;
     }

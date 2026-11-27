@@ -1,9 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-/* A device pairing through this instance is sent to a self-hosted one. The
- * "self-hosted" instance is this same one: its /.well-known/config is real.
- * The test plays the device, talking to the API directly. */
-
 const API_URL = process.env.API_URL || "http://localhost:4000/graphql";
 
 const gql = async <T>(
@@ -58,13 +54,11 @@ test.describe("Sending a device to your own server", () => {
 
   test("waits for the device, then follows it", async ({ page, baseURL }) => {
     const code = await requestCode();
-    // The same instance under another name: another origin to the page.
     const here = new URL(baseURL ?? "http://localhost:3000");
     here.hostname = here.hostname === "127.0.0.1" ? "localhost" : "127.0.0.1";
     const { origin } = here;
     await page.goto(`/auth/approve?code=${code}`);
 
-    // No account here: the expander sits under "Sign in first".
     await expect(
       page.getByRole("heading", { name: "Sign in first" })
     ).toBeVisible();
@@ -76,7 +70,6 @@ test.describe("Sending a device to your own server", () => {
       page.getByText(`Sending your device to ${new URL(origin).host}`)
     ).toBeVisible();
 
-    // The device sees the redirect and confirms it has moved.
     const polled = await gql<{
       pollDeviceCode: { status: string; token: string | null; webUrl: string };
     }>(

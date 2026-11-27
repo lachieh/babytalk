@@ -37,8 +37,6 @@ builder.queryField("myPasskeys", (t) =>
   })
 );
 
-/* Unauthenticated: the phone that sent a device elsewhere watches for it to
- * arrive there. */
 builder.queryField("deviceCodeRedirect", (t) =>
   t.field({
     args: {

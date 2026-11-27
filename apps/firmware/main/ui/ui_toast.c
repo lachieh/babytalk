@@ -1,5 +1,3 @@
-// The undo toast (components/undo-toast.tsx): what just happened, Undo when it can be undone, and
-// a thin bar for the five seconds it stays. It floats on the top layer over every screen.
 #include <stdio.h>
 #include <string.h>
 

@@ -17,7 +17,6 @@ export const notAuthenticated = () =>
     extensions: { code: "UNAUTHENTICATED", http: { status: 401 } },
   });
 
-/** A device asked to register a pairing code that already exists here. */
 export const codeTaken = () =>
   createGraphQLError("Device code already in use", {
     extensions: { code: "CODE_TAKEN" },

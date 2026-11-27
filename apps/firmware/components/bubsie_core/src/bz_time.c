@@ -118,7 +118,7 @@ void bz_format_elapsed(bz_ms_t ms, char *out, size_t len)
 void bz_format_minutes(long minutes, char *out, size_t len)
 {
     if (minutes <= 0) {
-        snprintf(out, len, "\xE2\x80\x94"); /* — */
+        snprintf(out, len, "\xE2\x80\x94");
         return;
     }
     long h = minutes / 60, m = minutes % 60;

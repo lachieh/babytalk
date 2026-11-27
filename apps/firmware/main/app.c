@@ -54,14 +54,11 @@ void ui_do(app_fn fn, void *arg)
 
 void app_interrupt(void) { xEventGroupSetBits(signals, APP_INTERRUPT); }
 
-/* Sleep on the worker; false if interrupted. */
 static bool pause_ms(int ms)
 {
     if (ms <= 0) return !(xEventGroupClearBits(signals, APP_INTERRUPT) & APP_INTERRUPT);
     return !(xEventGroupWaitBits(signals, APP_INTERRUPT, pdTRUE, pdFALSE, pdMS_TO_TICKS(ms)) & APP_INTERRUPT);
 }
-
-/* ── Wi-Fi ───────────────────────────────────────────────── */
 
 typedef struct {
     wifi_ap_t aps[WIFI_SCAN_MAX];
@@ -101,7 +98,6 @@ static void show_joining(void *ssid)
 
 static void do_continue(void *arg);
 
-/* Back to the password, still typed, so a slip can be fixed rather than typed again. */
 static void show_wrong_password(void *arg)
 {
     const join_t *join = arg;
@@ -137,8 +133,6 @@ void app_wifi_join(const char *ssid, const char *pass)
     app_do(do_join, join);
 }
 
-/* ── Clock ───────────────────────────────────────────────── */
-
 static bool sntp_started;
 
 bool app_clock_synced(void)
@@ -173,8 +167,6 @@ void app_set_timezone(const char *name)
     app_continue();
 }
 
-/* ── Pairing ─────────────────────────────────────────────── */
-
 static bz_pairing_t pairing;
 static char signed_out_notice[80];
 static screen_pairing_t pairing_view;
@@ -196,7 +188,6 @@ static void publish_pairing(void)
     ui_do(show_pairing, NULL);
 }
 
-/* Pair until approved; false if interrupted (the person changed server or Wi-Fi). */
 static bool pair(void)
 {
     bz_pair_start(&pairing, settings.web_url, settings.api_url);
@@ -217,8 +208,6 @@ static bool pair(void)
         int status = http_request(act.url, act.body, NULL, &resp, 15000);
         free(act.body);
         ESP_LOGI(TAG, "pair: %s -> %d %.120s", act.url, status, resp.body ? resp.body : "");
-        // Interrupted while the request was out (the server changed, say): its answer is not acted on,
-        // so tokens or a redirect from it are never saved under what comes next.
         if (xEventGroupGetBits(signals) & APP_INTERRUPT) {
             http_free(&resp);
             return false;
@@ -228,7 +217,6 @@ static bool pair(void)
         if (before == BZ_PAIR_REQUEST_CODE && pairing.state == BZ_PAIR_POLL) ESP_LOGI(TAG, "pair: code %s", pairing.code);
         http_free(&resp);
         if (pairing.server_changed) {
-            // Redirected: from here on this device belongs to the new server.
             pairing.server_changed = false;
             settings_save_web_url(pairing.server.web, pairing.server.api);
             ESP_LOGI(TAG, "pair: server is now %s", pairing.server.web);
@@ -245,7 +233,6 @@ static bool pair(void)
 static void do_set_server(void *arg)
 {
     char *url = arg;
-    // A session, its baby and its unsent changes belong to the old server: none of them go to the new one.
     station_stop();
     station_forget();
     settings_unpair();
@@ -259,8 +246,6 @@ void app_set_server(const char *web_url)
     app_interrupt();
     app_do(do_set_server, strdup(web_url));
 }
-
-/* ── Flow ────────────────────────────────────────────────── */
 
 static void show_timezone(void *arg) { screen_timezone_show(settings.tz); }
 
@@ -283,7 +268,6 @@ static void do_continue(void *arg)
     }
     start_clock();
     if (!settings.refresh[0] && !pair()) return;
-    // The station screen appears once the babies are known (station.c redraw).
     ui_do(show_station, NULL);
     station_start();
 }
@@ -297,7 +281,6 @@ static void do_boot(void *arg)
         do_scan(NULL);
         return;
     }
-    // A saved network: rejoin it quietly, and fall back to the list if it is gone.
     join_t *join = calloc(1, sizeof *join);
     strlcpy(join->ssid, settings.wifi_ssid, sizeof join->ssid);
     strlcpy(join->pass, settings.wifi_pass, sizeof join->pass);
@@ -306,11 +289,8 @@ static void do_boot(void *arg)
 
 static void do_signed_out(void *arg)
 {
-    // Queued behind an unpair or a server change, it is about a session that is already gone.
     if ((uint32_t)(uintptr_t)arg != settings_session()) return;
     station_stop();
-    // Changes not sent yet are kept and go out once it is paired again; the server refuses any the
-    // account then cannot reach, as it refuses anything else. Unpair and Reset still drop them.
     int unsent = station_sign_out();
     strlcpy(signed_out_notice,
             unsent ? "This device was signed out. Pair it again to send what's waiting."

@@ -11,7 +11,6 @@ int check_count;
 
 int main(void)
 {
-    // Times in the tests are local to this zone unless a test sets another.
     setenv("TZ", "UTC0", 1);
 #define X(name) name();
 #include "tests.def"

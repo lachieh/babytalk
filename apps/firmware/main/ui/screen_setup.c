@@ -1,4 +1,3 @@
-// Setup after Wi-Fi: the time zone (the API has none; see README), pairing by code, and the server.
 #include <stdio.h>
 #include <string.h>
 
@@ -6,8 +5,6 @@
 #include "bz_time.h"
 #include "screens.h"
 #include "settings.h"
-
-/* ── Time zone ─────────────────────────────────────────────── */
 
 static lv_obj_t *roller;
 
@@ -32,7 +29,6 @@ void screen_timezone_show(const char *current)
     for (size_t i = 0; i < count; i++) {
         if (i) strlcat(options, "\n", sizeof options);
         strlcat(options, zones[i].label, sizeof options);
-        // Nothing chosen yet: start on UTC, in the middle, so either way is a short scroll.
         if (strcmp(zones[i].name, current && current[0] ? current : "UTC") == 0) selected = (uint32_t)i;
     }
 
@@ -59,13 +55,10 @@ void screen_timezone_show(const char *current)
     ui_load(screen, "timezone");
 }
 
-/* ── Pairing ───────────────────────────────────────────────── */
-
 static void show_pairing_again(void *arg) { app_continue(); }
 
 static void on_change_server(lv_event_t *event)
 {
-    // Pairing waits while the address is typed; Cancel starts it again on the same server.
     app_interrupt();
     screen_server_show(settings.web_url, show_pairing_again);
 }
@@ -90,7 +83,6 @@ void screen_pairing_show(const screen_pairing_t *view)
         lv_qrcode_update(qr, view->url, (uint32_t)strlen(view->url));
         lv_obj_center(qr);
     } else {
-        // Asking the server for a code: the web's breathe, never a spinner.
         theme_breathe(card, 2000);
     }
 
@@ -120,8 +112,6 @@ void screen_pairing_show(const screen_pairing_t *view)
     ui_load(screen, view->code[0] ? "pairing" : "pairing-waiting");
 }
 
-/* ── Server ────────────────────────────────────────────────── */
-
 static app_fn server_back;
 
 static void on_server_done(lv_event_t *event)
@@ -135,7 +125,6 @@ static void on_server_done(lv_event_t *event)
     while (*typed == ' ') typed++;
     if (!*typed) return;
     char url[SETTINGS_URL_LEN];
-    // A bare host means https; self-hosters on a LAN type http:// themselves.
     if (strncmp(typed, "http://", 7) == 0 || strncmp(typed, "https://", 8) == 0) {
         strlcpy(url, typed, sizeof url);
     } else {

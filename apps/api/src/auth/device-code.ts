@@ -23,7 +23,6 @@ const generateCode = (): string => {
 const normalizeCode = (input: string): string =>
   input.replaceAll(/[\s-]/g, "").toUpperCase();
 
-/** The origin (scheme, host, port) of an http(s) URL, or null. */
 const webOrigin = (input: string): string | null => {
   try {
     const url = new URL(input.trim());
@@ -48,8 +47,6 @@ export interface DeviceCodeRequest {
   expiresAt: Date;
 }
 
-/** Register a pairing code. A device that was sent here from another
- * instance brings the code it already shows on screen. */
 export const requestDeviceCode = async (
   rawCode?: string | null
 ): Promise<DeviceCodeRequest> => {
@@ -97,15 +94,12 @@ export const approveDeviceCode = async (
     .returning({ id: deviceCodes.id });
   if (approved.length > 0) return true;
 
-  // Lost a race: approved by the same person counts, anything else does not.
   const after = await findLink(code);
   return Boolean(
     after?.approvedAt && !after.redirectWebUrl && after.userId === userId
   );
 };
 
-/** Send a pending code's device to another Bubsie instance. Holding the code
- * is the authority, as it is for approving. */
 export const redirectDeviceCode = async (
   rawCode: string,
   rawWebUrl: string
@@ -129,7 +123,6 @@ export const redirectDeviceCode = async (
   return redirected.length > 0;
 };
 
-/** The device has registered this code at the instance it was sent to. */
 export const confirmDeviceCodeRedirect = async (
   rawCode: string
 ): Promise<boolean> => {

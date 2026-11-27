@@ -20,12 +20,8 @@ const DEVICE_CODE_REDIRECT = `
 
 const POLL_MS = 2000;
 const WAIT_MS = 2 * 60 * 1000;
-/** A device that can't reach the address gives up within about a minute
- * (three tries with a 15 s timeout). */
 const DEVICE_CHECK_WAIT_MS = 75 * 1000;
 
-/** `deviceChecks`: the browser couldn't check the address (http from an https
- * page), so only the device can tell whether it's Bubsie and reachable. */
 type State =
   | { kind: "form"; error: string }
   | { kind: "checking" }
@@ -35,7 +31,6 @@ type State =
 
 const NOT_BUBSIE = "We couldn't find Bubsie at that address.";
 
-/** Whether `origin` serves a Bubsie web app: its public config names an API. */
 const isBubsie = async (origin: string): Promise<boolean> => {
   try {
     const res = await fetch(`${origin}/.well-known/config`);
@@ -86,9 +81,6 @@ const ChevronIcon = ({ open }: { open: boolean }) => (
   </svg>
 );
 
-/** Sends a pairing device to a self-hosted Bubsie instead of this one. The
- * device moves its code there; once it confirms, the phone follows. No
- * account here is needed, and no tokens pass through this instance. */
 export const OwnServer = ({ code }: { code: string }) => {
   const panelId = useId();
   const inputId = useId();

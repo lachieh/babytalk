@@ -20,14 +20,13 @@ TEST(test_rules_infer_default)
         ev(BZ_FEED, 300 * MIN, 320 * MIN, "{\"method\":\"breast\",\"side\":\"left\"}"),
         ev(BZ_FEED, 100 * MIN, 120 * MIN, "{\"method\":\"breast\",\"side\":\"right\"}"),
     };
-    CHECK_STR(bz_infer_default(BZ_FEED, feeds, 2)->key, "breast-r"); // the other side to last time
+    CHECK_STR(bz_infer_default(BZ_FEED, feeds, 2)->key, "breast-r");
     bz_event_t bottles[] = {
         ev(BZ_FEED, 300 * MIN, 320 * MIN, "{\"method\":\"formula\"}"),
         ev(BZ_FEED, 200 * MIN, 220 * MIN, "{\"method\":\"bottle\"}"),
         ev(BZ_FEED, 100 * MIN, 120 * MIN, "{\"method\":\"breast\",\"side\":\"left\"}"),
     };
     CHECK_STR(bz_infer_default(BZ_FEED, bottles, 3)->key, "formula");
-    // A running feed does not count.
     bz_event_t running[] = {ev(BZ_FEED, 400 * MIN, BZ_RUNNING, "{\"method\":\"bottle\"}"), feeds[0]};
     CHECK_STR(bz_infer_default(BZ_FEED, running, 2)->key, "breast-r");
 
@@ -37,7 +36,7 @@ TEST(test_rules_infer_default)
         ev(BZ_DIAPER, 1, 1, "{\"wet\":true,\"soiled\":false}"),
     };
     CHECK_STR(bz_infer_default(BZ_DIAPER, diapers, 3)->key, "wet-soiled");
-    CHECK_STR(bz_infer_default(BZ_DIAPER, diapers + 1, 2)->key, "wet"); // half is not more than half
+    CHECK_STR(bz_infer_default(BZ_DIAPER, diapers + 1, 2)->key, "wet");
     bz_event_t sleep = ev(BZ_SLEEP, 1, 2, "{\"location\":\"held\"}");
     CHECK_STR(bz_infer_default(BZ_SLEEP, &sleep, 1)->key, "held");
     CHECK_STR(bz_infer_default(BZ_PUMP, NULL, 0)->key, "both");
@@ -61,7 +60,7 @@ TEST(test_rules_one_tap_and_amounts)
     char dismissed[1][BZ_ID_LEN];
     strcpy(dismissed[0], events[0].id);
     CHECK(bz_awaiting_amount(events, 3, BZ_FEED, now, (const char(*)[BZ_ID_LEN])dismissed, 1) == NULL);
-    CHECK(bz_awaiting_amount(events, 3, BZ_FEED, now + 20 * MIN, NULL, 0) == NULL); // window passed
+    CHECK(bz_awaiting_amount(events, 3, BZ_FEED, now + 20 * MIN, NULL, 0) == NULL);
     CHECK_INT(bz_last_amount_ml(events, 3, BZ_FEED), 150);
 
     double chips[3];
@@ -69,7 +68,7 @@ TEST(test_rules_one_tap_and_amounts)
     CHECK(chips[0] == 120 && chips[1] == 150 && chips[2] == 180);
     bz_amount_chips(0, true, chips);
     CHECK(chips[0] == 3 && chips[1] == 4 && chips[2] == 5);
-    bz_amount_chips(15, true, chips); // 0.5 oz: the lower chip halves
+    bz_amount_chips(15, true, chips);
     CHECK(chips[0] == 0.25 && chips[1] == 0.5);
     CHECK_INT(bz_display_to_ml(4, true), 118);
     char volume[16];

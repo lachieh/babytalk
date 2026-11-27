@@ -74,7 +74,6 @@ static const char *infer_feed(const bz_event_t *events, size_t count)
     }
     if (seen == 0) return "breast-l";
     if (other > breast) return strcmp(last_other, "formula") == 0 ? "formula" : "bottle";
-    // Alternate sides: the next feed starts on the other breast.
     return strcmp(last_side[0] ? last_side : "left", "left") == 0 ? "breast-r" : "breast-l";
 }
 
@@ -203,7 +202,6 @@ static void join(char *out, size_t len, const char *part)
     strncat(out, part, len - strlen(out) - 1);
 }
 
-/* timerDetail in lib/format-event.ts */
 static void timer_detail(const bz_event_t *e, char *out, size_t len)
 {
     char side[16], value[16];

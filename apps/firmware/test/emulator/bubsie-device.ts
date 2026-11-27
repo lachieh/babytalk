@@ -1,7 +1,3 @@
-// Drives the Bubsie firmware in amoled-175c-emulator, headlessly, through the emulator's own
-// HeadlessBoard (imported from the checkout at AMOLED_EMU). What is here is Bubsie's: tapping a
-// touch target by the label the firmware traces (CONFIG_BUBSIE_UI_TRACE), and the pauses its
-// screens need after a touch.
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -9,7 +5,6 @@ import path from "node:path";
 
 const EMU = process.env.AMOLED_EMU;
 if (!EMU) throw new Error("set AMOLED_EMU to an amoled-175c-emulator checkout");
-// The emulator is not a package; its headless entry point is imported from the checkout.
 const headless = await import(
   path.join(path.resolve(EMU), "web/headless/index.ts")
 );
@@ -17,13 +12,10 @@ const { HeadlessBoard, WaitTimeout, loadFirmware, startRelay } = headless;
 type Board = InstanceType<typeof HeadlessBoard>;
 type Relay = { port: number; close(): Promise<void> };
 
-/** The images under test: BUBSIE_IMAGES (a directory with bootloader.bin, partition-table.bin and app.bin). */
 const IMAGES = path.resolve(process.env.BUBSIE_IMAGES ?? "dist");
 
 export interface BootOptions {
-  /** A relay that may reach this machine carries the device's TCP. Offline without it. */
   network?: boolean;
-  /** The Wi-Fi around the board (the emulator's WifiSetup). The emulator's four networks without it. */
   wifi?: unknown;
 }
 
@@ -62,7 +54,6 @@ export class Device {
     return new Device(board, relay, relayLog);
   }
 
-  /** Stop the board, keeping its logs for reading afterwards (`saveLogs`). */
   async close(): Promise<void> {
     this.saveLogs();
     this.board.close();
@@ -77,7 +68,6 @@ export class Device {
     return this.board.run(seconds);
   }
 
-  /** Run until the serial log (after what earlier waits consumed) matches. Returns the match. */
   async waitFor(pattern: RegExp, maxSeconds = 30): Promise<RegExpExecArray> {
     try {
       return await this.board.waitFor(pattern, maxSeconds);
@@ -89,7 +79,6 @@ export class Device {
     }
   }
 
-  /** Run until anything logged so far matches, without moving the waitFor cursor. */
   async seen(pattern: RegExp, maxSeconds = 30): Promise<RegExpMatchArray> {
     const deadline = this.seconds + maxSeconds;
     for (;;) {
@@ -100,7 +89,6 @@ export class Device {
     }
   }
 
-  /** Where the firmware last said a touch target with this label is. */
   async find(
     label: string | RegExp,
     maxSeconds = 3
@@ -134,7 +122,6 @@ export class Device {
     }
   }
 
-  /** Find a target, scrolling the list up (then back down) until it is on the glass. */
   async reach(label: string | RegExp): Promise<[number, number]> {
     const up: [number, number][] = Array.from({ length: 7 }, () => [340, 150]);
     const down: [number, number][] = Array.from({ length: 8 }, () => [
@@ -144,11 +131,8 @@ export class Device {
       if (from) await this.swipe([233, from], [233, to], 0.4);
       try {
         const [x, y] = await this.find(label, 0.6);
-        // Keep clear of the top and bottom edge, where the rim and the title sit.
         if (y > 40 && y < 430) return [x, y];
-      } catch {
-        // not on the glass yet
-      }
+      } catch {}
     }
     return this.find(label, 0.5);
   }
@@ -182,12 +166,10 @@ export class Device {
     await this.run(0.4);
   }
 
-  /** Type on the on-screen keyboard: tap each key the firmware traced, by its label. */
   async typeKeys(text: string): Promise<void> {
     for (const key of text) await this.tap(...(await this.find(`key ${key}`)));
   }
 
-  /** Save the display as `<dir>/<name>.png`, lit as the panel lights it. */
   screenshot(dir: string, name: string): string {
     assert.ok(this.board.frame, "the display was never drawn");
     mkdirSync(dir, { recursive: true });
@@ -196,7 +178,6 @@ export class Device {
     return file;
   }
 
-  /** RGB888 of a display pixel, at full brightness. */
   rgb(x: number, y: number): [number, number, number] {
     const value = this.board.pixel(x, y);
     return [
@@ -206,7 +187,6 @@ export class Device {
     ].map((c) => Math.round(c * 255)) as [number, number, number];
   }
 
-  /** The whole serial log and the emulator's own log, for reading after a failure. */
   saveLogs(): string {
     const file =
       process.env.BUBSIE_LOG ?? path.join(tmpdir(), "bubsie-serial.log");

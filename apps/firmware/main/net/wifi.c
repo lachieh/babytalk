@@ -21,7 +21,6 @@ _Static_assert(BZ_WIFI_REASON_HANDSHAKE_TIMEOUT == WIFI_REASON_HANDSHAKE_TIMEOUT
 #define JOIN_FAILED BIT1
 
 static EventGroupHandle_t events;
-/* Rejoin after a drop only once a network has been joined (or is being joined). */
 static volatile bool want_connection;
 static volatile uint8_t last_reason;
 
@@ -105,8 +104,6 @@ wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms)
     ESP_LOGI(TAG, "joining %s", ssid);
     esp_wifi_connect();
 
-    // The station retries on its own after a failure. A wrong password fails the same way every
-    // time, so it ends the wait; anything else gets three tries.
     TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(timeout_ms);
     int failures = 0;
     // Taken as each failure is seen: the disconnect below reports a reason of its own (36).

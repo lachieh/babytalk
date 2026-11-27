@@ -1,7 +1,3 @@
-// Boots the Bubsie firmware in the emulator and walks its screens, saving each to docs/screens/.
-// Runs its own Bubsie on a fresh database (bubsie-servers.ts). Run with scripts/emulator-test.sh
-// against a build whose web URL is that Bubsie:
-//   BUBSIE_WEB_URL=http://$BUBSIE_HOST:$BUBSIE_WEB_PORT scripts/build.sh
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
 
@@ -33,7 +29,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       `the day background is the web's surface, not ${r},${g},${b}`
     );
 
-    // A new device has no network saved: it scans and lists what is in range.
     await device.waitFor(/screen: wifi-scanning/, 10);
     await device.run(0.3);
     device.screenshot(SCREENS, "02-wifi-scanning");
@@ -42,16 +37,13 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.5);
     device.screenshot(SCREENS, "03-wifi-list");
 
-    // The emulator's network is open, so a tap joins it without a password.
     await device.tapLabel("emulator");
     await device.waitFor(/wifi: joining emulator/, 5);
     await device.waitFor(/wifi: address 10\.0\.2\.\d+/, 20);
 
-    // The API has no time zone, so the device asks once.
     await device.waitFor(/screen: timezone/, 10);
     await device.run(0.5);
     device.screenshot(SCREENS, "04-timezone");
-    // Drag the list up a long way (east of UTC), then continue.
     await device.swipe([233, 300], [233, 120], 0.4);
     await device.swipe([233, 300], [233, 120], 0.4);
     await device.run(1);
@@ -60,12 +52,10 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     const zone = (await device.waitFor(/app: time zone (\S+)/, 5))[1];
     assert.notEqual(zone, "UTC");
 
-    // Pairing: a code from the server, shown as a QR code and as XXXX-XXXX.
     await device.waitFor(/screen: pairing/, 30);
     const code = (
       await device.waitFor(/app: pair: code ([A-Z0-9]{8})/, 30)
     )[1]!;
-    // The clock comes from SNTP, in the zone just picked.
     await device.seen(/app: clock set, \d+:\d\d [ap]m \S+/, 30);
     await device.run(0.8);
     device.screenshot(SCREENS, "06-pairing");
@@ -73,14 +63,12 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.waitFor(/app: pair: approved/, 20);
     const ada = family.babies[0]!;
 
-    // The station: the first baby, the first page (Feed).
     await device.waitFor(/sync: babies: 2/, 20);
     await device.waitFor(/screen: station/, 10);
     await device.waitFor(/sync: events: 0/, 20);
     await device.run(1);
     device.screenshot(SCREENS, "07-station-feed");
 
-    // One tap logs the inferred default: with no history, a left breast feed, as a timer.
     await device.tapLabel("Feed");
     await device.waitFor(
       /sync: log feed \{"method":"breast","side":"left"\}: ok/,
@@ -99,7 +87,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       side: "left",
     });
 
-    await device.run(6); // the undo window closes, the timer counts on
+    await device.run(6);
     device.screenshot(SCREENS, "09-feed-timer");
     await device.tapLabel("Done");
     await device.waitFor(/sync: stop \S+: ok/, 5);
@@ -108,12 +96,10 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     events = await recentEvents(ada.id, family.token, api);
     assert.notEqual(events[0]!.endedAt, null, "the stop reached the server");
 
-    // Next time the other side is offered.
     await device.run(6);
     await device.find("Breast · Right");
     device.screenshot(SCREENS, "10-feed-next-side");
 
-    // Sleep, picked: long-press opens the picker; held, 10 minutes ago.
     await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page sleep/, 5);
     await device.run(0.5);
@@ -141,7 +127,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       `started ${minutesAgo} minutes ago`
     );
 
-    // Discard, then undo the discard: the timer is back.
     await device.tapLabel("Discard");
     await device.waitFor(/toast: Sleep timer discarded · Held \[Undo\]/, 5);
     await device.run(0.5);
@@ -152,7 +137,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.tapLabel("Done");
     await device.waitFor(/sync: sent update/, 20);
 
-    // Diaper: logged at once; undo takes it back.
     await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page diaper/, 5);
     await device.tapLabel("Diaper");
@@ -180,7 +164,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       1
     );
 
-    // A bottle: picked, timed, then the amount prompt takes its place.
     await device.swipe([60, 233], [400, 233]);
     await device.swipe([60, 233], [400, 233]);
     await device.waitFor(/screen: station page feed/, 5);
@@ -211,7 +194,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       await device.run(3);
     }
 
-    // Another device logs a sleep that ended an hour ago: the station picks it up on its next refresh.
     await gql(
       "mutation($babyId: String!, $from: String!, $to: String!) { logEvent(babyId: $babyId, type: sleep, startedAt: $from, endedAt: $to, sleepMeta: { location: crib }) { id } }",
       {
@@ -228,7 +210,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(1.5);
     device.screenshot(SCREENS, "18-sleep-from-phone");
 
-    // Settings, from the last page.
     await device.swipe([400, 233], [60, 233]);
     await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page settings/, 5);
@@ -239,7 +220,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.5);
     device.screenshot(SCREENS, "20-settings");
 
-    // Day look: night mode Auto -> Always -> Never.
     await device.tapLabel("Night mode");
     await device.waitFor(/screen: settings/, 5);
     await device.tapLabel("Night mode");
@@ -248,7 +228,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.5);
     device.screenshot(SCREENS, "21-settings-day");
 
-    // Show Pump and Note too.
     await device.tapLabel("Buttons");
     await device.waitFor(/screen: tiles/, 5);
     await device.tapLabel("Pump");
@@ -258,13 +237,11 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.5);
     device.screenshot(SCREENS, "22-buttons");
 
-    // BOOT goes back to the first page of the station.
     await device.button("boot");
     await device.waitFor(/screen: station/, 5);
     await device.run(1);
     device.screenshot(SCREENS, "23-station-day-feed");
 
-    // Switch baby: tap the name.
     await device.tapLabel("Ada");
     await device.waitFor(/screen: babies/, 5);
     await device.run(0.5);
@@ -277,7 +254,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     device.screenshot(SCREENS, "25-station-theo");
     const theo = family.babies[1]!;
 
-    // A note for Theo, typed on the keyboard.
     for (let i = 0; i < 4; i++) await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page note/, 5);
     await device.run(0.5);
@@ -301,12 +277,11 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       0
     );
 
-    // An outage: the change is kept, shown as waiting, survives a restart, and goes when the API is back.
     await bubsie.stopApi();
     await device.button("boot");
     await device.waitFor(/screen: station/, 5);
-    await device.swipe([400, 233], [60, 233]); // sleep
-    await device.swipe([400, 233], [60, 233]); // diaper
+    await device.swipe([400, 233], [60, 233]);
+    await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page diaper/, 5);
     await device.tapLabel("Diaper");
     await device.waitFor(/sync: log diaper .*: ok/, 5);
@@ -332,7 +307,6 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(1);
     device.screenshot(SCREENS, "29-after-restart");
 
-    // Unpair asks first, then the device is back at pairing.
     for (let i = 0; i < 5; i++) await device.swipe([400, 233], [60, 233]);
     await device.tapLabel("Settings");
     await device.waitFor(/screen: settings/, 5);

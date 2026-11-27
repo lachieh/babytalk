@@ -14,8 +14,6 @@ void bz_ob_init(bz_outbox_t *ob)
     ob->next_request = 1;
 }
 
-/* ── Lookups ─────────────────────────────────────────────── */
-
 static bz_entry_t *entry_of(bz_outbox_t *ob, const char *id)
 {
     for (size_t i = 0; i < ob->outbox_count; i++) {
@@ -60,7 +58,6 @@ static bz_entry_t *new_entry(bz_outbox_t *ob, const bz_event_t *event, bz_op_t o
     return entry;
 }
 
-/* The event as the server has it, or a stand-in carrying only its id when this device never loaded it. */
 static bz_event_t base_event(const bz_outbox_t *ob, const char *id, bz_type_t type, bool *loaded)
 {
     const bz_event_t *current = server_event(ob, id);
@@ -87,7 +84,7 @@ static void upsert_server(bz_outbox_t *ob, const bz_event_t *event)
             return;
         }
     }
-    if (ob->server_count >= BZ_SERVER_MAX) ob->server_count--; /* the oldest falls off */
+    if (ob->server_count >= BZ_SERVER_MAX) ob->server_count--;
     memmove(&ob->server[1], &ob->server[0], ob->server_count * sizeof *event);
     ob->server[0] = *event;
     ob->server_count++;
@@ -104,8 +101,6 @@ static void remove_server(bz_outbox_t *ob, const char *id)
     }
 }
 
-/* ── Changes ─────────────────────────────────────────────── */
-
 void bz_ob_set_baby(bz_outbox_t *ob, const char *baby_id)
 {
     if (strcmp(ob->server_baby, baby_id ? baby_id : "") == 0) return;
@@ -115,7 +110,6 @@ void bz_ob_set_baby(bz_outbox_t *ob, const char *baby_id)
 
 void bz_ob_loaded(bz_outbox_t *ob, const bz_event_t *events, size_t count, bz_ms_t requested_at)
 {
-    // An answer asked for before the last confirmed write may not include it.
     if (requested_at < ob->last_write_at) return;
     if (count > BZ_SERVER_MAX) count = BZ_SERVER_MAX;
     memcpy(ob->server, events, count * sizeof *events);
@@ -130,7 +124,6 @@ bool bz_ob_create(bz_outbox_t *ob, const bz_event_t *event, const char *baby_id)
 bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_event_t *values)
 {
     bz_entry_t *entry = entry_of(ob, id);
-    // Metadata built from a copy that was cut short would replace the server's whole.
     if ((changed & BZ_CHANGED_META) && (values->meta_lost || (entry && entry->event.meta_lost))) return false;
     if (entry) {
         if (entry->op == BZ_OP_DELETE) return false;
@@ -156,7 +149,6 @@ static bool remove_event(bz_outbox_t *ob, const char *id)
     }
     if (entry->op == BZ_OP_DELETE) return true;
     bool sending = entry->status == BZ_ST_SENDING;
-    // Never sent: there is nothing to delete.
     if (entry->exists == BZ_EXISTS_NO && !sending) {
         drop_entry(ob, entry);
         return true;
@@ -194,7 +186,6 @@ bool bz_ob_delete(bz_outbox_t *ob, const char *id)
 
 bool bz_ob_can_delete(const bz_outbox_t *ob, const char *id)
 {
-    // A change already waiting becomes the delete; anything else needs an entry of its own.
     return entry_of((bz_outbox_t *)ob, id) || ob->outbox_count < BZ_OUTBOX_MAX;
 }
 
@@ -202,13 +193,10 @@ void bz_ob_hide(bz_outbox_t *ob, const char *id)
 {
     if (is_hidden(ob, id)) return;
     if (ob->hidden_count >= BZ_HIDDEN_MAX) {
-        // Only one discard waits in its undo window at a time; an old one is long committed.
         bz_ob_delete(ob, ob->hidden[0]);
     }
     snprintf(ob->hidden[ob->hidden_count++], BZ_ID_LEN, "%s", id);
 }
-
-/* ── Sending ─────────────────────────────────────────────── */
 
 const bz_entry_t *bz_ob_next(const bz_outbox_t *ob)
 {
@@ -225,8 +213,6 @@ uint32_t bz_ob_send_start(bz_outbox_t *ob, const char *id)
 {
     bz_entry_t *entry = entry_of(ob, id);
     if (!entry || entry->status != BZ_ST_READY) return 0;
-    // A resent create that the server may already hold confirms only that first copy (the server
-    // ignores this one), so the changes made since stay unconfirmed and follow as an update.
     bool resent_create = entry->op == BZ_OP_CREATE && entry->exists == BZ_EXISTS_MAYBE;
     if (entry->op == BZ_OP_CREATE) entry->exists = BZ_EXISTS_MAYBE;
     if (!resent_create) {
@@ -266,7 +252,6 @@ void bz_ob_send_ok(bz_outbox_t *ob, const char *id, uint32_t request, const bz_e
     if (at > ob->last_write_at) ob->last_write_at = at;
     bz_exists_t exists = entry->sent_op == BZ_OP_DELETE ? BZ_EXISTS_NO : BZ_EXISTS_YES;
     if (entry->version > entry->sent_version) {
-        // Changed while the request was in flight: send what changed.
         entry->exists = exists;
         if (entry->op == BZ_OP_CREATE) entry->op = BZ_OP_UPDATE;
         entry->request = 0;
@@ -280,7 +265,6 @@ void bz_ob_send_ok(bz_outbox_t *ob, const char *id, uint32_t request, const bz_e
         remove_server(ob, id);
         return;
     }
-    // The loaded list is one baby's; a change to another baby's event waits for their next load.
     if (done.baby_id[0] && strcmp(done.baby_id, ob->server_baby) != 0) return;
     if (confirmed) {
         upsert_server(ob, confirmed);
@@ -300,8 +284,6 @@ static void unsent(bz_entry_t *entry, bz_status_t status)
 void bz_ob_send_failed(bz_outbox_t *ob, const char *id, uint32_t request, bool definite)
 {
     bz_entry_t *entry = replying(ob, id, request);
-    // A failure never lowers `exists`: a refusal of this request says nothing about an earlier one
-    // that went unanswered and may have been stored.
     if (entry) unsent(entry, definite ? BZ_ST_FAILED : BZ_ST_WAITING);
 }
 
@@ -327,8 +309,6 @@ bool bz_ob_has_waiting(const bz_outbox_t *ob)
     }
     return false;
 }
-
-/* ── Views ───────────────────────────────────────────────── */
 
 static bool visible(const bz_entry_t *entry) { return entry->op != BZ_OP_DELETE || entry->status == BZ_ST_FAILED; }
 
@@ -365,7 +345,6 @@ size_t bz_ob_derive(const bz_outbox_t *ob, const char *baby_id, bz_event_t *out,
         const bz_entry_t *entry = &ob->outbox[i];
         if (entry->detached || !visible(entry) || server_event(ob, entry->event.id)) continue;
         if (is_hidden(ob, entry->event.id)) continue;
-        // Each change belongs to the baby it was made for.
         if (!baby_id || strcmp(entry->baby_id, baby_id) != 0) continue;
         out[count] = entry->event;
         out[count++].sync = sync_of(entry);
@@ -387,8 +366,6 @@ bz_unsaved_t bz_ob_unsaved(const bz_outbox_t *ob)
     }
     return unsaved;
 }
-
-/* ── Persistence ─────────────────────────────────────────── */
 
 static cJSON *event_json(const bz_event_t *event)
 {
@@ -477,7 +454,6 @@ bool bz_ob_adopt(bz_outbox_t *ob, const char *json)
         entry->detached = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(item, "detached"));
         entry->seq = (uint32_t)num(item, "seq", (int)ob->next_seq);
         if (entry->seq >= ob->next_seq) ob->next_seq = entry->seq + 1;
-        // A request in flight when the device stopped has no reply coming.
         if (entry->status == BZ_ST_SENDING) unsent(entry, BZ_ST_READY);
     }
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(root, "hidden"))

@@ -28,7 +28,6 @@ static void on_boot(void *arg)
 {
     if (screen_off) return;
     lv_obj_t *active = lv_screen_active();
-    // Inside the station (pages, pickers, settings): back to the first page.
     if (screen_named(active, "station") || screen_named(active, "picker") || screen_named(active, "settings") ||
         screen_named(active, "babies") || screen_named(active, "tiles") || screen_named(active, "note") ||
         screen_named(active, "amount-finished")) {
@@ -67,6 +66,5 @@ void buttons_start(void)
     gpio_config(&boot);
     const gpio_config_t pwr = {.pin_bit_mask = BIT64(PIN_PWR), .mode = GPIO_MODE_INPUT};
     gpio_config(&pwr);
-    // Screens are built on this task (with the display lock), so it needs a full stack.
     xTaskCreate(poll, "buttons", 8192, NULL, 2, NULL);
 }

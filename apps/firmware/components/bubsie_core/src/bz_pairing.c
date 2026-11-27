@@ -75,7 +75,6 @@ static void go(bz_pairing_t *p, bz_pair_state_t state)
     p->failures = 0;
 }
 
-/* A redirect that cannot be completed: pair afresh with the server that redirected. */
 static void fall_back(bz_pairing_t *p, const char *why)
 {
     char host[BZ_URL_LEN];
@@ -178,7 +177,6 @@ void bz_pair_on_reply(bz_pairing_t *p, int status, const char *body)
         if (reply.kind == BZ_REPLY_OK && bz_parse_device_code(body, code, sizeof code)) {
             go(p, BZ_PAIR_REDIRECT_CONFIRM);
         } else if (strcmp(reply.code, "CODE_TAKEN") == 0 && p->claim_unanswered) {
-            // Perhaps by this device, whose earlier claim got there without an answer.
             go(p, BZ_PAIR_REDIRECT_CHECK);
         } else if (strcmp(reply.code, "CODE_TAKEN") == 0) {
             snprintf(why, sizeof why, "%s already has a device using this code.", host);
@@ -215,7 +213,6 @@ void bz_pair_on_reply(bz_pairing_t *p, int status, const char *body)
             p->poll_web_url = true;
             go(p, BZ_PAIR_POLL);
         } else if (reply.kind == BZ_REPLY_OK || reply.kind == BZ_REPLY_REFUSED || ++p->failures >= GIVE_UP_AFTER) {
-            // Anything but true (false: the code expired on the original, say) is not a move.
             fall_back(p, "The move to the new server didn't go through.");
         }
         break;

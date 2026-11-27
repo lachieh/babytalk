@@ -8,7 +8,6 @@ TEST(test_wifi_failure)
     CHECK_INT(bz_wifi_failure(15), BZ_WIFI_WRONG_PASSWORD);
     CHECK_INT(bz_wifi_failure(202), BZ_WIFI_WRONG_PASSWORD);
     CHECK_INT(bz_wifi_failure(14), BZ_WIFI_WRONG_PASSWORD);
-    // Out of range, refused, a connection failure, or no reason at all.
     CHECK_INT(bz_wifi_failure(201), BZ_WIFI_UNREACHABLE);
     CHECK_INT(bz_wifi_failure(205), BZ_WIFI_UNREACHABLE);
     CHECK_INT(bz_wifi_failure(2), BZ_WIFI_UNREACHABLE);

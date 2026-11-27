@@ -1,5 +1,3 @@
-// The brand mark while the device starts: the web's pebble (components/icons.tsx PebbleLoading),
-// breathing, over the serif wordmark.
 #include "screens.h"
 
 void screen_splash_show(const char *status)

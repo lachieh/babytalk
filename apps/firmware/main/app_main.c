@@ -1,4 +1,3 @@
-// Bubsie for the Waveshare ESP32-S3-Touch-AMOLED-1.75C.
 #include "app.h"
 #include "buttons.h"
 #include "bsp/esp-bsp.h"

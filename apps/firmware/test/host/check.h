@@ -1,4 +1,3 @@
-// A minimal test harness for the host tests: CHECK records a failure and carries on.
 #pragma once
 #include <stdio.h>
 #include <string.h>

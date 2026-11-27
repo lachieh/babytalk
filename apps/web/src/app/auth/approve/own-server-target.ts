@@ -1,9 +1,6 @@
-/** What to do with an address entered under "Using your own server?". */
 export type OwnServerTarget =
   | { kind: "invalid" }
-  /** This server: the device is already here, so a move could only fail. */
   | { kind: "this-server" }
-  /** Check from the browser that the address serves Bubsie, then send the device. */
   | { kind: "check"; origin: string }
   /** An http address from an https page: the browser may not fetch it (mixed
    * content), so the device checks it itself and falls back if it isn't Bubsie. */

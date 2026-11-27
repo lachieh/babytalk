@@ -5,9 +5,6 @@ import { randomInt, randomUUID } from "node:crypto";
 import { db, deviceCodes, refreshSessions, users } from "@bubsie/db";
 import { eq, inArray } from "drizzle-orm";
 
-/* Runs the real resolvers against Postgres. Needs DATABASE_URL pointing at a
- * migrated database (CI's test job provides one). */
-
 const databaseUrl = process.env.DATABASE_URL;
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

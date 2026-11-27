@@ -1,12 +1,3 @@
-// The station: one event type per page, swiped sideways, then a Settings page.
-//
-// Why one tile per page: the web's 2-column grid does not fit a 466 px circle with targets big
-// enough for a thumb, and a radial menu of five puts every target at the rim, where the bezel and
-// curve make it hardest to hit. A page puts a single 232 px button in the middle of the glass (one
-// tap logs the inferred default, as on the web), with the variant under it and how long ago it
-// last happened inside it: readable at a glance, completable with a thumb, swiping for the rest.
-//
-// Each page is one of: the type's button (idle), its running timer, or its amount prompt.
 #include <stdio.h>
 #include <string.h>
 
@@ -20,20 +11,17 @@
 
 static const char *TAG = "screen";
 
-/* The web's TILE_ORDER, then Settings. */
 static const bz_type_t ORDER[] = {BZ_FEED, BZ_SLEEP, BZ_DIAPER, BZ_PUMP, BZ_NOTE};
 #define MAX_PAGES (BZ_TYPE_COUNT + 1)
 
 typedef struct {
-    bz_type_t type; /* BZ_TYPE_UNKNOWN: the Settings page */
+    bz_type_t type;
     lv_obj_t *tile;
     lv_obj_t *body;
     char signature[200];
-    lv_obj_t *digits; /* running timer */
+    lv_obj_t *digits;
     lv_obj_t *arc;
     bz_ms_t started;
-    /* The amount prompt: whose amount it asks, and the chip chosen so far. Each page keeps its own,
-     * since a feed and a pump can both be waiting and every page is rebuilt on refresh. */
     char amount_id[BZ_ID_LEN];
     double amount;
 } page_t;
@@ -47,10 +35,7 @@ static int current_page;
 static lv_timer_t *ticker;
 static bool shown_dark;
 
-/* A variant the person picked for a type, until the next log. NULL: the inferred default. */
 static const bz_variant_t *picked[BZ_TYPE_COUNT];
-
-/* ── Helpers ─────────────────────────────────────────────── */
 
 static const bz_variant_t *variant_for(bz_type_t type)
 {
@@ -66,13 +51,10 @@ static lv_obj_t *bare(lv_obj_t *parent)
     return obj;
 }
 
-/* ── Idle: the big button ────────────────────────────────── */
-
 static lv_point_t pressed_at;
 
 static void on_main_press(lv_event_t *event) { lv_indev_get_point(lv_indev_active(), &pressed_at); }
 
-/* A drag that started on the button (a swipe that went the wrong way) is not a tap. */
 static bool moved(void)
 {
     lv_point_t now;
@@ -185,8 +167,6 @@ static void build_idle(page_t *page)
     }
 }
 
-/* ── Running timer ───────────────────────────────────────── */
-
 static char timer_ids[BZ_TYPE_COUNT][BZ_ID_LEN];
 
 static void on_done(lv_event_t *event)
@@ -210,7 +190,6 @@ static void update_timer(page_t *page)
     char text[16];
     bz_format_elapsed(elapsed, text, sizeof text);
     lv_label_set_text(page->digits, text);
-    // The ring fills once an hour, so a glance tells where in the hour the timer is.
     long seconds = (long)(elapsed / 1000) % 3600;
     if (page->arc) lv_arc_set_value(page->arc, (int32_t)(seconds * 1000 / 3600));
 }
@@ -264,8 +243,6 @@ static void build_timer(page_t *page, const bz_event_t *event)
     lv_obj_align(discard, LV_ALIGN_TOP_MID, 0, 340);
 }
 
-/* ── Amount ──────────────────────────────────────────────── */
-
 static void on_amount_save(lv_event_t *event)
 {
     page_t *page = lv_event_get_user_data(event);
@@ -310,8 +287,6 @@ static void build_amount(page_t *page, const bz_event_t *event)
     lv_obj_align(skip, LV_ALIGN_TOP_MID, 0, 342);
 }
 
-/* ── Settings page ───────────────────────────────────────── */
-
 static void on_settings(lv_event_t *event) { screen_settings_show(); }
 
 static void build_settings_page(page_t *page)
@@ -348,8 +323,6 @@ static void build_settings_page(page_t *page)
     lv_obj_align(line, LV_ALIGN_CENTER, 0, 110);
     if (unsaved.queued) theme_breathe(line, 2000);
 }
-
-/* ── Pages ───────────────────────────────────────────────── */
 
 typedef enum { STATE_IDLE, STATE_TIMER, STATE_AMOUNT } tile_state_t;
 
@@ -454,7 +427,6 @@ static void on_tick(lv_timer_t *timer)
 
 static void on_delete(lv_event_t *event)
 {
-    // A rebuilt station loads before the old one goes: only forget what belongs to this one.
     if (lv_event_get_target(event) != screen) return;
     if (ticker) lv_timer_delete(ticker);
     ticker = NULL;
@@ -497,7 +469,6 @@ void screen_station_show(void)
     }
     lv_tileview_set_tile_by_index(tileview, (uint32_t)current_page, 0, LV_ANIM_OFF);
 
-    // Page dots along the bottom of the circle.
     lv_obj_t *row = bare(screen);
     lv_obj_set_size(row, LV_SIZE_CONTENT, 14);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);

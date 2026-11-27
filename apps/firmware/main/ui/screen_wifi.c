@@ -1,5 +1,3 @@
-// Wi-Fi setup: the networks in range as a list that follows the circle, then a password on the
-// on-screen keyboard. Reachable from setup and from Settings.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

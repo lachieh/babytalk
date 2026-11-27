@@ -15,7 +15,6 @@ static bz_event_t ev(const char *id, bz_type_t type, bz_ms_t started, bz_ms_t en
     return e;
 }
 
-/* Send the next entry; answer with `ok`/`definite`. Returns the id sent, or "" if nothing was ready. */
 static const char *send_next(bool ok, bool definite, char **body_out)
 {
     static char id[BZ_ID_LEN];
@@ -52,11 +51,10 @@ TEST(test_outbox_create_shows_and_sends_in_order)
     CHECK(bz_ob_create(&ob, &b, "b1"));
     size_t n = bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX);
     CHECK_INT(n, 2);
-    CHECK_STR(view[0].id, "b"); // newest first
+    CHECK_STR(view[0].id, "b");
     CHECK_INT(view[0].sync, BZ_PENDING);
-    CHECK_INT(bz_ob_derive(&ob, "b2", view, BZ_SERVER_MAX), 0); // another baby's station sees none
+    CHECK_INT(bz_ob_derive(&ob, "b2", view, BZ_SERVER_MAX), 0);
 
-    // The first request fails for want of a network: nothing else goes until it does.
     CHECK_STR(send_next(false, false, NULL), "a");
     CHECK(bz_ob_next(&ob) == NULL);
     CHECK(bz_ob_has_waiting(&ob));
@@ -66,7 +64,7 @@ TEST(test_outbox_create_shows_and_sends_in_order)
     CHECK_STR(send_next(true, false, NULL), "b");
     CHECK_INT(ob.outbox_count, 0);
     n = bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX);
-    CHECK_INT(n, 2); // confirmed events join the loaded list
+    CHECK_INT(n, 2);
     CHECK_INT(view[1].sync, BZ_SAVED);
 }
 
@@ -77,11 +75,10 @@ TEST(test_outbox_change_during_flight)
     bz_event_t a = ev("a", BZ_SLEEP, 100, BZ_RUNNING);
     bz_ob_create(&ob, &a, "b1");
     uint32_t request = bz_ob_send_start(&ob, "a");
-    // Stopped while the create is in flight: the stop follows as an update with only endedAt.
     bz_event_t stopped = a;
     stopped.ended = 500;
     CHECK(bz_ob_update(&ob, "a", BZ_CHANGED_ENDED, &stopped));
-    CHECK(bz_ob_next(&ob) == NULL); // still sending
+    CHECK(bz_ob_next(&ob) == NULL);
     bz_ob_send_ok(&ob, "a", request, NULL, 1000);
     CHECK_INT(ob.outbox_count, 1);
     CHECK_INT(ob.outbox[0].op, BZ_OP_UPDATE);
@@ -101,28 +98,24 @@ TEST(test_outbox_refused_and_delete)
     bz_event_t a = ev("a", BZ_NOTE, 100, 100), b = ev("b", BZ_NOTE, 200, 200);
     bz_ob_create(&ob, &a, "b1");
     bz_ob_create(&ob, &b, "b1");
-    CHECK_STR(send_next(false, true, NULL), "a"); // refused
+    CHECK_STR(send_next(false, true, NULL), "a");
     CHECK_INT(bz_ob_unsaved(&ob).failed, 1);
-    // A refused entry does not hold the others back.
     CHECK_STR(send_next(true, false, NULL), "b");
     bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX);
     CHECK_INT(view[1].sync, BZ_FAILED);
     bz_ob_retry(&ob);
     CHECK_STR(send_next(true, false, NULL), "a");
 
-    // Deleting a never-sent create needs no request at all.
     bz_event_t c = ev("c", BZ_DIAPER, 300, 300);
     bz_ob_create(&ob, &c, "b1");
     CHECK(bz_ob_delete(&ob, "c"));
     CHECK_INT(ob.outbox_count, 0);
-    // Deleting a saved one sends deleteEvent and drops it from the list.
     CHECK(bz_ob_delete(&ob, "a"));
     char *body = NULL;
     send_next(true, false, &body);
     CHECK(body && strstr(body, "deleteEvent"));
     free(body);
     CHECK_INT(bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX), 1);
-    // An update after a delete cannot be recorded.
     bz_ob_delete(&ob, "b");
     bz_event_t values = b;
     CHECK(!bz_ob_update(&ob, "b", BZ_CHANGED_META, &values));
@@ -136,10 +129,10 @@ TEST(test_outbox_loaded_stale_and_hidden)
     bz_ob_loaded(&ob, server, 2, 50);
     bz_event_t a = ev("a", BZ_DIAPER, 400, 400);
     bz_ob_create(&ob, &a, "b1");
-    send_next(true, false, NULL); // confirmed at 1000
-    bz_ob_loaded(&ob, server, 2, 900); // asked before that write: ignored
+    send_next(true, false, NULL);
+    bz_ob_loaded(&ob, server, 2, 900);
     CHECK_INT(bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX), 3);
-    bz_ob_loaded(&ob, server, 1, 1100); // a later answer replaces the list
+    bz_ob_loaded(&ob, server, 1, 1100);
     CHECK_INT(bz_ob_derive(&ob, "b1", view, BZ_SERVER_MAX), 1);
 
     bz_ob_hide(&ob, "s2");
@@ -156,16 +149,15 @@ TEST(test_outbox_persist_and_adopt)
     strcpy(a.meta, "{\"method\":\"breast\",\"side\":\"left\"}");
     bz_ob_create(&ob, &a, "b1");
     bz_ob_create(&ob, &h, "b1");
-    bz_ob_send_start(&ob, "a"); // the device stops with this in flight
-    bz_ob_hide(&ob, "h");       // and this discard inside its undo window
+    bz_ob_send_start(&ob, "a");
+    bz_ob_hide(&ob, "h");
     char *json = bz_ob_serialize(&ob);
 
     static bz_outbox_t after;
     bz_ob_init(&after);
     CHECK(bz_ob_adopt(&after, json));
     free(json);
-    // The in-flight create goes again (the server may hold it: exists is "maybe").
-    CHECK_INT(after.outbox_count, 1); // the never-sent discarded note needs no request
+    CHECK_INT(after.outbox_count, 1);
     CHECK_STR(after.outbox[0].event.id, "a");
     CHECK_INT(after.outbox[0].status, BZ_ST_READY);
     CHECK_INT(after.outbox[0].exists, BZ_EXISTS_MAYBE);

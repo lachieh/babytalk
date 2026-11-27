@@ -29,7 +29,6 @@ bool api_ensure_config(void)
 
 typedef enum { REFRESHED, REJECTED, UNAVAILABLE } refresh_t;
 
-/* Rotate the refresh token (refresh-token.ts). Only an answer that refuses it ends the session. */
 static refresh_t refresh(void)
 {
     uint32_t session = settings_session();
@@ -41,9 +40,6 @@ static refresh_t refresh(void)
     refresh_t result = UNAVAILABLE;
     static char token[SETTINGS_TOKEN_LEN], next[SETTINGS_TOKEN_LEN];
     if (status == 200 && bz_parse_refresh(resp.body, token, sizeof token, next, sizeof next)) {
-        // The session may have ended while the request was out (unpaired, another server): its
-        // tokens are not brought back.
-        // Not a refusal: that session is simply over, and whoever ended it decides what comes next.
         result = settings_save_refreshed(session, token, next) ? REFRESHED : UNAVAILABLE;
     } else if (status != 0) {
         bz_reply_t reply = bz_gql_classify(status, resp.body);
@@ -71,7 +67,6 @@ api_result_t api_call(char *body, http_resp_t *out, bz_reply_t *reply)
             break;
         }
         if (reply->kind == BZ_REPLY_TRANSIENT) break;
-        // Not authenticated: refresh once. A token just refreshed and still refused is rejected.
         http_free(out);
         refresh_t refreshed = attempt == 0 ? refresh() : REJECTED;
         if (refreshed == REJECTED) {

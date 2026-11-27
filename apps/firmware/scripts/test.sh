@@ -1,5 +1,4 @@
 #!/bin/sh
-# Build and run the host unit tests for components/bubsie_core (pure C, no ESP-IDF or LVGL).
 set -eu
 cd "$(dirname "$0")/.."
 mkdir -p test/out

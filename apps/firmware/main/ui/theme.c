@@ -136,7 +136,6 @@ lv_obj_t *ui_icon(lv_obj_t *parent, const lv_image_dsc_t *icon, lv_color_t color
 
 static void press_feedback(lv_obj_t *obj)
 {
-    // The web's active:scale-[0.97], skipped with reduced motion.
     if (reduced_motion) return;
     lv_obj_set_style_transform_scale(obj, 248, LV_STATE_PRESSED);
     lv_obj_set_style_transform_pivot_x(obj, lv_pct(50), 0);

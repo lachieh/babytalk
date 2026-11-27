@@ -61,7 +61,6 @@ static void trace_targets(lv_obj_t *obj)
             trace_keys(child);
             continue;
         }
-        // A target is something that answers a touch: clickable, with a handler of its own.
         if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE) && lv_obj_get_event_count(child) > 0) {
             lv_area_t a;
             lv_obj_get_coords(child, &a);
@@ -105,7 +104,6 @@ void ui_load(lv_obj_t *screen, const char *name)
     ESP_LOGI(TAG, "%s", name);
 }
 
-/* Half the width of the circle at height y, less a margin. */
 static int chord_half(int y, int margin)
 {
     int dy = y - UI_CENTER;
@@ -121,7 +119,6 @@ static void fit_to_curve(lv_obj_t *list)
         lv_obj_t *row = lv_obj_get_child(list, i);
         lv_area_t area;
         lv_obj_get_coords(row, &area);
-        // The narrower of the row's two edges sets its width, so its corners stay on the glass.
         int half = LV_MIN(chord_half(area.y1, 16), chord_half(area.y2, 16));
         int width = LV_CLAMP(160, 2 * half, UI_SAFE + 30);
         if (lv_obj_get_width(row) != width) lv_obj_set_width(row, width);
@@ -218,7 +215,6 @@ ui_text_entry_t ui_text_entry(lv_obj_t *screen, const char *placeholder, bool pa
     entry.keyboard = lv_keyboard_create(screen);
     lv_keyboard_set_textarea(entry.keyboard, entry.field);
     lv_keyboard_set_popovers(entry.keyboard, true);
-    // Between y 146 and 380 the circle is at least 360 px wide, so every key sits on the glass.
     lv_obj_set_size(entry.keyboard, 352, 234);
     lv_obj_align(entry.keyboard, LV_ALIGN_TOP_MID, 0, 146);
     lv_obj_set_style_bg_opa(entry.keyboard, LV_OPA_TRANSP, 0);

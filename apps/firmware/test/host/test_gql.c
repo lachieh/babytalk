@@ -31,12 +31,11 @@ TEST(test_gql_log_event)
     CHECK_STR(var_str(root, "babyId"), "baby-1");
     CHECK_STR(var_str(root, "type"), "feed");
     CHECK_STR(var_str(root, "startedAt"), "2026-11-27T10:00:00.000Z");
-    CHECK(var_str(root, "endedAt") == NULL); // a running timer has no end
+    CHECK(var_str(root, "endedAt") == NULL);
     CHECK(strstr(query_of(root), "$meta: FeedMetadataInput") != NULL);
     CHECK(strstr(query_of(root), "feedMeta: $meta") != NULL);
     cJSON *meta = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(root, "variables"), "meta");
     CHECK_STR(cJSON_GetObjectItemCaseSensitive(meta, "side")->valuestring, "left");
-    // Fields the API's input type does not declare are not sent (they would fail validation).
     CHECK(cJSON_GetObjectItemCaseSensitive(meta, "syncedBy") == NULL);
     cJSON_Delete(root);
 

@@ -22,8 +22,6 @@ static void changed(bz_station_t *st)
     bz_st_refresh(st);
 }
 
-/* A discard checked for room when it was made (bz_st_discard), and every change commits it before
- * taking room of its own, so the delete always fits. */
 static void commit_discard(bz_station_t *st)
 {
     if (!st->pending_discard[0]) return;
@@ -35,7 +33,6 @@ static void commit_discard(bz_station_t *st)
 void bz_st_sign_out(bz_station_t *st)
 {
     commit_discard(st);
-    // In place: the model is too big for a task's stack.
     bz_ob_set_baby(&st->ob, "");
     st->baby_id[0] = '\0';
     st->toast.shown = false;
@@ -88,8 +85,6 @@ bz_err_t bz_st_log(bz_station_t *st, bz_type_t type, const char *meta, int minut
     if (amount_ml > 0 && !bz_meta_with_int(given, "amountMl", amount_ml, event.meta, sizeof event.meta)) return BZ_ERR_TOO_LONG;
     bz_ms_t at = now - (bz_ms_t)(minutes_ago > 0 ? minutes_ago : 0) * 60000;
     event.started = at;
-    // lib/event-time.ts logTimes: a timer runs from `at`; anything else (or "already finished")
-    // starts and ends at `at`.
     event.ended = bz_starts_timer(type, event.meta) && !finished ? BZ_RUNNING : at;
     if (!bz_ob_create(&st->ob, &event, st->baby_id)) return BZ_ERR_FULL;
     show_toast(st, &event, event.ended == BZ_RUNNING ? BZ_TOAST_STARTED : BZ_TOAST_SAVED, true, now);
@@ -106,7 +101,6 @@ bz_err_t bz_st_stop(bz_station_t *st, const char *id, bz_ms_t now)
     commit_discard(st);
     values.ended = now < values.started ? values.started : now;
     if (!bz_ob_update(&st->ob, id, BZ_CHANGED_ENDED, &values)) return BZ_ERR_FULL;
-    // Feeds and pumps that take an amount say "saved" once the amount is in.
     if (!bz_takes_amount(&values)) show_toast(st, &values, BZ_TOAST_SAVED, false, now);
     changed(st);
     return BZ_ST_OK;

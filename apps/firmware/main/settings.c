@@ -121,7 +121,7 @@ static void persist_tokens(void)
     } else {
         nvs_erase_key(nvs, "session");
     }
-    nvs_erase_key(nvs, "token"); /* the two keys from before */
+    nvs_erase_key(nvs, "token");
     nvs_erase_key(nvs, "refresh");
     nvs_commit(nvs);
     nvs_close(nvs);

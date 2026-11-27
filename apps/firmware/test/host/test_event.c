@@ -21,13 +21,11 @@ TEST(test_event_meta)
     CHECK(bz_meta_bool(meta, "wet"));
     CHECK(!bz_meta_bool("not json", "wet"));
 
-    // Setting the amount keeps fields the device does not know about.
     CHECK(bz_meta_with_int(meta, "amountMl", 90, out, sizeof out));
     CHECK_INT(bz_meta_int(out, "amountMl"), 90);
     char notes[32];
     bz_meta_str(out, "notes", notes, sizeof notes);
     CHECK_STR(notes, "burped");
-    // Metadata cut short is not rebuilt from nothing, and a result that does not fit is refused.
     CHECK(!bz_meta_with_int("{\"side\":\"left\",\"notes\":\"bu", "amountMl", 90, out, sizeof out));
     CHECK(!bz_meta_with_int(meta, "amountMl", 90, out, 20));
 }

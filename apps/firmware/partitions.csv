@@ -1,6 +1,4 @@
 # Name,   Type, SubType, Offset,  Size
-# nvs holds settings and tokens. outbox is its own NVS partition so a full outbox can never
-# crowd out the settings, and erasing settings (Reset device) leaves unsent events alone.
 nvs,      data, nvs,     0x9000,  0x6000,
 phy_init, data, phy,     0xf000,  0x1000,
 factory,  app,  factory, 0x10000, 8M,
