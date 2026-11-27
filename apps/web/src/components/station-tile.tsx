@@ -28,7 +28,7 @@ import { EventIcon, getEventStyle } from "@/lib/event-styles";
 import { triggerFeedback } from "@/lib/haptics";
 import type { StationActionKey } from "@/lib/station-config";
 
-type LocalPhase = "idle" | "picking" | "amount" | "note";
+type LocalPhase = "idle" | "picking" | "note";
 
 const panelClass =
   "flex h-full flex-col rounded-3xl border-2 border-neutral-200 bg-surface-raised p-4";
@@ -88,10 +88,6 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
       return;
     }
     const action = oneTapAction(type, selectedVariant.meta);
-    if (action === "amount") {
-      setPhase("amount");
-      return;
-    }
     handleLog(selectedVariant.meta, {
       finished: action === "instant",
       minutesAgo: 0,
@@ -246,14 +242,13 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
           type={type}
         />
       )}
-      {(phase === "picking" || phase === "amount") && (
+      {phase === "picking" && (
         <LogSheet
           lastAmountMl={type === "feed" ? lastAmountMl(events, "feed") : null}
           onClose={handlePickerClose}
           onLog={handleSheetLog}
           onSelect={setSelected}
           selected={selected}
-          startAtAmount={phase === "amount"}
           type={type}
         />
       )}
