@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useId, useState } from "react";
 
 import { gqlRequest } from "@/lib/gql-request";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 const CHECK_HOUSEHOLD = `
   query { myHousehold { id } }
@@ -64,7 +63,6 @@ const unitButton = (active: boolean) =>
   }`;
 
 export default function SetupPage() {
-  useAutoDarkMode();
   const router = useRouter();
   const hintId = useId();
   const [step, setStep] = useState<"welcome" | "baby" | "already-joined">(

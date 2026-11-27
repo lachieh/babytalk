@@ -8,7 +8,6 @@ import { useCallback, useEffect, useState } from "react";
 import { Icon } from "@/components/icons";
 import { gqlRequest, storeSession } from "@/lib/gql-request";
 import { isPasskeySupported, signInWithPasskey } from "@/lib/passkey";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { disableDeviceMode } from "@/lib/use-device-mode";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 
@@ -59,7 +58,6 @@ const EmailAddress = ({ email }: { email: string }) => {
 };
 
 export default function LoginPage() {
-  useAutoDarkMode();
   const checkingAuth = useRedirectIfLoggedIn();
   const router = useRouter();
   const [email, setEmail] = useState("");

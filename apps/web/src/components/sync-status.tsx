@@ -5,10 +5,8 @@ import { usePathname } from "next/navigation";
 import { useBabyContext } from "@/lib/baby-context";
 import { syncMessage } from "@/lib/sync-copy";
 
-const NAV_CLEARANCE =
-  "calc(max(1.5rem, env(safe-area-inset-bottom)) + 5.375rem)";
-const BARE_CLEARANCE =
-  "calc(max(0.5rem, env(safe-area-inset-bottom)) + 0.75rem)";
+const NAV_CLEARANCE = "calc(max(1.5rem, var(--safe-bottom)) + 5.375rem)";
+const BARE_CLEARANCE = "calc(max(0.5rem, var(--safe-bottom)) + 0.75rem)";
 
 const hasBottomNav = (pathname: string) =>
   !pathname.startsWith("/station") &&

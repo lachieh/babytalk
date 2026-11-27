@@ -6,7 +6,6 @@ import { useEffect, useState } from "react";
 
 import { Icon } from "@/components/icons";
 import { loadRuntimeConfig } from "@/lib/runtime-config";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { useRedirectIfLoggedIn } from "@/lib/use-redirect-if-logged-in";
 import type { VolumeUnit } from "@/lib/use-volume-unit";
 import { useVolumeUnit } from "@/lib/use-volume-unit";
@@ -64,7 +63,6 @@ const SummaryIcon = ({ type }: { type: "feed" | "sleep" | "diaper" }) => (
 
 export default function Home() {
   useRedirectIfLoggedIn();
-  useAutoDarkMode();
   const { unit } = useVolumeUnit();
   const [sourceUrl, setSourceUrl] = useState<string | undefined>();
 

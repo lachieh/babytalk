@@ -8,7 +8,6 @@ import { UndoToast } from "@/components/undo-toast";
 import { useBabyContext } from "@/lib/baby-context";
 import type { StationActionKey } from "@/lib/station-config";
 import { useStationActions } from "@/lib/station-config";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 const TILE_ORDER: StationActionKey[] = [
   "feed",
@@ -92,7 +91,6 @@ function spansFullRow(index: number, count: number) {
 }
 
 export default function StationPage() {
-  useAutoDarkMode();
   const { baby, loading } = useBabyContext();
   const { visible, toggle } = useStationActions();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -137,7 +135,7 @@ export default function StationPage() {
         onOpenSettings={handleOpenSettings}
       />
 
-      <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-[calc(max(0.5rem,env(safe-area-inset-bottom))+4.75rem)]">
+      <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-[calc(max(0.5rem,var(--safe-bottom))+4.75rem)]">
         {mainContent}
       </main>
 
