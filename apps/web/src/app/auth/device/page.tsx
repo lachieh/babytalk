@@ -7,7 +7,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { gqlRequest, storeSession } from "@/lib/gql-request";
 import { loadRuntimeConfig } from "@/lib/runtime-config";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { enableDeviceMode } from "@/lib/use-device-mode";
 
 const REQUEST_DEVICE_CODE = `
@@ -45,7 +44,6 @@ const formatRemaining = (ms: number): string => {
 type Phase = "loading" | "waiting" | "approved" | "expired" | "error";
 
 const DevicePage = () => {
-  useAutoDarkMode();
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
   const [code, setCode] = useState("");

@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { gqlRequest, storeSession } from "@/lib/gql-request";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 import { disableDeviceMode } from "@/lib/use-device-mode";
 
 const VERIFY_MAGIC_LINK = `
@@ -48,7 +47,6 @@ const primaryButton =
   "inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-primary-500 px-6 py-3 text-base font-semibold text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.98]";
 
 const VerifyContent = () => {
-  useAutoDarkMode();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [failure, setFailure] = useState<Failure | null>(null);

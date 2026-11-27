@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
-import { ThemeColorSync } from "@/components/theme-color-sync";
+import { ThemeSync } from "@/components/theme-sync";
+import { applyThemeScript } from "@/lib/theme";
 
 import "./globals.css";
 import { LegacyStorageMigration } from "./legacy-storage";
@@ -30,10 +31,6 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   initialScale: 1,
-  themeColor: [
-    { color: "#f8f1e7", media: "(prefers-color-scheme: light)" },
-    { color: "#0e0b05", media: "(prefers-color-scheme: dark)" },
-  ],
   viewportFit: "cover",
   width: "device-width",
 };
@@ -44,8 +41,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Picks light or dark before first paint so the page and the
+            phone's status bar never disagree. */}
+        {/* oxlint-disable-next-line react/no-danger -- static script built from our own function */}
+        <script dangerouslySetInnerHTML={{ __html: applyThemeScript }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
@@ -59,7 +60,7 @@ export default function RootLayout({
       </head>
       <body className="overflow-hidden overscroll-none">
         <LegacyStorageMigration />
-        <ThemeColorSync />
+        <ThemeSync />
         {children}
         <ServiceWorkerRegistrar />
       </body>

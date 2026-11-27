@@ -434,13 +434,21 @@ body {
   }
 }
 
-/* --- Safe area utilities for notched devices --- */
+/* --- Safe area utilities for notched devices ---
+   Chrome on Android can draw an installed app under the navigation bar yet
+   report safe-area-inset-bottom as 0 until the first scroll; the static max
+   inset reserves the space from first paint. */
+:root {
+  --safe-bottom: env(
+    safe-area-max-inset-bottom,
+    env(safe-area-inset-bottom, 0px)
+  );
+}
 .safe-top {
   padding-top: max(calc(var(--spacing) * 10), env(safe-area-inset-top));
 }
 .safe-bottom {
   padding-bottom: calc(
-    max(calc(var(--spacing) * 6), env(safe-area-inset-bottom)) +
-      calc(var(--spacing) * 4)
+    max(calc(var(--spacing) * 6), var(--safe-bottom)) + calc(var(--spacing) * 4)
   );
 }

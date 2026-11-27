@@ -6,7 +6,6 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/gql-request";
 import { triggerFeedback } from "@/lib/haptics";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 const APPROVE_DEVICE_CODE = `
   mutation ApproveDeviceCode($code: String!) {
@@ -17,7 +16,6 @@ const APPROVE_DEVICE_CODE = `
 type Phase = "loading" | "approved" | "invalid" | "needs-login" | "error";
 
 const ApproveContent = () => {
-  useAutoDarkMode();
   const router = useRouter();
   const params = useSearchParams();
   const code = params.get("code") ?? "";

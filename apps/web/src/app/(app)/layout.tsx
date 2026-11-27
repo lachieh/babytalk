@@ -16,7 +16,6 @@ import {
 import { BabyContextProvider, readCachedBaby } from "@/lib/baby-context";
 import { gqlRequest, restoreSession } from "@/lib/gql-request";
 import { RuntimeConfigProvider, loadRuntimeConfig } from "@/lib/runtime-config";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 import { HistoryTabs, historyTabFor } from "./history/tabs";
 
@@ -62,7 +61,6 @@ const PageSkeleton = ({ pathname }: { pathname: string }) => {
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  useAutoDarkMode();
   const router = useRouter();
   const pathname = usePathname() ?? "";
   const [ready, setReady] = useState(false);

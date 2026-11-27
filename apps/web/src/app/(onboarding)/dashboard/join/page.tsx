@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 
 import { gqlRequest } from "@/lib/gql-request";
-import { useAutoDarkMode } from "@/lib/use-auto-dark-mode";
 
 const JOIN_HOUSEHOLD = `
   mutation JoinHousehold($inviteCode: String!) {
@@ -35,7 +34,6 @@ const codeHint = (length: number, remaining: number): string => {
 };
 
 const JoinContent = () => {
-  useAutoDarkMode();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [code, setCode] = useState("");
