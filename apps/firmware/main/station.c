@@ -330,6 +330,7 @@ static const char *err_name(bz_err_t err)
     case BZ_ERR_NO_CLOCK: return "no clock";
     case BZ_ERR_FULL: return "outbox full";
     case BZ_ERR_NO_BABY: return "no baby";
+    case BZ_ERR_TOO_LONG: return "metadata too long";
     default: return "not found";
     }
 }

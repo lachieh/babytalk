@@ -50,10 +50,11 @@ int bz_meta_int(const char *meta, const char *key)
 
 bool bz_meta_with_int(const char *meta, const char *key, int value, char *out, size_t out_len)
 {
-    cJSON *root = cJSON_Parse(meta ? meta : "");
+    cJSON *root = meta && meta[0] ? cJSON_Parse(meta) : cJSON_CreateObject();
+    // Metadata that is not an object (cut short, say) is not replaced by one holding only `key`.
     if (!cJSON_IsObject(root)) {
         cJSON_Delete(root);
-        root = cJSON_CreateObject();
+        return false;
     }
     cJSON_DeleteItemFromObjectCaseSensitive(root, key);
     cJSON_AddNumberToObject(root, key, value);

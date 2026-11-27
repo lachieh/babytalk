@@ -27,4 +27,7 @@ TEST(test_event_meta)
     char notes[32];
     bz_meta_str(out, "notes", notes, sizeof notes);
     CHECK_STR(notes, "burped");
+    // Metadata cut short is not rebuilt from nothing, and a result that does not fit is refused.
+    CHECK(!bz_meta_with_int("{\"side\":\"left\",\"notes\":\"bu", "amountMl", 90, out, sizeof out));
+    CHECK(!bz_meta_with_int(meta, "amountMl", 90, out, 20));
 }

@@ -14,7 +14,8 @@
 #define BZ_UNDO_MS 5000
 #define BZ_DISMISSED_MAX 8
 
-typedef enum { BZ_ST_OK, BZ_ERR_NO_CLOCK, BZ_ERR_FULL, BZ_ERR_NO_BABY, BZ_ERR_NOT_FOUND } bz_err_t;
+/** BZ_ERR_TOO_LONG: the metadata would not fit in BZ_META_LEN, so the change is not made. */
+typedef enum { BZ_ST_OK, BZ_ERR_NO_CLOCK, BZ_ERR_FULL, BZ_ERR_NO_BABY, BZ_ERR_NOT_FOUND, BZ_ERR_TOO_LONG } bz_err_t;
 
 typedef struct {
     bool shown;

@@ -123,7 +123,10 @@ bool bz_meta_takes_amount(bz_type_t type, const char *meta)
     return strcmp(method, "bottle") == 0 || strcmp(method, "formula") == 0;
 }
 
-bool bz_takes_amount(const bz_event_t *event) { return bz_meta_takes_amount(event->type, event->meta); }
+bool bz_takes_amount(const bz_event_t *event)
+{
+    return !event->meta_lost && bz_meta_takes_amount(event->type, event->meta);
+}
 
 const bz_event_t *bz_active(const bz_event_t *events, size_t count, bz_type_t type)
 {

@@ -130,6 +130,8 @@ bool bz_ob_create(bz_outbox_t *ob, const bz_event_t *event, const char *baby_id)
 bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_event_t *values)
 {
     bz_entry_t *entry = entry_of(ob, id);
+    // Metadata built from a copy that was cut short would replace the server's whole.
+    if ((changed & BZ_CHANGED_META) && (values->meta_lost || (entry && entry->event.meta_lost))) return false;
     if (entry) {
         if (entry->op == BZ_OP_DELETE) return false;
         apply_changes(&entry->event, changed, values);
@@ -403,6 +405,7 @@ static cJSON *event_json(const bz_event_t *event)
         cJSON_AddStringToObject(json, "endedAt", iso);
     }
     cJSON_AddStringToObject(json, "metadata", event->meta);
+    if (event->meta_lost) cJSON_AddTrueToObject(json, "metaLost");
     return json;
 }
 
@@ -460,6 +463,7 @@ bool bz_ob_adopt(bz_outbox_t *ob, const char *json)
         bz_entry_t *entry = &ob->outbox[ob->outbox_count++];
         memset(entry, 0, sizeof *entry);
         entry->event = event;
+        entry->event.meta_lost = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "metaLost"));
         const cJSON *baby = cJSON_GetObjectItemCaseSensitive(item, "baby");
         snprintf(entry->baby_id, sizeof entry->baby_id, "%s", cJSON_IsString(baby) ? baby->valuestring : "");
         entry->op = (bz_op_t)num(item, "op", BZ_OP_UPDATE);

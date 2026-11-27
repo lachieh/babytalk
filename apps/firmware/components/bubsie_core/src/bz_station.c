@@ -70,8 +70,10 @@ bz_err_t bz_st_log(bz_station_t *st, bz_type_t type, const char *meta, int minut
     commit_discard(st);
     bz_event_t event = {.type = type};
     snprintf(event.id, sizeof event.id, "%s", new_id);
-    snprintf(event.meta, sizeof event.meta, "%s", meta && meta[0] ? meta : "{}");
-    if (amount_ml > 0) bz_meta_with_int(event.meta, "amountMl", amount_ml, event.meta, sizeof event.meta);
+    const char *given = meta && meta[0] ? meta : "{}";
+    if (strlen(given) >= sizeof event.meta) return BZ_ERR_TOO_LONG;
+    strcpy(event.meta, given);
+    if (amount_ml > 0 && !bz_meta_with_int(given, "amountMl", amount_ml, event.meta, sizeof event.meta)) return BZ_ERR_TOO_LONG;
     bz_ms_t at = now - (bz_ms_t)(minutes_ago > 0 ? minutes_ago : 0) * 60000;
     event.started = at;
     // lib/event-time.ts logTimes: a timer runs from `at`; anything else (or "already finished")
@@ -112,9 +114,12 @@ bz_err_t bz_st_complete_amount(bz_station_t *st, const char *id, int amount_ml, 
     const bz_event_t *current = find(st, id);
     if (!current) return BZ_ERR_NOT_FOUND;
     bz_event_t saved = *current;
+    if (amount_ml > 0 && (current->meta_lost || !bz_meta_with_int(current->meta, "amountMl", amount_ml, saved.meta,
+                                                                 sizeof saved.meta))) {
+        return BZ_ERR_TOO_LONG;
+    }
     commit_discard(st);
     if (amount_ml > 0) {
-        bz_meta_with_int(current->meta, "amountMl", amount_ml, saved.meta, sizeof saved.meta);
         if (!bz_ob_update(&st->ob, id, BZ_CHANGED_META, &saved)) return BZ_ERR_FULL;
     }
     dismiss(st, id);

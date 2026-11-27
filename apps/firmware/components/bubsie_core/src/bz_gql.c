@@ -246,12 +246,18 @@ bool bz_event_from_json(const cJSON *item, bz_event_t *out)
     out->ended = cJSON_IsString(ended) ? bz_parse_iso(ended->valuestring) : BZ_RUNNING;
     if (out->ended < 0) out->ended = BZ_RUNNING;
     const cJSON *meta = cJSON_GetObjectItemCaseSensitive(item, "metadata");
+    bool fits = true;
     if (cJSON_IsString(meta)) {
-        snprintf(out->meta, sizeof out->meta, "%s", meta->valuestring);
+        fits = strlen(meta->valuestring) < sizeof out->meta;
+        if (fits) strcpy(out->meta, meta->valuestring);
     } else if (cJSON_IsObject(meta)) {
-        cJSON_PrintPreallocated((cJSON *)meta, out->meta, sizeof out->meta, false);
+        fits = cJSON_PrintPreallocated((cJSON *)meta, out->meta, sizeof out->meta, false);
     } else {
         strcpy(out->meta, "{}");
+    }
+    if (!fits) {
+        strcpy(out->meta, "{}");
+        out->meta_lost = true;
     }
     return out->id[0] && out->type != BZ_TYPE_UNKNOWN && out->started > 0;
 }

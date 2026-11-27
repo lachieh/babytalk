@@ -88,6 +88,7 @@ void ui_toast_error(bz_err_t err)
     if (err == BZ_ERR_NO_CLOCK) ui_toast_message("The clock is still setting. Try again in a moment.");
     else if (err == BZ_ERR_NO_BABY) ui_toast_message("Still loading. Try again in a moment.");
     else if (err == BZ_ERR_FULL) ui_toast_message("Too many changes waiting to send. Check Wi-Fi.");
+    else if (err == BZ_ERR_TOO_LONG) ui_toast_message("This one has too much detail to change here. Use the app.");
 }
 
 void ui_toast_tick(void)

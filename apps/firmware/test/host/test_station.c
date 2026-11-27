@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "bz_station.h"
@@ -104,4 +106,54 @@ TEST(test_station_discard_when_full)
     CHECK(bz_st_active(&st, BZ_PUMP) == NULL);
     CHECK_INT(st.ob.outbox_count, BZ_OUTBOX_MAX);
     CHECK_INT(st.ob.outbox[BZ_OUTBOX_MAX - 1].op, BZ_OP_DELETE);
+}
+
+/* A finished pump loaded from the server with `notes` notes, a minute ago. */
+static void loaded_pump(size_t notes)
+{
+    bz_st_init(&st);
+    bz_st_set_baby(&st, "b1");
+    char json[1200], text[1000];
+    memset(text, 'n', notes);
+    text[notes] = '\0';
+    snprintf(json, sizeof json,
+             "{\"data\":{\"recentEvents\":[{\"id\":\"p1\",\"type\":\"pump\",\"startedAt\":\"2026-11-27T10:00:00.000Z\","
+             "\"endedAt\":\"2026-11-27T10:20:00.000Z\",\"metadata\":{\"side\":\"left\",\"notes\":\"%s\"}}]}}",
+             text);
+    static bz_event_t events[1];
+    CHECK_INT(bz_parse_events(json, "recentEvents", events, 1), 1);
+    bz_st_loaded(&st, events, 1, NOW);
+}
+
+TEST(test_station_metadata_too_long)
+{
+    bz_ms_t ended = bz_parse_iso("2026-11-27T10:20:00.000Z");
+    // Metadata that does not fit is not kept half-cut, and is never edited from here.
+    loaded_pump(600);
+    CHECK(st.view[0].meta_lost);
+    CHECK_STR(st.view[0].meta, "{}");
+    CHECK(bz_st_awaiting_amount(&st, BZ_PUMP, ended + 60000) == NULL);
+    CHECK_INT(bz_st_complete_amount(&st, "p1", 80, ended + 60000), BZ_ERR_TOO_LONG);
+    CHECK_INT(st.ob.outbox_count, 0);
+
+    // Metadata that fits, but not with an amount added: refused rather than sent cut.
+    loaded_pump(BZ_META_LEN - 40);
+    CHECK(!st.view[0].meta_lost);
+    CHECK(bz_st_awaiting_amount(&st, BZ_PUMP, ended + 60000) != NULL);
+    CHECK_INT(bz_st_complete_amount(&st, "p1", 80, ended + 60000), BZ_ERR_TOO_LONG);
+    CHECK_INT(st.ob.outbox_count, 0);
+
+    // A change to a cut event keeps the mark across a restart.
+    loaded_pump(600);
+    bz_event_t running = st.view[0];
+    running.ended = BZ_RUNNING;
+    bz_st_loaded(&st, &running, 1, NOW);
+    CHECK_INT(bz_st_stop(&st, "p1", ended + 60000), BZ_ST_OK);
+    CHECK(st.toast.shown && st.toast.phase == BZ_TOAST_SAVED); // no amount to wait for
+    char *saved = bz_ob_serialize(&st.ob);
+    bz_st_init(&st);
+    bz_st_set_baby(&st, "b1");
+    CHECK(bz_ob_adopt(&st.ob, saved));
+    free(saved);
+    CHECK(st.ob.outbox[0].event.meta_lost);
 }

@@ -22,7 +22,8 @@ const bz_variant_t *bz_infer_default(bz_type_t type, const bz_event_t *events, s
 
 /** Feeds (except solids), sleep and pumping run as timers; the rest are logged at once. */
 bool bz_starts_timer(bz_type_t type, const char *meta);
-/** Bottle and formula feeds, and pumping, ask how much once finished. */
+/** Bottle and formula feeds, and pumping, ask how much once finished (unless their metadata was
+ * too long to keep: an amount would be saved over it). */
 bool bz_takes_amount(const bz_event_t *event);
 bool bz_meta_takes_amount(bz_type_t type, const char *meta);
 

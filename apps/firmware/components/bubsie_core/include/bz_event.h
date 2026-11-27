@@ -31,6 +31,9 @@ typedef struct {
     bz_ms_t started;
     bz_ms_t ended; /* BZ_RUNNING while a timer runs */
     char meta[BZ_META_LEN];
+    /* The server's metadata did not fit in `meta`, which holds "{}" instead of a cut copy. An edit
+     * from here would replace what the server has, so its metadata is never changed here. */
+    bool meta_lost;
     uint8_t sync; /* bz_sync_t, set on derived views only */
 } bz_event_t;
 
@@ -45,5 +48,6 @@ bool bz_meta_str(const char *meta, const char *key, char *out, size_t out_len);
 bool bz_meta_bool(const char *meta, const char *key);
 int bz_meta_int(const char *meta, const char *key);
 
-/** Copy `meta` with `key` set to the integer `value`. */
+/** Copy `meta` with `key` set to the integer `value`. false if `meta` is not a JSON object or the
+ * result does not fit in `out_len`; `out` is then not usable. */
 bool bz_meta_with_int(const char *meta, const char *key, int value, char *out, size_t out_len);
