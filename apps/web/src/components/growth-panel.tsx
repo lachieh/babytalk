@@ -1,7 +1,17 @@
 "use client";
 
-import { useCallback, useId, useMemo, useState } from "react";
+import {
+  ViewTransition,
+  addTransitionType,
+  startTransition,
+  useCallback,
+  useId,
+  useMemo,
+  useState,
+} from "react";
 
+import { readMemory, writeMemory } from "@/lib/app-cache";
+import { navTransitionTypes, pageEnter, pageExit } from "@/lib/page-transition";
 import type { MeasurementUnit } from "@/lib/use-measurement-unit";
 import {
   getPercentileData,
@@ -65,6 +75,8 @@ function positionPhrase(point: GrowthPoint, reference: Reference): string {
     : "No reference for this age";
 }
 
+const METRIC_MEMORY = "growth:metric";
+
 const MetricOption = ({
   metric,
   name,
@@ -81,16 +93,29 @@ const MetricOption = ({
     [onChange, metric.key]
   );
   return (
-    <label className="flex min-h-[44px] flex-1 cursor-pointer select-none items-center justify-center rounded-xl px-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-800 has-checked:bg-surface-raised has-checked:font-semibold has-checked:text-neutral-800 has-checked:shadow-sm has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-ink">
+    <label className="relative flex min-h-[44px] flex-1 cursor-pointer select-none items-center justify-center rounded-xl px-2 text-sm font-medium text-neutral-600 transition-colors hover:text-neutral-800 has-checked:font-semibold has-checked:text-neutral-800 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary-ink">
+      {checked && (
+        <ViewTransition name="growth-metric-pill" share="indicator">
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 rounded-xl bg-surface-raised shadow-sm"
+          />
+        </ViewTransition>
+      )}
+      {/* Uncontrolled: the choice is selected the moment it is made, while
+          the pill and chart follow in a transition. */}
       <input
-        checked={checked}
         className="sr-only"
+        defaultChecked={checked}
         name={name}
         onChange={handleChange}
         type="radio"
         value={metric.key}
       />
-      {metric.label}
+      {/* Its own layer, so the sliding pill passes under the label. */}
+      <ViewTransition name={`growth-metric-${metric.key}`}>
+        <span className="relative">{metric.label}</span>
+      </ViewTransition>
     </label>
   );
 };
@@ -506,7 +531,23 @@ export const GrowthPanel = ({
   onEdit,
   today,
 }: GrowthPanelProps) => {
-  const [metricKey, setMetricKey] = useState<GrowthMetric>("weight");
+  const [metricKey, setMetricKey] = useState<GrowthMetric>(
+    () => readMemory<GrowthMetric>(METRIC_MEMORY) ?? "weight"
+  );
+  const chooseMetric = useCallback(
+    (next: GrowthMetric) => {
+      writeMemory(METRIC_MEMORY, next);
+      const from = METRICS.findIndex((m) => m.key === metricKey);
+      const to = METRICS.findIndex((m) => m.key === next);
+      startTransition(() => {
+        for (const type of navTransitionTypes(from, to) ?? []) {
+          addTransitionType(type);
+        }
+        setMetricKey(next);
+      });
+    },
+    [metricKey]
+  );
   const chartHeadingId = useId();
   const listHeadingId = useId();
 
@@ -532,16 +573,24 @@ export const GrowthPanel = ({
         <h2 className="sr-only" id={chartHeadingId}>
           Growth chart
         </h2>
-        <MetricPicker onChange={setMetricKey} value={metric.key} />
-        <ChartSection
-          babyName={babyName}
-          currentAgeDays={ageInDays(today ?? new Date(), birth)}
-          imperial={imperial}
+        <MetricPicker onChange={chooseMetric} value={metric.key} />
+        <ViewTransition
+          default="none"
+          enter={pageEnter}
+          exit={pageExit}
           key={metric.key}
-          metric={metric}
-          points={points}
-          reference={reference}
-        />
+        >
+          <div>
+            <ChartSection
+              babyName={babyName}
+              currentAgeDays={ageInDays(today ?? new Date(), birth)}
+              imperial={imperial}
+              metric={metric}
+              points={points}
+              reference={reference}
+            />
+          </div>
+        </ViewTransition>
       </section>
 
       <AddButton onAdd={onAdd} prominent={!hasAnything} />
