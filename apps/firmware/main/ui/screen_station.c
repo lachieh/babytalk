@@ -32,6 +32,10 @@ typedef struct {
     lv_obj_t *digits; /* running timer */
     lv_obj_t *arc;
     bz_ms_t started;
+    /* The amount prompt: whose amount it asks, and the chip chosen so far. Each page keeps its own,
+     * since a feed and a pump can both be waiting and every page is rebuilt on refresh. */
+    char amount_id[BZ_ID_LEN];
+    double amount;
 } page_t;
 
 static lv_obj_t *screen;
@@ -45,8 +49,6 @@ static bool shown_dark;
 
 /* A variant the person picked for a type, until the next log. NULL: the inferred default. */
 static const bz_variant_t *picked[BZ_TYPE_COUNT];
-static char amount_choice_id[BZ_ID_LEN];
-static double amount_choice;
 
 /* ── Helpers ─────────────────────────────────────────────── */
 
@@ -266,41 +268,44 @@ static void build_timer(page_t *page, const bz_event_t *event)
 
 static void on_amount_save(lv_event_t *event)
 {
-    if (amount_choice <= 0) return;
-    ui_toast_error(station_amount(amount_choice_id, bz_display_to_ml(amount_choice, settings.volume_oz)));
+    page_t *page = lv_event_get_user_data(event);
+    if (page->amount <= 0) return;
+    ui_toast_error(station_amount(page->amount_id, bz_display_to_ml(page->amount, settings.volume_oz)));
     screen_station_refresh();
 }
 
 static void on_amount_skip(lv_event_t *event)
 {
-    station_amount(amount_choice_id, 0);
+    page_t *page = lv_event_get_user_data(event);
+    station_amount(page->amount_id, 0);
     screen_station_refresh();
 }
 
 static void on_tile_chip(double value, void *user)
 {
-    amount_choice = value;
+    page_t *page = user;
+    page->amount = value;
     screen_station_refresh();
 }
 
 static void build_amount(page_t *page, const bz_event_t *event)
 {
     lv_obj_t *body = page->body;
-    if (strcmp(amount_choice_id, event->id) != 0) {
-        strlcpy(amount_choice_id, event->id, sizeof amount_choice_id);
-        amount_choice = 0;
+    if (strcmp(page->amount_id, event->id) != 0) {
+        strlcpy(page->amount_id, event->id, sizeof page->amount_id);
+        page->amount = 0;
     }
     char method[16];
     bz_meta_str(event->meta, "method", method, sizeof method);
     const char *title = event->type == BZ_PUMP ? "Amount pumped" : strcmp(method, "formula") == 0 ? "Formula amount"
                                                                                                   : "Bottle amount";
     int last = bz_last_amount_ml(station->view, station->view_count, event->type);
-    ui_amount_picker(body, title, last, amount_choice, on_tile_chip, NULL);
-    lv_obj_t *save = ui_button(body, "Save", true, on_amount_save, NULL);
+    ui_amount_picker(body, title, last, page->amount, on_tile_chip, page);
+    lv_obj_t *save = ui_button(body, "Save", true, on_amount_save, page);
     lv_obj_set_width(save, 250);
     lv_obj_align(save, LV_ALIGN_TOP_MID, 0, 262);
-    if (amount_choice <= 0) lv_obj_add_state(save, LV_STATE_DISABLED);
-    lv_obj_t *skip = ui_button(body, "Skip", false, on_amount_skip, NULL);
+    if (page->amount <= 0) lv_obj_add_state(save, LV_STATE_DISABLED);
+    lv_obj_t *skip = ui_button(body, "Skip", false, on_amount_skip, page);
     lv_obj_set_size(skip, 170, 56);
     lv_obj_align(skip, LV_ALIGN_TOP_MID, 0, 342);
 }
@@ -367,7 +372,7 @@ static void signature_of(page_t *page, char *out, size_t len, tile_state_t *stat
     } else if (awaiting) {
         *state = STATE_AMOUNT;
         *event = awaiting;
-        snprintf(out, len, "amount %s %g", awaiting->id, amount_choice);
+        snprintf(out, len, "amount %s %g", awaiting->id, strcmp(page->amount_id, awaiting->id) == 0 ? page->amount : 0);
     } else {
         char line[96];
         bz_last_line(station->view, station->view_count, page->type, now, settings.volume_oz, line, sizeof line);
