@@ -60,6 +60,23 @@ emulator's random numbers repeat on every boot, so clear the events table betwee
 `web/src/main.ts` `FIRMWARES`, copy the images to `web/public/firmware/bubsie/`, and run
 `pnpm relay --allow-private` with `pnpm dev`.
 
+`test/emulator/redirect.test.ts` pairs through one Bubsie to another and checks the sign-out. It runs
+its own instances from the built API and web (`pnpm --filter @bubsie/api build`, `pnpm --filter
+@bubsie/web build`), each on a fresh database in the dev Postgres: A on :4417/:3417 stands in for
+bubsie.app and is the build's web URL, B on :4418/:3418 is self-hosted. The phone side runs in Chrome
+through Playwright. It covers the redirect (the device ends up on B, logs land only in B, A issues no
+tokens), B already holding the code, a server from before redirects, a rotated JWT secret
+(the device refreshes) and a revoked refresh token (the device signs out to pairing on B, once):
+
+```sh
+BUBSIE_UI_TRACE=1 BUBSIE_WEB_URL=http://<lan ip>:3417 BUBSIE_OUT=dist-dev scripts/build.sh
+git worktree add --detach /tmp/bubsie-old dd52dbd   # optional: an API from before redirects,
+                                                    # then `pnpm install` and `pnpm turbo run build --filter=@bubsie/api` there
+AMOLED_EMU=~/src/amoled-175c-emulator BUBSIE_IMAGES=dist-dev BUBSIE_HOST=<lan ip> \
+  BUBSIE_PG=<postgres container> BUBSIE_OLD_API=/tmp/bubsie-old BUBSIE_TEST=redirect \
+  pnpm --filter @bubsie/firmware test:emulator
+```
+
 ## Architecture
 
 ```

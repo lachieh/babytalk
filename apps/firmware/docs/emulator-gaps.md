@@ -35,5 +35,6 @@ firmware does not mix in other entropy to hide it.
 Wanted: `RNG_DATA_REG` (0x6003507C on the ESP32-S3) answering from a host source of randomness (or a
 seed the harness passes, for reproducible runs).
 
-Until then, clear the dev database's events between runs:
+`test/emulator/redirect.test.ts` gives every run fresh databases, so it is not affected. For
+`bubsie.test.ts`, until then, clear the dev database's events between runs:
 `docker exec <postgres container> psql -U bubsie -d bubsie -c 'DELETE FROM events;'`.

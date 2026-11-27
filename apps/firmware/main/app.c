@@ -182,6 +182,7 @@ static void publish_pairing(void)
     bz_url_host(pairing.server.web, view.host, sizeof view.host);
     strlcpy(view.notice, pairing.notice, sizeof view.notice);
     if (memcmp(&view, &pairing_view, sizeof view) == 0) return;
+    if (view.notice[0] && strncmp(view.notice, pairing_view.notice, sizeof view.notice) != 0) ESP_LOGI(TAG, "pair: notice %s", view.notice);
     pairing_view = view;
     ui_do(show_pairing, NULL);
 }

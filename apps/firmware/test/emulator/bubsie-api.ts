@@ -7,9 +7,10 @@ const MAILPIT = process.env.MAILPIT_URL ?? "http://localhost:8025";
 export async function gql<T>(
   query: string,
   variables: Record<string, unknown> = {},
-  token?: string
+  token?: string,
+  api = API
 ): Promise<T> {
-  const response = await fetch(API, {
+  const response = await fetch(api, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -26,7 +27,7 @@ export async function gql<T>(
   return json.data as T;
 }
 
-async function magicToken(email: string): Promise<string> {
+export async function magicToken(email: string): Promise<string> {
   for (let attempt = 0; attempt < 40; attempt++) {
     const search = (await (
       await fetch(
@@ -49,20 +50,42 @@ async function magicToken(email: string): Promise<string> {
   throw new Error(`no magic link for ${email}`);
 }
 
-/** A new person with a household and the named babies. Returns their access token and baby ids. */
-export async function newFamily(
-  babyNames: string[]
-): Promise<{ token: string; babies: { id: string; name: string }[] }> {
-  const email = `device-${Math.random().toString(36).slice(2, 10)}@bubsie.test`;
-  await gql("mutation($email: String!) { requestMagicLink(email: $email) }", {
-    email,
-  });
+/** Delete every message in Mailpit, so the next magic link found is the next one sent. */
+export async function clearMail(): Promise<void> {
+  await fetch(`${MAILPIT}/api/v1/messages`, { method: "DELETE" });
+}
+
+/** Sign in by magic link (a new person the first time). Returns an access token. */
+export async function signIn(email: string, api = API): Promise<string> {
+  await clearMail();
+  await gql(
+    "mutation($email: String!) { requestMagicLink(email: $email) }",
+    { email },
+    undefined,
+    api
+  );
   const { verifyMagicLink } = await gql<{ verifyMagicLink: { token: string } }>(
     "mutation($token: String!) { verifyMagicLink(token: $token) { token } }",
-    { token: await magicToken(email) }
+    { token: await magicToken(email) },
+    undefined,
+    api
   );
-  const token = verifyMagicLink.token;
-  await gql("mutation { createHousehold { id } }", {}, token);
+  return verifyMagicLink.token;
+}
+
+/** A new person with a household and the named babies, on the API at `api`. Returns their email,
+ * access token and baby ids. */
+export async function newFamily(
+  babyNames: string[],
+  api = API
+): Promise<{
+  email: string;
+  token: string;
+  babies: { id: string; name: string }[];
+}> {
+  const email = `device-${Math.random().toString(36).slice(2, 10)}@bubsie.test`;
+  const token = await signIn(email, api);
+  await gql("mutation { createHousehold { id } }", {}, token, api);
   const babies = [];
   for (const name of babyNames) {
     const { addBaby } = await gql<{ addBaby: { id: string } }>(
@@ -73,18 +96,24 @@ export async function newFamily(
           .toISOString()
           .slice(0, 10),
       },
-      token
+      token,
+      api
     );
     babies.push({ id: addBaby.id, name });
   }
-  return { token, babies };
+  return { email, token, babies };
 }
 
-export async function approve(code: string, token: string): Promise<boolean> {
+export async function approve(
+  code: string,
+  token: string,
+  api = API
+): Promise<boolean> {
   const { approveDeviceCode } = await gql<{ approveDeviceCode: boolean }>(
     "mutation($code: String!) { approveDeviceCode(code: $code) }",
     { code },
-    token
+    token,
+    api
   );
   return approveDeviceCode;
 }
@@ -99,12 +128,14 @@ export interface ApiEvent {
 
 export async function recentEvents(
   babyId: string,
-  token: string
+  token: string,
+  api = API
 ): Promise<ApiEvent[]> {
   const { recentEvents } = await gql<{ recentEvents: ApiEvent[] }>(
     "query($babyId: String!) { recentEvents(babyId: $babyId, limit: 50) { id type startedAt endedAt metadata } }",
     { babyId },
-    token
+    token,
+    api
   );
   return recentEvents;
 }
