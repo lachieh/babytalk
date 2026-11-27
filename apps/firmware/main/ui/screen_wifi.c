@@ -16,7 +16,7 @@ static void on_network(lv_event_t *event)
     ESP_LOGI("ui", "network %s", ap->ssid);
     strlcpy(chosen, ap->ssid, sizeof chosen);
     if (ap->secure) {
-        screen_wifi_password_show(chosen);
+        screen_wifi_password_show(chosen, "", NULL);
     } else {
         app_wifi_join(chosen, "");
     }
@@ -82,10 +82,16 @@ static void on_password_done(lv_event_t *event)
     app_wifi_join(chosen, pass);
 }
 
-void screen_wifi_password_show(const char *ssid)
+void screen_wifi_password_show(const char *ssid, const char *pass, const char *notice)
 {
     lv_obj_t *screen = ui_screen();
     ui_title(screen, ssid);
-    ui_text_entry(screen, "Password", true, on_password_done, NULL);
+    ui_text_entry_t entry = ui_text_entry(screen, "Password", true, on_password_done, NULL);
+    lv_textarea_set_text(entry.field, pass);
+    if (notice) {
+        lv_obj_t *note = ui_label(screen, &font_sans_20, lv_color_hex(ui_pal.tokens.pump_600), notice);
+        lv_obj_align(note, LV_ALIGN_TOP_MID, 0, 392);
+        ESP_LOGI("ui", "notice %s", notice);
+    }
     ui_load(screen, "wifi-password");
 }

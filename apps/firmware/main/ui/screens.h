@@ -37,7 +37,8 @@ ui_text_entry_t ui_text_entry(lv_obj_t *screen, const char *placeholder, bool pa
 #include "wifi.h"
 /** `count` -1 while scanning. `message` (optional) explains why the list is back. */
 void screen_wifi_show(const wifi_ap_t *aps, int count, const char *message);
-void screen_wifi_password_show(const char *ssid);
+/** The password for `ssid`, with `pass` already typed and `notice` (or NULL) under the keyboard. */
+void screen_wifi_password_show(const char *ssid, const char *pass, const char *notice);
 
 /* ── Setup ─────────────────────────────────────────────────── */
 

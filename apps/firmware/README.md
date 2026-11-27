@@ -89,6 +89,7 @@ components/bubsie_core/   pure C: no ESP-IDF, no LVGL. Built on the host by scri
   bz_station   the station model: log, stop, discard, amount, undo (lib/baby-context.tsx)
   bz_pairing   device-code pairing, including redirects to another server, as a state machine
   bz_uuid      v4 ids, chosen on the device as the web does
+  bz_wifi      what a failed join means: a wrong password, or a network that couldn't be reached
 main/
   app.c        flow: Wi-Fi -> time zone -> pairing -> station; a worker task for blocking calls
   station.c    the model behind a lock, persisted to the "outbox" NVS partition, and the sync task

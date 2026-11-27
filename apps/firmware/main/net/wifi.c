@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "bz_wifi.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_netif.h"
@@ -10,6 +11,11 @@
 #include "freertos/event_groups.h"
 
 static const char *TAG = "wifi";
+
+_Static_assert(BZ_WIFI_REASON_MIC_FAILURE == WIFI_REASON_MIC_FAILURE, "reason codes");
+_Static_assert(BZ_WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT, "reason codes");
+_Static_assert(BZ_WIFI_REASON_AUTH_FAIL == WIFI_REASON_AUTH_FAIL, "reason codes");
+_Static_assert(BZ_WIFI_REASON_HANDSHAKE_TIMEOUT == WIFI_REASON_HANDSHAKE_TIMEOUT, "reason codes");
 
 #define GOT_ADDRESS BIT0
 #define JOIN_FAILED BIT1
@@ -99,7 +105,8 @@ wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms)
     ESP_LOGI(TAG, "joining %s", ssid);
     esp_wifi_connect();
 
-    // The station retries on its own after a failure; a wrong password fails the same way each time.
+    // The station retries on its own after a failure. A wrong password fails the same way every
+    // time, so it ends the wait; anything else gets three tries.
     TickType_t deadline = xTaskGetTickCount() + pdMS_TO_TICKS(timeout_ms);
     int failures = 0;
     while (xTaskGetTickCount() < deadline) {
@@ -108,19 +115,14 @@ wifi_result_t wifi_join(const char *ssid, const char *pass, int timeout_ms)
         if (bits & GOT_ADDRESS) return WIFI_JOINED;
         if (bits & JOIN_FAILED) {
             xEventGroupClearBits(events, JOIN_FAILED);
-            if (++failures >= 3) break;
+            if (bz_wifi_failure(last_reason) == BZ_WIFI_WRONG_PASSWORD || ++failures >= 3) break;
         }
     }
     want_connection = false;
     esp_wifi_disconnect();
     uint8_t reason = last_reason;
     ESP_LOGI(TAG, "join failed, reason %d", reason);
-    if (reason == WIFI_REASON_NO_AP_FOUND) return WIFI_NOT_FOUND;
-    if (reason == WIFI_REASON_AUTH_FAIL || reason == WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT ||
-        reason == WIFI_REASON_HANDSHAKE_TIMEOUT || reason == WIFI_REASON_MIC_FAILURE) {
-        return WIFI_WRONG_PASSWORD;
-    }
-    return WIFI_FAILED;
+    return bz_wifi_failure(reason) == BZ_WIFI_WRONG_PASSWORD ? WIFI_WRONG_PASSWORD : WIFI_UNREACHABLE;
 }
 
 bool wifi_connected(void) { return events && (xEventGroupGetBits(events) & GOT_ADDRESS); }

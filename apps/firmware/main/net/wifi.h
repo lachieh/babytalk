@@ -15,8 +15,8 @@ typedef struct {
 typedef enum {
     WIFI_JOINED,
     WIFI_WRONG_PASSWORD,
-    WIFI_NOT_FOUND,
-    WIFI_FAILED,
+    /** Out of range, refused, or no answer. */
+    WIFI_UNREACHABLE,
 } wifi_result_t;
 
 void wifi_init(void);

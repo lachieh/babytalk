@@ -101,6 +101,13 @@ static void show_joining(void *ssid)
 
 static void do_continue(void *arg);
 
+/* Back to the password, still typed, so a slip can be fixed rather than typed again. */
+static void show_wrong_password(void *arg)
+{
+    const join_t *join = arg;
+    screen_wifi_password_show(join->ssid, join->pass, "Wrong password");
+}
+
 static void do_join(void *arg)
 {
     join_t *join = arg;
@@ -112,11 +119,13 @@ static void do_join(void *arg)
         do_continue(NULL);
         return;
     }
-    const char *message = result == WIFI_WRONG_PASSWORD ? "That password didn't work"
-                          : result == WIFI_NOT_FOUND    ? "That network is out of range"
-                                                        : "Couldn't join that network";
+    if (result == WIFI_WRONG_PASSWORD && join->pass[0]) {
+        ui_do(show_wrong_password, join);
+        free(join);
+        return;
+    }
     free(join);
-    do_scan((void *)message);
+    do_scan("Couldn't reach that network");
 }
 
 void app_wifi_join(const char *ssid, const char *pass)
