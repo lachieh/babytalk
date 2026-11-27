@@ -29,7 +29,12 @@ void settings_load(void);
 void settings_set_u8(const char *key, uint8_t *field, uint8_t value);
 
 void settings_save_wifi(const char *ssid, const char *pass);
+/** A new session (pairing) or none (""): both tokens in one write. */
 void settings_save_tokens(const char *token, const char *refresh);
+/** Which session the saved tokens belong to; moves whenever the session is replaced or cleared. */
+uint32_t settings_session(void);
+/** A refresh's new tokens, saved only if `session` is still the current one. */
+bool settings_save_refreshed(uint32_t session, const char *token, const char *refresh);
 void settings_save_web_url(const char *web_url, const char *api_url);
 void settings_save_api_url(const char *api_url);
 void settings_save_baby(const char *baby_id);

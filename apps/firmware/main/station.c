@@ -23,7 +23,7 @@ static const char *TAG = "sync";
 
 bz_station_t *station;
 static SemaphoreHandle_t lock;
-static TaskHandle_t task;
+static TaskHandle_t volatile task;
 static volatile bool running;
 static volatile bool offline;
 static volatile bool force_refresh;
@@ -305,10 +305,12 @@ void station_start(void)
     xTaskCreatePinnedToCore(sync_task, "sync", 12 * 1024, NULL, 3, &task, 0);
 }
 
+/* Returns once the sync task has finished, so nothing it is doing (a refresh, say) lands after. */
 void station_stop(void)
 {
     running = false;
     wake();
+    while (task) vTaskDelay(pdMS_TO_TICKS(20));
 }
 
 void station_forget(void)

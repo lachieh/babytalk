@@ -217,6 +217,12 @@ static bool pair(void)
         int status = http_request(act.url, act.body, NULL, &resp, 15000);
         free(act.body);
         ESP_LOGI(TAG, "pair: %s -> %d %.120s", act.url, status, resp.body ? resp.body : "");
+        // Interrupted while the request was out (the server changed, say): its answer is not acted on,
+        // so tokens or a redirect from it are never saved under what comes next.
+        if (xEventGroupGetBits(signals) & APP_INTERRUPT) {
+            http_free(&resp);
+            return false;
+        }
         bz_pair_state_t before = pairing.state;
         bz_pair_on_reply(&pairing, status, resp.body);
         if (before == BZ_PAIR_REQUEST_CODE && pairing.state == BZ_PAIR_POLL) ESP_LOGI(TAG, "pair: code %s", pairing.code);
@@ -239,6 +245,10 @@ static bool pair(void)
 static void do_set_server(void *arg)
 {
     char *url = arg;
+    // A session, its baby and its unsent changes belong to the old server: none of them go to the new one.
+    station_stop();
+    station_forget();
+    settings_unpair();
     settings_save_web_url(url, "");
     free(url);
     do_continue(NULL);
@@ -296,6 +306,9 @@ static void do_boot(void *arg)
 
 static void do_signed_out(void *arg)
 {
+    // Queued behind an unpair or a server change, it is about a session that is already gone.
+    if ((uint32_t)(uintptr_t)arg != settings_session()) return;
+    strlcpy(signed_out_notice, "This device was signed out. Pair it again.", sizeof signed_out_notice);
     station_stop();
     station_forget();
     settings_unpair();
@@ -305,8 +318,7 @@ static void do_signed_out(void *arg)
 void app_signed_out(void)
 {
     ESP_LOGW(TAG, "signed out by the server");
-    strlcpy(signed_out_notice, "This device was signed out. Pair it again.", sizeof signed_out_notice);
-    app_do(do_signed_out, NULL);
+    app_do(do_signed_out, (void *)(uintptr_t)settings_session());
 }
 
 static void do_unpair(void *arg)
