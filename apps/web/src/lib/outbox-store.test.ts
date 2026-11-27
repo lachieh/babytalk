@@ -356,3 +356,47 @@ describe("outbox store", () => {
     });
   });
 });
+
+describe("the copy of events kept for next time", () => {
+  const finished = {
+    endedAt: "2026-11-21T03:20:00.000Z",
+    id: "feed-1",
+    metadata: "{}",
+    startedAt: "2026-11-21T03:00:00.000Z",
+    type: "feed",
+  };
+  const running = {
+    endedAt: null,
+    id: "sleep-1",
+    metadata: "{}",
+    startedAt: "2026-11-21T04:00:00.000Z",
+    type: "sleep",
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("opens with what the server last said", async () => {
+    const local = fakeStorage();
+    const first = await loadStore({ local });
+    first.dispatchOutbox({ events: [finished], type: "loaded" });
+
+    const next = await loadStore({ local });
+    expect(next.getOutboxState().source).toBe("device");
+    expect(next.getOutboxState().server.map((e) => e.id)).toStrictEqual([
+      "feed-1",
+    ]);
+  });
+
+  it("leaves out timers that were running, which may have been stopped elsewhere", async () => {
+    const local = fakeStorage();
+    const first = await loadStore({ local });
+    first.dispatchOutbox({ events: [finished, running], type: "loaded" });
+
+    const next = await loadStore({ local });
+    expect(next.getOutboxState().server.map((e) => e.id)).toStrictEqual([
+      "feed-1",
+    ]);
+  });
+});
