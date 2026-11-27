@@ -103,20 +103,20 @@ main/
 
 ## Screens
 
-| Screen | Reached from | Shows |
-| --- | --- | --- |
-| Splash | boot | breathing pebble, wordmark, status |
-| Wi-Fi list / password | first boot, Settings > Wi-Fi, a network gone | networks following the circle; keyboard |
-| Time zone | setup, Settings | roller of zones |
-| Pairing / server | not paired, Unpair, signed out | QR of `<web>/auth/approve?code=C`, `XXXX-XXXX`, Server button |
-| Station page | paired | one per visible type: baby name, big button (tap logs, long press picks), last time, variant pill |
-| Timer | a running feed/sleep/pump | label, start time, elapsed, hour ring, Done, Discard |
-| Amount | a finished bottle/formula/pump | three chips around the last amount, Save, Skip |
-| Picker | variant pill, long press | variants, Now/5m/10m/15m/30m, Start timer or Log, Already finished |
-| Note | Note page | keyboard |
-| Babies | the baby's name (2+ babies) | babies |
-| Settings | last station page | baby, buttons, send again, night mode, volume, reduce motion, time zone, Wi-Fi, server, restart, unpair, reset |
-| Undo toast | after a log, stop, amount or discard | what happened, Undo for 5 s |
+| Screen                | Reached from                                 | Shows                                                                                                          |
+| --------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Splash                | boot                                         | breathing pebble, wordmark, status                                                                             |
+| Wi-Fi list / password | first boot, Settings > Wi-Fi, a network gone | networks following the circle; keyboard                                                                        |
+| Time zone             | setup, Settings                              | roller of zones                                                                                                |
+| Pairing / server      | not paired, Unpair, signed out               | QR of `<web>/auth/approve?code=C`, `XXXX-XXXX`, Server button                                                  |
+| Station page          | paired                                       | one per visible type: baby name, big button (tap logs, long press picks), last time, variant pill              |
+| Timer                 | a running feed/sleep/pump                    | label, start time, elapsed, hour ring, Done, Discard                                                           |
+| Amount                | a finished bottle/formula/pump               | three chips around the last amount, Save, Skip                                                                 |
+| Picker                | variant pill, long press                     | variants, Now/5m/10m/15m/30m, Start timer or Log, Already finished                                             |
+| Note                  | Note page                                    | keyboard                                                                                                       |
+| Babies                | the baby's name (2+ babies)                  | babies                                                                                                         |
+| Settings              | last station page                            | baby, buttons, send again, night mode, volume, reduce motion, time zone, Wi-Fi, server, restart, unpair, reset |
+| Undo toast            | after a log, stop, amount or discard         | what happened, Undo for 5 s                                                                                    |
 
 ## Design decisions
 
