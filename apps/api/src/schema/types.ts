@@ -53,12 +53,12 @@ DeviceCodeRequestType.implement({
 });
 
 export const DeviceCodeStatusEnum = builder.enumType("DeviceCodeStatus", {
-  values: ["pending", "expired", "approved"] as const,
+  values: ["pending", "expired", "approved", "redirected"] as const,
 });
 
 export const DeviceCodePollPayloadType = builder.objectRef<{
   refreshToken: string | null;
-  status: "pending" | "expired" | "approved";
+  status: "pending" | "expired" | "approved" | "redirected";
   token: string | null;
   user: {
     email: string;
@@ -66,6 +66,7 @@ export const DeviceCodePollPayloadType = builder.objectRef<{
     id: string;
     name: string | null;
   } | null;
+  webUrl: string | null;
 }>("DeviceCodePollPayload");
 
 DeviceCodePollPayloadType.implement({
@@ -81,6 +82,19 @@ DeviceCodePollPayloadType.implement({
       resolve: (parent) => parent.user,
       type: UserType,
     }),
+    webUrl: t.exposeString("webUrl", { nullable: true }),
+  }),
+});
+
+export const DeviceCodeRedirectType = builder.objectRef<{
+  confirmed: boolean;
+  webUrl: string;
+}>("DeviceCodeRedirect");
+
+DeviceCodeRedirectType.implement({
+  fields: (t) => ({
+    confirmed: t.exposeBoolean("confirmed"),
+    webUrl: t.exposeString("webUrl"),
   }),
 });
 

@@ -32,6 +32,9 @@ export const createConfigHandler = <T>(
 
       return NextResponse.json(publicConfig, {
         headers: {
+          // Public by definition: another Bubsie instance's page reads it to
+          // check an address is a Bubsie server.
+          "access-control-allow-origin": "*",
           "cache-control": `public, max-age=${maxAge}`,
         },
       });

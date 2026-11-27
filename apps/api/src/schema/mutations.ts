@@ -5,7 +5,9 @@ import type {
 
 import {
   approveDeviceCode,
+  confirmDeviceCodeRedirect,
   pollDeviceCode,
+  redirectDeviceCode,
   requestDeviceCode,
 } from "../auth/device-code";
 import { requestMagicLink, verifyMagicLink } from "../auth/magic-link";
@@ -98,7 +100,11 @@ builder.mutationField("refreshToken", (t) =>
 
 builder.mutationField("requestDeviceCode", (t) =>
   t.field({
-    resolve: () => requestDeviceCode(),
+    args: {
+      // A device sent here from another instance keeps the code it shows.
+      code: t.arg.string(),
+    },
+    resolve: (_root, args) => requestDeviceCode(args.code),
     type: DeviceCodeRequestType,
   })
 );
@@ -123,21 +129,51 @@ builder.mutationField("pollDeviceCode", (t) =>
     },
     resolve: async (_root, args) => {
       const result = await pollDeviceCode(args.code);
+      if (result.status !== "approved") {
+        return {
+          refreshToken: null,
+          status: result.status,
+          token: null,
+          user: null,
+          webUrl: result.status === "redirected" ? result.webUrl : null,
+        };
+      }
       return {
-        refreshToken: result.refreshToken ?? null,
+        refreshToken: result.refreshToken,
         status: result.status,
-        token: result.token ?? null,
-        user: result.user
-          ? {
-              email: result.user.email,
-              householdId: null,
-              id: result.user.id,
-              name: null,
-            }
-          : null,
+        token: result.token,
+        user: {
+          email: result.user.email,
+          householdId: null,
+          id: result.user.id,
+          name: null,
+        },
+        webUrl: null,
       };
     },
     type: DeviceCodePollPayloadType,
+  })
+);
+
+/* Unauthenticated, like approving: holding the code is the authority. */
+builder.mutationField("redirectDeviceCode", (t) =>
+  t.field({
+    args: {
+      code: t.arg.string({ required: true }),
+      webUrl: t.arg.string({ required: true }),
+    },
+    resolve: (_root, args) => redirectDeviceCode(args.code, args.webUrl),
+    type: "Boolean",
+  })
+);
+
+builder.mutationField("confirmDeviceCodeRedirect", (t) =>
+  t.field({
+    args: {
+      code: t.arg.string({ required: true }),
+    },
+    resolve: (_root, args) => confirmDeviceCodeRedirect(args.code),
+    type: "Boolean",
   })
 );
 
