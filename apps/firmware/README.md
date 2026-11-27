@@ -40,7 +40,7 @@ pnpm --filter @bubsie/firmware test               # host unit tests of the pure-
 ```
 
 The emulator tests boot a build in [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator)
-through its `HeadlessBoard` (imported from the checkout at `AMOLED_EMU`, nothing copied), drive the
+through its `HeadlessBoard` (imported from the checkout at `AMOLED_EMU`, nothing copied; it needs the emulator at `2082c85` or later), drive the
 screens against Bubsie instances they start themselves, check what reached the API, and save each
 screen to `docs/screens/`. Each instance runs the built API and web (`pnpm --filter @bubsie/api build`,
 `pnpm --filter @bubsie/web build`) on a fresh `bubsie_fw_*` database in the dev Postgres, and signs

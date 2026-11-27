@@ -2,7 +2,7 @@
 
 What the Bubsie firmware needed from [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator)
 that it did not do at `9b918ea`. Both are fixed by
-[lachieh/amoled-175c-emulator#1](https://github.com/lachieh/amoled-175c-emulator/pull/1). The firmware
+[lachieh/amoled-175c-emulator#1](https://github.com/lachieh/amoled-175c-emulator/pull/1), merged as `2082c85`. The firmware
 never worked around either.
 
 ## 1. Only one open Wi-Fi network: no secured network, no wrong password (fixed)
