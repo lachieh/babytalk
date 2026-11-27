@@ -40,6 +40,7 @@ void screen_wifi_show(const wifi_ap_t *aps, int count, const char *message)
     ui_title(screen, "Choose Wi-Fi");
 
     if (message) {
+        ESP_LOGI("ui", "notice %s", message);
         lv_obj_t *note = ui_label(list, &font_sans_20, lv_color_hex(ui_pal.tokens.pump_600), message);
         lv_obj_set_width(note, 300);
         lv_label_set_long_mode(note, LV_LABEL_LONG_WRAP);

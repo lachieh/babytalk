@@ -1,17 +1,28 @@
 // Boots the Bubsie firmware in the emulator and walks its screens, saving each to docs/screens/.
-// Run with apps/firmware/scripts/emulator-test.sh against a build whose web URL is a local Bubsie
-// (BUBSIE_WEB_URL=http://<this machine>:3417 scripts/build.sh).
+// Runs its own Bubsie on a fresh database (bubsie-servers.ts). Run with scripts/emulator-test.sh
+// against a build whose web URL is that Bubsie:
+//   BUBSIE_WEB_URL=http://$BUBSIE_HOST:$BUBSIE_WEB_PORT scripts/build.sh
 import assert from "node:assert/strict";
-import { test } from "node:test";
+import { after, before, test } from "node:test";
 
 import { approve, gql, newFamily, recentEvents } from "./bubsie-api.ts";
 import { Device } from "./bubsie-device.ts";
+import { Instance, ports } from "./bubsie-servers.ts";
 
 const SCREENS = process.env.BUBSIE_SCREENS ?? "screens";
 
+let bubsie: Instance;
+before(async () => {
+  bubsie = await Instance.start({ name: "bubsie_fw_main", ...ports(0) });
+});
+after(async () => {
+  await bubsie?.stop();
+});
+
 test("sets up from new, then logs, syncs and recovers like the web station", async () => {
-  const family = await newFamily(["Ada", "Theo"]);
-  const device = await Device.boot("bubsie", { network: true });
+  const api = bubsie.apiUrl;
+  const family = await newFamily(["Ada", "Theo"], api);
+  const device = await Device.boot({ network: true });
   try {
     await device.waitFor(/screen: splash/, 10);
     await device.run(1.5);
@@ -32,7 +43,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     device.screenshot(SCREENS, "03-wifi-list");
 
     // The emulator's network is open, so a tap joins it without a password.
-    await device.tap(233, 140);
+    await device.tapLabel("emulator");
     await device.waitFor(/wifi: joining emulator/, 5);
     await device.waitFor(/wifi: address 10\.0\.2\.\d+/, 20);
 
@@ -58,7 +69,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.seen(/app: clock set, \d+:\d\d [ap]m \S+/, 30);
     await device.run(0.8);
     device.screenshot(SCREENS, "06-pairing");
-    assert.equal(await approve(code, family.token), true);
+    assert.equal(await approve(code, family.token, api), true);
     await device.waitFor(/app: pair: approved/, 20);
     const ada = family.babies[0]!;
 
@@ -79,7 +90,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.6);
     device.screenshot(SCREENS, "08-feed-timer-undo");
     await device.waitFor(/sync: sent create/, 20);
-    let events = await recentEvents(ada.id, family.token);
+    let events = await recentEvents(ada.id, family.token, api);
     assert.equal(events.length, 1);
     assert.equal(events[0]!.type, "feed");
     assert.equal(events[0]!.endedAt, null);
@@ -94,7 +105,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.waitFor(/sync: stop \S+: ok/, 5);
     await device.waitFor(/toast: Feed saved/, 5);
     await device.waitFor(/sync: sent update/, 20);
-    events = await recentEvents(ada.id, family.token);
+    events = await recentEvents(ada.id, family.token, api);
     assert.notEqual(events[0]!.endedAt, null, "the stop reached the server");
 
     // Next time the other side is offered.
@@ -122,7 +133,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(6);
     device.screenshot(SCREENS, "13-sleep-timer-10m");
     await device.waitFor(/sync: sent create/, 20);
-    events = await recentEvents(ada.id, family.token);
+    events = await recentEvents(ada.id, family.token, api);
     const sleep = events.find((e) => e.type === "sleep")!;
     const minutesAgo = (Date.now() - Date.parse(sleep.startedAt)) / 60000;
     assert.ok(
@@ -155,7 +166,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     for (
       let i = 0;
       i < 3 &&
-      (await recentEvents(ada.id, family.token)).filter(
+      (await recentEvents(ada.id, family.token, api)).filter(
         (e) => e.type === "diaper"
       ).length !== 1;
       i++
@@ -163,7 +174,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
       await device.run(3);
     }
     assert.equal(
-      (await recentEvents(ada.id, family.token)).filter(
+      (await recentEvents(ada.id, family.token, api)).filter(
         (e) => e.type === "diaper"
       ).length,
       1
@@ -192,7 +203,7 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.run(0.5);
     device.screenshot(SCREENS, "17-bottle-saved");
     for (let i = 0; i < 5; i++) {
-      const bottle = (await recentEvents(ada.id, family.token)).find((e) =>
+      const bottle = (await recentEvents(ada.id, family.token, api)).find((e) =>
         e.metadata.includes("bottle")
       );
       if (bottle && JSON.parse(bottle.metadata).amountMl === 120) break;
@@ -208,7 +219,8 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
         from: new Date(Date.now() - 200 * 60_000).toISOString(),
         to: new Date(Date.now() - 60 * 60_000).toISOString(),
       },
-      family.token
+      family.token,
+      api
     );
     await device.swipe([400, 233], [60, 233]);
     await device.waitFor(/screen: station page sleep/, 5);
@@ -272,25 +284,25 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     device.screenshot(SCREENS, "26-station-note");
     await device.tapLabel("Note");
     await device.waitFor(/screen: note/, 5);
-    for (const x of [104, 135, 166]) await device.tap(x, 176); // q w e
+    await device.typeKeys("qwe");
     await device.run(0.5);
     device.screenshot(SCREENS, "27-note-keyboard");
-    await device.tap(384, 350); // OK
+    await device.tapLabel("key OK");
     const note = (await device.waitFor(/sync: log note (\{.*\}): ok/, 5))[1]!;
     assert.ok(JSON.parse(note).text.length > 0, note);
     await device.waitFor(/sync: sent create/, 20);
-    const theoEvents = await recentEvents(theo.id, family.token);
+    const theoEvents = await recentEvents(theo.id, family.token, api);
     assert.equal(theoEvents.length, 1);
     assert.equal(theoEvents[0]!.type, "note");
     assert.equal(
-      (await recentEvents(ada.id, family.token)).filter(
+      (await recentEvents(ada.id, family.token, api)).filter(
         (e) => e.type === "note"
       ).length,
       0
     );
 
-    // Offline: the change is kept, shown as waiting, survives a restart, and goes when the network is back.
-    device.disconnect();
+    // An outage: the change is kept, shown as waiting, survives a restart, and goes when the API is back.
+    await bubsie.stopApi();
     await device.button("boot");
     await device.waitFor(/screen: station/, 5);
     await device.swipe([400, 233], [60, 233]); // sleep
@@ -307,12 +319,12 @@ test("sets up from new, then logs, syncs and recovers like the web station", asy
     await device.tapLabel("Settings");
     await device.waitFor(/screen: settings/, 5);
     await device.tapLabel("Restart");
-    device.reconnect();
+    await bubsie.startApi();
     await device.waitFor(/sync: restored 1 unsent/, 30);
     await device.waitFor(/screen: station/, 40);
     await device.waitFor(/sync: sent create/, 30);
     assert.equal(
-      (await recentEvents(theo.id, family.token)).filter(
+      (await recentEvents(theo.id, family.token, api)).filter(
         (e) => e.type === "diaper"
       ).length,
       1

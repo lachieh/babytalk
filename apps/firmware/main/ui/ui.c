@@ -14,6 +14,32 @@ bool screen_named(lv_obj_t *screen, const char *name)
 }
 
 #if CONFIG_BUBSIE_UI_TRACE
+// Button areas are private to LVGL; only the trace build reads them.
+#include "src/widgets/buttonmatrix/lv_buttonmatrix_private.h"
+
+static const char *key_name(const char *text)
+{
+    if (strcmp(text, LV_SYMBOL_OK) == 0) return "OK";
+    if (strcmp(text, LV_SYMBOL_BACKSPACE) == 0) return "Backspace";
+    if (strcmp(text, LV_SYMBOL_KEYBOARD) == 0) return "Hide";
+    return text;
+}
+
+/* Each key of a keyboard (a button matrix is one object, so its keys are traced one by one). */
+static void trace_keys(lv_obj_t *obj)
+{
+    const lv_buttonmatrix_t *matrix = (const lv_buttonmatrix_t *)obj;
+    lv_area_t at;
+    lv_obj_get_coords(obj, &at);
+    for (uint32_t i = 0; i < matrix->btn_cnt; i++) {
+        const char *text = lv_buttonmatrix_get_button_text(obj, i);
+        if (!text || !text[0]) continue;
+        const lv_area_t *key = &matrix->button_areas[i];
+        ESP_LOGI("ui", "at %d,%d key %s", (int)(at.x1 + (key->x1 + key->x2) / 2), (int)(at.y1 + (key->y1 + key->y2) / 2),
+                 key_name(text));
+    }
+}
+
 static const char *label_of(lv_obj_t *obj)
 {
     if (lv_obj_check_type(obj, &lv_label_class)) return lv_label_get_text(obj);
@@ -31,6 +57,10 @@ static void trace_targets(lv_obj_t *obj)
     for (uint32_t i = 0; i < count; i++) {
         lv_obj_t *child = lv_obj_get_child(obj, i);
         if (lv_obj_has_flag(child, LV_OBJ_FLAG_HIDDEN)) continue;
+        if (lv_obj_check_type(child, &lv_keyboard_class)) {
+            trace_keys(child);
+            continue;
+        }
         // A target is something that answers a touch: clickable, with a handler of its own.
         if (lv_obj_has_flag(child, LV_OBJ_FLAG_CLICKABLE) && lv_obj_get_event_count(child) > 0) {
             lv_area_t a;

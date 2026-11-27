@@ -1,8 +1,8 @@
 // Pairing through one Bubsie ("bubsie.app", A) to a self-hosted one (B), with the phone side driven
 // in Chrome through A's approve page; then B rejecting the device's refresh token. Each run gets
-// fresh databases (bubsie-servers.ts), so the emulator's repeating random ids never collide.
-// Run with scripts/emulator-test.sh against a build whose web URL is A:
-//   BUBSIE_WEB_URL=http://$BUBSIE_HOST:3417 scripts/build.sh
+// fresh databases (bubsie-servers.ts). Run with scripts/emulator-test.sh against a build whose web
+// URL is A:
+//   BUBSIE_WEB_URL=http://$BUBSIE_HOST:$BUBSIE_WEB_PORT scripts/build.sh
 // BUBSIE_OLD_API: a checkout from before redirects (e.g. dd52dbd) with apps/api/dist built, for the
 // "old server" fallback; without it that test is skipped.
 import assert from "node:assert/strict";
@@ -15,15 +15,15 @@ import type { Browser, Page } from "@playwright/test";
 
 import {
   approve,
-  clearMail,
   gql,
   magicToken,
+  mailIds,
   newFamily,
   recentEvents,
   signIn,
 } from "./bubsie-api.ts";
 import { Device } from "./bubsie-device.ts";
-import { Instance } from "./bubsie-servers.ts";
+import { Instance, ports } from "./bubsie-servers.ts";
 
 const SCREENS = process.env.BUBSIE_SCREENS ?? "screens";
 const OLD_API = process.env.BUBSIE_OLD_API;
@@ -38,13 +38,12 @@ let browser: Browser;
 
 before(async () => {
   [a, b, old] = await Promise.all([
-    Instance.start({ name: "bubsie_fw_a", apiPort: 4417, webPort: 3417 }),
-    Instance.start({ name: "bubsie_fw_b", apiPort: 4418, webPort: 3418 }),
+    Instance.start({ name: "bubsie_fw_a", ...ports(0) }),
+    Instance.start({ name: "bubsie_fw_b", ...ports(1) }),
     OLD_API
       ? Instance.start({
           name: "bubsie_fw_old",
-          apiPort: 4419,
-          webPort: 3419,
+          ...ports(2),
           apiCheckout: OLD_API,
         })
       : undefined,
@@ -63,7 +62,7 @@ after(async () => {
 async function toPairing(device: Device): Promise<string> {
   await device.waitFor(/screen: wifi-list/, 40);
   await device.run(0.5);
-  await device.tap(233, 140);
+  await device.tapLabel("emulator");
   await device.waitFor(/screen: timezone/, 40);
   await device.run(0.5);
   await device.tap(233, 392);
@@ -112,7 +111,7 @@ test("pairs with a self-hosted server through bubsie.app, then signs out when it
   // The person has an account on B only.
   const family = await newFamily(["Ada"], b.apiUrl);
   const ada = family.babies[0]!;
-  const device = await Device.boot("bubsie", { network: true });
+  const device = await Device.boot({ network: true });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
   });
@@ -152,12 +151,12 @@ test("pairs with a self-hosted server through bubsie.app, then signs out when it
 
     // Sign in on B and approve there.
     await page.getByRole("button", { name: "Sign in" }).click();
-    await clearMail();
+    const seen = await mailIds(family.email);
     await page.getByPlaceholder("you@example.com").fill(family.email);
     await page.getByRole("button", { name: "Send magic link" }).click();
     await page.getByText("Check your email").waitFor();
     await page.goto(
-      `${b.webUrl}/auth/verify?token=${await magicToken(family.email)}`
+      `${b.webUrl}/auth/verify?token=${await magicToken(family.email, seen)}`
     );
     await page
       .getByRole("heading", { name: "Device signed in" })
@@ -269,7 +268,7 @@ async function fallsBack(
   screen: string,
   takeFirst = false
 ): Promise<void> {
-  const device = await Device.boot("bubsie", { network: true });
+  const device = await Device.boot({ network: true });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
   });

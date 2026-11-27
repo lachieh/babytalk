@@ -1,14 +1,13 @@
 // A Bubsie API for the emulator test to act as the person with the phone: sign in by magic link
-// (through Mailpit), set up a household and babies, approve the device's code, log from "another
-// device". Points at BUBSIE_API (default http://localhost:4417/graphql) and MAILPIT_URL.
-const API = process.env.BUBSIE_API ?? "http://localhost:4417/graphql";
+// (through Mailpit at MAILPIT_URL), set up a household and babies, approve the device's code, log
+// from "another device". Every call names the API it goes to.
 const MAILPIT = process.env.MAILPIT_URL ?? "http://localhost:8025";
 
 export async function gql<T>(
   query: string,
   variables: Record<string, unknown> = {},
-  token?: string,
-  api = API
+  token: string | undefined,
+  api: string
 ): Promise<T> {
   const response = await fetch(api, {
     method: "POST",
@@ -27,18 +26,27 @@ export async function gql<T>(
   return json.data as T;
 }
 
-export async function magicToken(email: string): Promise<string> {
+/** The ids of the messages Mailpit holds for `email`. */
+export async function mailIds(email: string): Promise<Set<string>> {
+  const search = (await (
+    await fetch(
+      `${MAILPIT}/api/v1/search?query=to:${encodeURIComponent(email)}`
+    )
+  ).json()) as { messages: { ID: string }[] };
+  return new Set(search.messages.map((m) => m.ID));
+}
+
+/** The token in the first magic link sent to `email` that is not one of `seen`. Leaves every
+ * message in place: the Mailpit may be shared with someone using it. */
+export async function magicToken(
+  email: string,
+  seen: Set<string> = new Set()
+): Promise<string> {
   for (let attempt = 0; attempt < 40; attempt++) {
-    const search = (await (
-      await fetch(
-        `${MAILPIT}/api/v1/search?query=to:${encodeURIComponent(email)}`
-      )
-    ).json()) as {
-      messages: { ID: string }[];
-    };
-    if (search.messages.length > 0) {
+    for (const id of await mailIds(email)) {
+      if (seen.has(id)) continue;
       const message = (await (
-        await fetch(`${MAILPIT}/api/v1/message/${search.messages[0]!.ID}`)
+        await fetch(`${MAILPIT}/api/v1/message/${id}`)
       ).json()) as { Text: string; HTML: string };
       const match = `${message.Text}\n${message.HTML}`.match(
         /token=([0-9a-f-]{36})/
@@ -50,14 +58,9 @@ export async function magicToken(email: string): Promise<string> {
   throw new Error(`no magic link for ${email}`);
 }
 
-/** Delete every message in Mailpit, so the next magic link found is the next one sent. */
-export async function clearMail(): Promise<void> {
-  await fetch(`${MAILPIT}/api/v1/messages`, { method: "DELETE" });
-}
-
 /** Sign in by magic link (a new person the first time). Returns an access token. */
-export async function signIn(email: string, api = API): Promise<string> {
-  await clearMail();
+export async function signIn(email: string, api: string): Promise<string> {
+  const seen = await mailIds(email);
   await gql(
     "mutation($email: String!) { requestMagicLink(email: $email) }",
     { email },
@@ -66,7 +69,7 @@ export async function signIn(email: string, api = API): Promise<string> {
   );
   const { verifyMagicLink } = await gql<{ verifyMagicLink: { token: string } }>(
     "mutation($token: String!) { verifyMagicLink(token: $token) { token } }",
-    { token: await magicToken(email) },
+    { token: await magicToken(email, seen) },
     undefined,
     api
   );
@@ -77,7 +80,7 @@ export async function signIn(email: string, api = API): Promise<string> {
  * access token and baby ids. */
 export async function newFamily(
   babyNames: string[],
-  api = API
+  api: string
 ): Promise<{
   email: string;
   token: string;
@@ -107,7 +110,7 @@ export async function newFamily(
 export async function approve(
   code: string,
   token: string,
-  api = API
+  api: string
 ): Promise<boolean> {
   const { approveDeviceCode } = await gql<{ approveDeviceCode: boolean }>(
     "mutation($code: String!) { approveDeviceCode(code: $code) }",
@@ -129,7 +132,7 @@ export interface ApiEvent {
 export async function recentEvents(
   babyId: string,
   token: string,
-  api = API
+  api: string
 ): Promise<ApiEvent[]> {
   const { recentEvents } = await gql<{ recentEvents: ApiEvent[] }>(
     "query($babyId: String!) { recentEvents(babyId: $babyId, limit: 50) { id type startedAt endedAt metadata } }",
