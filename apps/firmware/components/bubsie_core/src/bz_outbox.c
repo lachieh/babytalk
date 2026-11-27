@@ -60,6 +60,18 @@ static bz_entry_t *new_entry(bz_outbox_t *ob, const bz_event_t *event, bz_op_t o
     return entry;
 }
 
+/* The event as the server has it, or a stand-in carrying only its id when this device never loaded it. */
+static bz_event_t base_event(const bz_outbox_t *ob, const char *id, bz_type_t type, bool *loaded)
+{
+    const bz_event_t *current = server_event(ob, id);
+    *loaded = current != NULL;
+    if (current) return *current;
+    bz_event_t stand_in = {.type = type};
+    snprintf(stand_in.id, sizeof stand_in.id, "%s", id);
+    strcpy(stand_in.meta, "{}");
+    return stand_in;
+}
+
 static void apply_changes(bz_event_t *event, unsigned changed, const bz_event_t *values)
 {
     if (changed & BZ_CHANGED_STARTED) event->started = values->started;
@@ -126,34 +138,19 @@ bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_ev
         entry->version++;
         return true;
     }
-    const bz_event_t *current = server_event(ob, id);
-    bz_event_t base;
-    if (current) {
-        base = *current;
-    } else {
-        memset(&base, 0, sizeof base);
-        snprintf(base.id, sizeof base.id, "%s", id);
-        base.type = values->type;
-        strcpy(base.meta, "{}");
-    }
+    bool loaded;
+    bz_event_t base = base_event(ob, id, values->type, &loaded);
     apply_changes(&base, changed, values);
-    return new_entry(ob, &base, BZ_OP_UPDATE, changed, !current, ob->server_baby) != NULL;
+    return new_entry(ob, &base, BZ_OP_UPDATE, changed, !loaded, ob->server_baby) != NULL;
 }
 
 static bool remove_event(bz_outbox_t *ob, const char *id)
 {
     bz_entry_t *entry = entry_of(ob, id);
     if (!entry) {
-        const bz_event_t *current = server_event(ob, id);
-        bz_event_t base;
-        if (current) {
-            base = *current;
-        } else {
-            memset(&base, 0, sizeof base);
-            snprintf(base.id, sizeof base.id, "%s", id);
-            strcpy(base.meta, "{}");
-        }
-        return new_entry(ob, &base, BZ_OP_DELETE, 0, !current, ob->server_baby) != NULL;
+        bool loaded;
+        bz_event_t base = base_event(ob, id, BZ_FEED, &loaded);
+        return new_entry(ob, &base, BZ_OP_DELETE, 0, !loaded, ob->server_baby) != NULL;
     }
     if (entry->op == BZ_OP_DELETE) return true;
     bool sending = entry->status == BZ_ST_SENDING;
@@ -166,6 +163,14 @@ static bool remove_event(bz_outbox_t *ob, const char *id)
     if (!sending) entry->status = BZ_ST_READY;
     entry->version++;
     return true;
+}
+
+static bool is_hidden(const bz_outbox_t *ob, const char *id)
+{
+    for (size_t i = 0; i < ob->hidden_count; i++) {
+        if (strcmp(ob->hidden[i], id) == 0) return true;
+    }
+    return false;
 }
 
 void bz_ob_unhide(bz_outbox_t *ob, const char *id)
@@ -187,9 +192,7 @@ bool bz_ob_delete(bz_outbox_t *ob, const char *id)
 
 void bz_ob_hide(bz_outbox_t *ob, const char *id)
 {
-    for (size_t i = 0; i < ob->hidden_count; i++) {
-        if (strcmp(ob->hidden[i], id) == 0) return;
-    }
+    if (is_hidden(ob, id)) return;
     if (ob->hidden_count >= BZ_HIDDEN_MAX) {
         // Only one discard waits in its undo window at a time; an old one is long committed.
         bz_ob_delete(ob, ob->hidden[0]);
@@ -323,14 +326,6 @@ static bool visible(const bz_entry_t *entry) { return entry->op != BZ_OP_DELETE 
 
 static uint8_t sync_of(const bz_entry_t *entry) { return entry->status == BZ_ST_FAILED ? BZ_FAILED : BZ_PENDING; }
 
-static bool is_hidden(const bz_outbox_t *ob, const char *id)
-{
-    for (size_t i = 0; i < ob->hidden_count; i++) {
-        if (strcmp(ob->hidden[i], id) == 0) return true;
-    }
-    return false;
-}
-
 static int newest_first(const void *a, const void *b)
 {
     bz_ms_t x = ((const bz_event_t *)a)->started, y = ((const bz_event_t *)b)->started;
@@ -453,15 +448,9 @@ bool bz_ob_adopt(bz_outbox_t *ob, const char *json)
     const cJSON *item;
     cJSON_ArrayForEach(item, cJSON_GetObjectItemCaseSensitive(root, "outbox"))
     {
-        cJSON *wrapper = cJSON_CreateObject();
-        cJSON *data = cJSON_AddObjectToObject(wrapper, "data");
-        cJSON_AddItemToObject(data, "e", cJSON_Duplicate(cJSON_GetObjectItemCaseSensitive(item, "event"), true));
-        char *text = cJSON_PrintUnformatted(wrapper);
-        cJSON_Delete(wrapper);
         bz_event_t event;
-        bool parsed = bz_parse_event(text, "e", &event);
-        free(text);
-        if (!parsed || entry_of(ob, event.id) || ob->outbox_count >= BZ_OUTBOX_MAX) continue;
+        const cJSON *json = cJSON_GetObjectItemCaseSensitive(item, "event");
+        if (!cJSON_IsObject(json) || !bz_event_from_json(json, &event) || entry_of(ob, event.id) || ob->outbox_count >= BZ_OUTBOX_MAX) continue;
         bz_entry_t *entry = &ob->outbox[ob->outbox_count++];
         memset(entry, 0, sizeof *entry);
         entry->event = event;

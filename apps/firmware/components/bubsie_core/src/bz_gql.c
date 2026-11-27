@@ -234,7 +234,7 @@ int bz_parse_babies(const char *text, bz_baby_t *out, int max)
     return count;
 }
 
-static bool event_from(const cJSON *item, bz_event_t *out)
+bool bz_event_from_json(const cJSON *item, bz_event_t *out)
 {
     memset(out, 0, sizeof *out);
     copy_str(item, "id", out->id, sizeof out->id);
@@ -268,7 +268,7 @@ int bz_parse_events(const char *text, const char *field, bz_event_t *out, int ma
         {
             if (count >= max) break;
             // Types the device does not show (growth, ...) are skipped.
-            if (event_from(item, &out[count])) count++;
+            if (bz_event_from_json(item, &out[count])) count++;
         }
     }
     cJSON_Delete(root);
@@ -279,7 +279,7 @@ bool bz_parse_event(const char *text, const char *field, bz_event_t *out)
 {
     cJSON *root = cJSON_Parse(text ? text : "");
     const cJSON *item = data_field(root, field);
-    bool ok = cJSON_IsObject(item) && event_from(item, out);
+    bool ok = cJSON_IsObject(item) && bz_event_from_json(item, out);
     cJSON_Delete(root);
     return ok;
 }

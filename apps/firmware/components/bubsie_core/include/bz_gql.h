@@ -58,6 +58,9 @@ int bz_parse_babies(const char *body, bz_baby_t *out, int max);
 int bz_parse_events(const char *body, const char *field, bz_event_t *out, int max);
 /** One event (logEvent/updateEvent result). */
 bool bz_parse_event(const char *body, const char *field, bz_event_t *out);
+/** One event object: `bz_parse_event` without the envelope. */
+struct cJSON;
+bool bz_event_from_json(const struct cJSON *item, bz_event_t *out);
 
 typedef enum { BZ_POLL_PENDING, BZ_POLL_APPROVED, BZ_POLL_EXPIRED, BZ_POLL_REDIRECTED, BZ_POLL_UNKNOWN } bz_poll_status_t;
 
