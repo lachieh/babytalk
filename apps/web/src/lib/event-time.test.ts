@@ -125,8 +125,8 @@ describe("entry timing", () => {
   const minutesAgo = (m: number) => new Date(now - m * 60_000).toISOString();
 
   it("treats bottle, formula and solid feeds as instant and breast as a span", () => {
-    expect(entryShape("feed", "bottle")).toBe("instant");
-    expect(entryShape("feed", "formula")).toBe("instant");
+    expect(entryShape("feed", "bottle")).toBe("span");
+    expect(entryShape("feed", "formula")).toBe("span");
     expect(entryShape("feed", "solid")).toBe("instant");
     expect(entryShape("feed", "breast")).toBe("span");
     expect(entryShape("sleep")).toBe("span");
@@ -338,10 +338,11 @@ describe("editing a stored entry", () => {
     expect(timing.running).toBeTruthy();
   });
 
-  it("keeps new bottle, formula and solid entries instant", () => {
-    for (const method of ["bottle", "formula", "solid"]) {
-      expect(editShape(null, "feed", method)).toBe("instant");
+  it("times new feeds except solids, and keeps a stored feed's shape", () => {
+    for (const method of ["breast", "bottle", "formula"]) {
+      expect(editShape(null, "feed", method)).toBe("span");
     }
+    expect(editShape(null, "feed", "solid")).toBe("instant");
     expect(editShape(STORED[2], "feed", "bottle")).toBe("instant");
   });
 

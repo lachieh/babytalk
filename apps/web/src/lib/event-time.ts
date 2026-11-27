@@ -56,7 +56,7 @@ export type EntryShape = "instant" | "span";
 
 export function entryShape(type: string, method?: unknown): EntryShape {
   if (type === "sleep" || type === "pump") return "span";
-  if (type === "feed") return method === "breast" ? "span" : "instant";
+  if (type === "feed") return method === "solid" ? "instant" : "span";
   return "instant";
 }
 
@@ -65,10 +65,7 @@ export function editShape(
   type: string,
   method?: unknown
 ): EntryShape {
-  const shape = entryShape(type, method);
-  if (!stored || shape === "span" || !DURATION_EVENT_TYPES.has(type)) {
-    return shape;
-  }
+  if (!stored || type !== "feed") return entryShape(type, method);
   return stored.endedAt === stored.startedAt ? "instant" : "span";
 }
 

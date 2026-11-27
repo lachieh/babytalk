@@ -68,7 +68,6 @@ const LogColumn = ({
   const variants = VARIANTS_BY_TYPE[type];
   const [selected, setSelected] = useState(defaultVariant);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetAtAmount, setSheetAtAmount] = useState(false);
 
   useEffect(() => {
     setSelected(defaultVariant);
@@ -86,11 +85,6 @@ const LogColumn = ({
 
   const handleMainTap = useCallback(() => {
     const action = oneTapAction(type, selectedVariant.meta);
-    if (action === "amount") {
-      setSheetAtAmount(true);
-      setSheetOpen(true);
-      return;
-    }
     log({ finished: action === "instant", minutesAgo: 0 });
   }, [log, selectedVariant, type]);
 
@@ -102,10 +96,7 @@ const LogColumn = ({
     [log]
   );
 
-  const openSheet = useCallback(() => {
-    setSheetAtAmount(false);
-    setSheetOpen(true);
-  }, []);
+  const openSheet = useCallback(() => setSheetOpen(true), []);
   const closeSheet = useCallback(() => setSheetOpen(false), []);
 
   const disabled = !isReady || isBusy;
@@ -145,7 +136,6 @@ const LogColumn = ({
           onLog={handleSheetLog}
           onSelect={setSelected}
           selected={selected}
-          startAtAmount={sheetAtAmount}
           type={type}
         />
       )}

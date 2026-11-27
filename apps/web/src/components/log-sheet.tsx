@@ -5,7 +5,7 @@ import { useCallback, useId, useState } from "react";
 import { AmountInput } from "@/components/amount-input";
 import { ChoiceChips, Sheet } from "@/components/sheet";
 import type { BabyEvent } from "@/lib/baby-context";
-import { logSheetPrimary } from "@/lib/daily-totals";
+import { logSheetPrimary, methodTakesAmount } from "@/lib/daily-totals";
 import { EVENT_TYPE_LABELS, parseMeta } from "@/lib/event-meta";
 import { BACKDATE_MINUTES, logTimes } from "@/lib/event-time";
 import type { StationActionKey } from "@/lib/station-config";
@@ -224,11 +224,9 @@ export const LogSheet = ({
   onSelect,
   onLog,
   onClose,
-  startAtAmount,
 }: {
   type: StationActionKey;
   selected: string;
-  startAtAmount: boolean;
   lastAmountMl: number | null;
   onSelect: (key: string) => void;
   onLog: (request: LogRequest) => void;
@@ -237,7 +235,7 @@ export const LogSheet = ({
   const variantGroup = useId();
   const variants = VARIANTS_BY_TYPE[type];
   const [minutesAgo, setMinutesAgo] = useState(0);
-  const [askingAmount, setAskingAmount] = useState(startAtAmount);
+  const [askingAmount, setAskingAmount] = useState(false);
 
   const selectedVariant =
     variants.find((v) => v.key === selected) ?? variants[0];
@@ -249,18 +247,18 @@ export const LogSheet = ({
     []
   );
 
-  const handlePrimary = useCallback(() => {
-    if (primary.action === "amount") {
+  const handlePrimary = useCallback(
+    () => onLog({ finished: primary.action === "instant", minutesAgo }),
+    [primary.action, minutesAgo, onLog]
+  );
+
+  const handleFinished = useCallback(() => {
+    if (methodTakesAmount(selectedVariant.meta)) {
       setAskingAmount(true);
       return;
     }
-    onLog({ finished: primary.action === "instant", minutesAgo });
-  }, [primary.action, minutesAgo, onLog]);
-
-  const handleFinished = useCallback(
-    () => onLog({ finished: true, minutesAgo }),
-    [minutesAgo, onLog]
-  );
+    onLog({ finished: true, minutesAgo });
+  }, [selectedVariant, minutesAgo, onLog]);
 
   const handleAmountConfirm = useCallback(
     (amountMl: number) => onLog({ amountMl, finished: true, minutesAgo }),

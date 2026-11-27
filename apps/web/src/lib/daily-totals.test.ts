@@ -193,9 +193,9 @@ describe("last-event lines under the home summary", () => {
 });
 
 describe("one tap on a log button", () => {
-  it("asks for the amount of a bottle or formula feed instead of timing it", () => {
-    expect(oneTapAction("feed", { method: "bottle" })).toBe("amount");
-    expect(oneTapAction("feed", { method: "formula" })).toBe("amount");
+  it("starts a timer for a bottle or formula feed, like sleep", () => {
+    expect(oneTapAction("feed", { method: "bottle" })).toBe("timer");
+    expect(oneTapAction("feed", { method: "formula" })).toBe("timer");
   });
 
   it("logs a solid feed and a diaper as a single moment", () => {
@@ -214,8 +214,8 @@ describe("one tap on a log button", () => {
   const EVERY_VARIANT: [string, Record<string, unknown>, string][] = [
     ["feed", { method: "breast", side: "left" }, "timer"],
     ["feed", { method: "breast", side: "right" }, "timer"],
-    ["feed", { method: "bottle" }, "amount"],
-    ["feed", { method: "formula" }, "amount"],
+    ["feed", { method: "bottle" }, "timer"],
+    ["feed", { method: "formula" }, "timer"],
     ["feed", { method: "solid" }, "instant"],
     ["diaper", { soiled: false, wet: true }, "instant"],
     ["diaper", { soiled: true, wet: false }, "instant"],

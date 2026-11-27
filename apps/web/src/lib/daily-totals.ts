@@ -112,14 +112,13 @@ export function takesAmount(event: BabyEvent): boolean {
   return event.type === "feed" && methodTakesAmount(parseMeta(event.metadata));
 }
 
-export type OneTapAction = "instant" | "amount" | "timer";
+export type OneTapAction = "instant" | "timer";
 
 export function oneTapAction(
   type: string,
   meta: Record<string, unknown>
 ): OneTapAction {
-  if (entryShape(type, meta.method) === "span") return "timer";
-  return type === "feed" && methodTakesAmount(meta) ? "amount" : "instant";
+  return entryShape(type, meta.method) === "span" ? "timer" : "instant";
 }
 
 export function logSheetPrimary(
