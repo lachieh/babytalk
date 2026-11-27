@@ -157,3 +157,23 @@ TEST(test_station_metadata_too_long)
     free(saved);
     CHECK(st.ob.outbox[0].event.meta_lost);
 }
+
+TEST(test_station_sign_out_keeps_unsent)
+{
+    // Signed out by the server: what was loaded goes, what was not sent yet stays for after pairing.
+    loaded_timer_and_changes(2);
+    CHECK_INT(bz_st_discard(&st, "p1", NOW + BZ_UNDO_MS), BZ_ST_OK); // in its undo window
+    bz_st_sign_out(&st);
+    CHECK_STR(st.baby_id, "");
+    CHECK_INT(st.view_count, 0);
+    CHECK_INT(st.ob.server_count, 0);
+    CHECK(!st.toast.shown);
+    CHECK_INT(st.ob.outbox_count, 3); // two changes and the discard, committed
+    CHECK_INT(st.ob.hidden_count, 0);
+
+    // Paired again: the changes show and go out as before.
+    bz_st_set_baby(&st, "b1");
+    CHECK_INT(st.view_count, 2);
+    const bz_entry_t *next = bz_ob_next(&st.ob);
+    CHECK(next && strcmp(next->event.id, "d0") == 0);
+}

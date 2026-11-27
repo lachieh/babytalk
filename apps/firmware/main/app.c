@@ -308,9 +308,14 @@ static void do_signed_out(void *arg)
 {
     // Queued behind an unpair or a server change, it is about a session that is already gone.
     if ((uint32_t)(uintptr_t)arg != settings_session()) return;
-    strlcpy(signed_out_notice, "This device was signed out. Pair it again.", sizeof signed_out_notice);
     station_stop();
-    station_forget();
+    // Changes not sent yet are kept and go out once it is paired again; the server refuses any the
+    // account then cannot reach, as it refuses anything else. Unpair and Reset still drop them.
+    int unsent = station_sign_out();
+    strlcpy(signed_out_notice,
+            unsent ? "This device was signed out. Pair it again to send what's waiting."
+                   : "This device was signed out. Pair it again.",
+            sizeof signed_out_notice);
     settings_unpair();
     do_continue(NULL);
 }

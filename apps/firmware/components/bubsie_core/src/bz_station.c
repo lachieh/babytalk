@@ -32,6 +32,18 @@ static void commit_discard(bz_station_t *st)
     st->revision++;
 }
 
+void bz_st_sign_out(bz_station_t *st)
+{
+    commit_discard(st);
+    // In place: the model is too big for a task's stack.
+    bz_ob_set_baby(&st->ob, "");
+    st->baby_id[0] = '\0';
+    st->toast.shown = false;
+    st->dismissed_count = 0;
+    st->revision++;
+    bz_st_refresh(st);
+}
+
 void bz_st_set_baby(bz_station_t *st, const char *baby_id)
 {
     commit_discard(st);

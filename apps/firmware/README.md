@@ -113,7 +113,10 @@ main/
   the web). Babies reload every 5 minutes.
 - **Session.** The API URL is never configured: it comes from `<web_url>/.well-known/config` and is
   cached. A request the server answers as unauthenticated refreshes the token once and retries; a
-  refresh the server refuses signs the device out and it asks to pair again.
+  refresh the server refuses signs the device out and it asks to pair again. Changes not sent yet
+  survive that and go out once it is paired again on the same server (any the account cannot reach
+  are refused like any other refusal); changing the server, Unpair and Reset drop them. Both tokens
+  are stored in one NVS write, and a refresh that returns after its session ended saves nothing.
 - **Pairing.** `requestDeviceCode`, then `pollDeviceCode` every 2.5 s. `redirected` with `webUrl` W:
   fetch W's config, `requestDeviceCode(code: C)` on W, `confirmDeviceCodeRedirect(code: C)` on the
   original, save W as `web_url`, poll C on W. `CODE_TAKEN`, a server without the `code` argument, or a

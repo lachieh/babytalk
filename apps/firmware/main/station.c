@@ -323,6 +323,17 @@ void station_forget(void)
     station_unlock();
 }
 
+int station_sign_out(void)
+{
+    station_lock();
+    bz_st_sign_out(station);
+    persist();
+    baby_count = -1;
+    int unsent = (int)station->ob.outbox_count;
+    station_unlock();
+    return unsent;
+}
+
 /* ── Actions ─────────────────────────────────────────────── */
 
 static const char *err_name(bz_err_t err)

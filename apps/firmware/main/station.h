@@ -19,6 +19,9 @@ void station_start(void);
 void station_stop(void);
 /** Forget this session's events and unsent changes (unpair, reset). */
 void station_forget(void);
+/** The server signed this device out: forget what was loaded, keep the unsent changes for the next
+ * pairing (on the same server). Returns how many there are. */
+int station_sign_out(void);
 
 void station_lock(void);
 void station_unlock(void);

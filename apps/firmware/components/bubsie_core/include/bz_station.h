@@ -38,6 +38,9 @@ typedef struct {
 } bz_station_t;
 
 void bz_st_init(bz_station_t *st);
+/** The server ended the session: forget what was loaded and shown, keep the unsent changes (a
+ * discard in its undo window is committed) so they go out once the device is paired again. */
+void bz_st_sign_out(bz_station_t *st);
 void bz_st_set_baby(bz_station_t *st, const char *baby_id);
 void bz_st_loaded(bz_station_t *st, const bz_event_t *events, size_t count, bz_ms_t requested_at);
 /** Recompute `view` from the outbox. Every action below does this itself. */
