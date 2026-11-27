@@ -24,13 +24,15 @@ static const char *TAG = "sync";
 bz_station_t *station;
 static SemaphoreHandle_t lock;
 static TaskHandle_t task;
+static SemaphoreHandle_t idle;
 static volatile bool running;
 static volatile bool offline;
 static volatile bool force_refresh;
 static uint32_t persisted_revision;
 
 static bz_baby_t babies[STATION_BABIES_MAX];
-static int baby_count = -1;
+static int baby_count;
+static bool babies_loaded;
 
 #define REFRESH_ACTIVE_MS 15000
 #define REFRESH_IDLE_MS 60000
@@ -84,6 +86,8 @@ static void restore(void)
 void station_init(void)
 {
     lock = xSemaphoreCreateRecursiveMutex();
+    idle = xSemaphoreCreateBinary();
+    xSemaphoreGive(idle);
     station = heap_caps_calloc(1, sizeof *station, MALLOC_CAP_SPIRAM);
     bz_st_init(station);
     restore();
@@ -93,7 +97,7 @@ void station_init(void)
 static void redraw(void *arg)
 {
     lv_obj_t *active = lv_screen_active();
-    if (baby_count == 0) {
+    if (babies_loaded && baby_count == 0) {
         if (!screen_named(active, "no-baby") && (screen_named(active, "station") || screen_named(active, "splash"))) {
             screen_no_baby_show();
         }
@@ -106,7 +110,9 @@ static void redraw(void *arg)
 
 static void wake(void)
 {
+    station_lock();
     if (task) xTaskNotifyGive(task);
+    station_unlock();
 }
 
 static void after_change(void)
@@ -131,6 +137,7 @@ static bool load_babies(void)
     station_lock();
     memcpy(babies, found, sizeof found);
     baby_count = count;
+    babies_loaded = true;
     const char *chosen = NULL;
     for (int i = 0; i < count; i++) {
         if (strcmp(found[i].id, settings.baby_id) == 0) chosen = found[i].id;
@@ -226,7 +233,7 @@ static void sync_task(void *arg)
             continue;
         }
         bz_ms_t now = station_now();
-        if (baby_count < 0 || now >= next_babies) {
+        if (!babies_loaded || now >= next_babies) {
             if (load_babies()) next_babies = now + BABIES_EVERY_MS;
             ui_do(redraw, NULL);
         }
@@ -276,7 +283,10 @@ static void sync_task(void *arg)
         if (wait < 50) wait = 50;
         ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(wait));
     }
+    station_lock();
     task = NULL;
+    station_unlock();
+    xSemaphoreGive(idle);
     vTaskDelete(NULL);
 }
 
@@ -286,21 +296,23 @@ void station_start(void)
         wake();
         return;
     }
-    while (task) vTaskDelay(pdMS_TO_TICKS(20));
+    xSemaphoreTake(idle, portMAX_DELAY);
     signed_out = false;
-    baby_count = -1;
     station_lock();
+    babies_loaded = false;
+    baby_count = 0;
     if (settings.baby_id[0]) bz_st_set_baby(station, settings.baby_id);
-    station_unlock();
     running = true;
     xTaskCreatePinnedToCore(sync_task, "sync", 12 * 1024, NULL, 3, &task, 0);
+    station_unlock();
 }
 
 void station_stop(void)
 {
     running = false;
     wake();
-    while (task) vTaskDelay(pdMS_TO_TICKS(20));
+    xSemaphoreTake(idle, portMAX_DELAY);
+    xSemaphoreGive(idle);
 }
 
 void station_forget(void)
@@ -309,7 +321,8 @@ void station_forget(void)
     bz_st_init(station);
     persisted_revision = UINT32_MAX;
     persist();
-    baby_count = -1;
+    babies_loaded = false;
+    baby_count = 0;
     station_unlock();
 }
 
@@ -318,7 +331,8 @@ int station_sign_out(void)
     station_lock();
     bz_st_sign_out(station);
     persist();
-    baby_count = -1;
+    babies_loaded = false;
+    baby_count = 0;
     int unsent = (int)station->ob.outbox_count;
     station_unlock();
     return unsent;
