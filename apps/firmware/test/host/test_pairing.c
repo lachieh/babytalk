@@ -33,8 +33,9 @@ TEST(test_pairing_approve)
     CHECK_STR(shown, "ABCD-2345");
     bz_pair_approve_url(&p, url, sizeof url);
     CHECK_STR(url, "https://bubsie.app/auth/approve?code=ABCD2345");
-    CHECK_INT(bz_pair_next(&p).delay_ms, BZ_PAIR_POLL_MS);
-    free(bz_pair_next(&p).body);
+    bz_pair_act_t wait = bz_pair_next(&p);
+    CHECK_INT(wait.delay_ms, BZ_PAIR_POLL_MS);
+    free(wait.body);
     step(&p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", "\"ABCD2345\"", 200, PENDING);
     step(&p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", "pollDeviceCode", 0, NULL);
     CHECK_INT(p.state, BZ_PAIR_POLL);
