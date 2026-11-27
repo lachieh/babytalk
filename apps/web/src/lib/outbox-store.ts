@@ -46,6 +46,7 @@ import {
   unsavedTotal,
 } from "./event-outbox";
 import { RequestRefusedError, gqlRequest } from "./gql-request";
+import { randomUUID } from "./random-uuid";
 
 const KEY_PREFIX = "bubsie_outbox:";
 const TAB_ID_KEY = "bubsie_outbox_tab";
@@ -306,7 +307,7 @@ const flush = () => {
     if (entry.status !== "ready") continue;
     // A create waits until the provider knows which baby it is for.
     if (entry.op === "create" && !forBaby) continue;
-    const requestId = crypto.randomUUID();
+    const requestId = randomUUID();
     dispatchOutbox({ id: entry.id, requestId, type: "send-start" });
     void send(entry.id, requestId, forBaby);
   }
@@ -342,16 +343,16 @@ const readTabId = (): string => {
   try {
     const existing = sessionStorage.getItem(TAB_ID_KEY);
     if (existing) return existing;
-    const created = crypto.randomUUID();
+    const created = randomUUID();
     sessionStorage.setItem(TAB_ID_KEY, created);
     return created;
   } catch {
-    return crypto.randomUUID();
+    return randomUUID();
   }
 };
 
 const newTabId = (): string => {
-  const created = crypto.randomUUID();
+  const created = randomUUID();
   try {
     sessionStorage.setItem(TAB_ID_KEY, created);
   } catch {

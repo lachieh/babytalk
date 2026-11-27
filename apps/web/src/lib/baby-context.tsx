@@ -38,6 +38,7 @@ import {
   startOutbox,
   subscribeOutbox,
 } from "@/lib/outbox-store";
+import { randomUUID } from "@/lib/random-uuid";
 import { retryUntil } from "@/lib/retry-until";
 import type { ToastPhase } from "@/lib/toast-copy";
 
@@ -351,7 +352,7 @@ export const BabyContextProvider = ({
         event,
         eventId: event.id,
         expiresAt: Date.now() + UNDO_DURATION,
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         label: event.type,
         phase,
       };
@@ -464,7 +465,7 @@ export const BabyContextProvider = ({
       const event: BabyEvent = {
         endedAt: typeof _endedAt === "string" ? _endedAt : null,
         // The event's id for good: the server stores the row under it.
-        id: crypto.randomUUID(),
+        id: randomUUID(),
         metadata: JSON.stringify(cleanMeta),
         startedAt:
           typeof _startedAt === "string"

@@ -1,4 +1,5 @@
 import { clearAppCache } from "./app-cache";
+import { randomUUID } from "./random-uuid";
 import {
   getApiUrl,
   getRuntimeConfig,
@@ -38,7 +39,7 @@ const SESSION_KEY = "bubsie_session";
 const currentSession = () => localStorage.getItem(SESSION_KEY) ?? "";
 
 const startNewSession = () => {
-  localStorage.setItem(SESSION_KEY, crypto.randomUUID());
+  localStorage.setItem(SESSION_KEY, randomUUID());
 };
 
 /** Store a new sign-in's credentials: every sign-in path goes through here. */
