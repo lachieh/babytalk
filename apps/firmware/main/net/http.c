@@ -54,7 +54,12 @@ int http_request(const char *url, const char *body, const char *bearer, http_res
         free(auth);
     }
     esp_err_t err = esp_http_client_perform(client);
-    out->status = err == ESP_OK ? esp_http_client_get_status_code(client) : 0;
+    int status = esp_http_client_get_status_code(client);
+    // A 401 without WWW-Authenticate (the API's expired access token) makes the client try its own
+    // auth schemes and fail with ESP_ERR_NOT_SUPPORTED before reading the body. The status is all
+    // the caller needs to refresh the session.
+    if (err == ESP_ERR_NOT_SUPPORTED && status == 401) err = ESP_OK;
+    out->status = err == ESP_OK ? status : 0;
     if (err != ESP_OK) ESP_LOGW(TAG, "%s: %s", url, esp_err_to_name(err));
     esp_http_client_cleanup(client);
     if (!out->body) out->body = calloc(1, 1);
