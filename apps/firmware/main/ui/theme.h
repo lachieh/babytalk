@@ -43,6 +43,7 @@ bool theme_reduced_motion(void);
 /* Per-event colours, from lib/event-styles.tsx (bg 50, border 200, icon 500, ink 600). */
 lv_color_t theme_event_bg(bz_type_t type);
 lv_color_t theme_event_border(bz_type_t type);
+lv_color_t theme_event_pressed(bz_type_t type);
 lv_color_t theme_event_icon(bz_type_t type);
 const lv_image_dsc_t *theme_event_icon_64(bz_type_t type);
 const lv_image_dsc_t *theme_event_icon_32(bz_type_t type);

@@ -18,15 +18,12 @@ static bz_type_t picker_type;
 static const bz_variant_t *picker_variant;
 static int picker_minutes;
 
-static void back_to_station(void *arg) { screen_station_show(); }
 static void on_back(lv_event_t *event) { screen_station_show(); }
 
 static void show_result(bz_err_t err)
 {
     screen_station_show();
-    if (err == BZ_ERR_NO_CLOCK) ui_toast_message("The clock is still setting. Try again in a moment.");
-    else if (err == BZ_ERR_NO_BABY) ui_toast_message("Still loading. Try again in a moment.");
-    else if (err == BZ_ERR_FULL) ui_toast_message("Too many changes waiting to send. Check Wi-Fi.");
+    ui_toast_error(err);
 }
 
 /* ── Amount picker (amount-input.tsx) ─────────────────────── */
@@ -248,13 +245,13 @@ static void on_note_done(lv_event_t *event)
 {
     lv_obj_t *keyboard = lv_event_get_target(event);
     if (lv_event_get_code(event) == LV_EVENT_CANCEL) {
-        back_to_station(NULL);
+        screen_station_show();
         return;
     }
     const char *text = lv_textarea_get_text(lv_keyboard_get_textarea(keyboard));
     while (*text == ' ') text++;
     if (!*text) {
-        back_to_station(NULL);
+        screen_station_show();
         return;
     }
     cJSON *meta = cJSON_CreateObject();

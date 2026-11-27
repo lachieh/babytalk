@@ -11,7 +11,6 @@
 static lv_obj_t *toast;
 static lv_obj_t *bar;
 static char shown_key[80];
-static bz_ms_t message_until;
 static bz_ms_t started, expires;
 
 static void on_undo(lv_event_t *event)
@@ -81,14 +80,21 @@ void ui_toast_message(const char *text)
     build(text, false);
     strcpy(shown_key, "message");
     started = station_now();
-    expires = message_until = started + 3500;
+    expires = started + 3500;
+}
+
+void ui_toast_error(bz_err_t err)
+{
+    if (err == BZ_ERR_NO_CLOCK) ui_toast_message("The clock is still setting. Try again in a moment.");
+    else if (err == BZ_ERR_NO_BABY) ui_toast_message("Still loading. Try again in a moment.");
+    else if (err == BZ_ERR_FULL) ui_toast_message("Too many changes waiting to send. Check Wi-Fi.");
 }
 
 void ui_toast_tick(void)
 {
     bz_ms_t now = station_now();
     if (strcmp(shown_key, "message") == 0) {
-        if (now >= message_until) ui_toast_hide();
+        if (now >= expires) ui_toast_hide();
     } else {
         station_lock();
         bz_toast_state_t state = station->toast;

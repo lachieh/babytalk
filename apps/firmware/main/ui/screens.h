@@ -58,6 +58,7 @@ void screen_server_show(const char *current, app_fn back);
 /* ── Station ───────────────────────────────────────────────── */
 
 #include "bz_rules.h"
+#include "bz_station.h"
 
 void screen_station_show(void);
 /** Night mode as settings and the clock say now (dark 8 pm to 7 am on Auto). */
@@ -87,3 +88,5 @@ void ui_toast_tick(void);
 void ui_toast_hide(void);
 /** A short note with no undo, e.g. why a tap did nothing. */
 void ui_toast_message(const char *text);
+/** Say why a station action did nothing (nothing for BZ_ST_OK and the errors a person cannot act on). */
+void ui_toast_error(bz_err_t err);

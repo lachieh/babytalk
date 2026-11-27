@@ -56,13 +56,6 @@ static const bz_variant_t *variant_for(bz_type_t type)
     return bz_infer_default(type, station->view, station->view_count);
 }
 
-static void show_error(bz_err_t err)
-{
-    if (err == BZ_ERR_NO_CLOCK) ui_toast_message("The clock is still setting. Try again in a moment.");
-    else if (err == BZ_ERR_NO_BABY) ui_toast_message("Still loading. Try again in a moment.");
-    else if (err == BZ_ERR_FULL) ui_toast_message("Too many changes waiting to send. Check Wi-Fi.");
-}
-
 static lv_obj_t *bare(lv_obj_t *parent)
 {
     lv_obj_t *obj = lv_obj_create(parent);
@@ -99,7 +92,7 @@ static void on_main_tap(lv_event_t *event)
     station_unlock();
     bz_err_t err = station_log(type, variant->meta, 0, false, 0);
     if (err == BZ_ST_OK) picked[type] = NULL;
-    show_error(err);
+    ui_toast_error(err);
     screen_station_refresh();
 }
 
@@ -143,14 +136,7 @@ static void build_idle(page_t *page)
     lv_obj_set_style_radius(button, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_opa(button, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(button, theme_event_bg(type), 0);
-    lv_obj_set_style_bg_color(button, lv_color_hex(type == BZ_NOTE ? ui_pal.tokens.note_100 : 0), LV_STATE_PRESSED);
-    if (type != BZ_NOTE) {
-        lv_color_t pressed = type == BZ_FEED     ? lv_color_hex(ui_pal.tokens.feed_100)
-                             : type == BZ_SLEEP  ? lv_color_hex(ui_pal.tokens.sleep_100)
-                             : type == BZ_DIAPER ? lv_color_hex(ui_pal.tokens.diaper_100)
-                                                 : lv_color_hex(ui_pal.tokens.pump_100);
-        lv_obj_set_style_bg_color(button, pressed, LV_STATE_PRESSED);
-    }
+    lv_obj_set_style_bg_color(button, theme_event_pressed(type), LV_STATE_PRESSED);
     lv_obj_set_style_border_width(button, 3, 0);
     lv_obj_set_style_border_color(button, theme_event_border(type), 0);
     if (!theme_reduced_motion()) lv_obj_set_style_transform_scale(button, 246, LV_STATE_PRESSED);
@@ -204,7 +190,7 @@ static char timer_ids[BZ_TYPE_COUNT][BZ_ID_LEN];
 static void on_done(lv_event_t *event)
 {
     bz_type_t type = (bz_type_t)(intptr_t)lv_event_get_user_data(event);
-    show_error(station_stop_timer(timer_ids[type]));
+    ui_toast_error(station_stop_timer(timer_ids[type]));
     screen_station_refresh();
 }
 
@@ -281,7 +267,7 @@ static void build_timer(page_t *page, const bz_event_t *event)
 static void on_amount_save(lv_event_t *event)
 {
     if (amount_choice <= 0) return;
-    show_error(station_amount(amount_choice_id, bz_display_to_ml(amount_choice, settings.volume_oz)));
+    ui_toast_error(station_amount(amount_choice_id, bz_display_to_ml(amount_choice, settings.volume_oz)));
     screen_station_refresh();
 }
 
@@ -405,14 +391,12 @@ static bool fill_page(page_t *page, bool force)
     lv_obj_clean(page->body);
     page->digits = NULL;
     page->arc = NULL;
-    bz_event_t copy;
-    if (event) copy = *event;
     if (page->type == BZ_TYPE_UNKNOWN) {
         build_settings_page(page);
     } else if (state == STATE_TIMER) {
-        build_timer(page, &copy);
+        build_timer(page, event);
     } else if (state == STATE_AMOUNT) {
-        build_amount(page, &copy);
+        build_amount(page, event);
     } else {
         build_idle(page);
     }

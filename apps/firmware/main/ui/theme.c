@@ -57,6 +57,12 @@ lv_color_t theme_event_border(bz_type_t type)
     return lv_color_hex(ui_pal.tokens.note_200);
 }
 
+lv_color_t theme_event_pressed(bz_type_t type)
+{
+    PICK(type, 100);
+    return lv_color_hex(ui_pal.tokens.note_100);
+}
+
 lv_color_t theme_event_icon(bz_type_t type)
 {
     PICK(type, 500);
