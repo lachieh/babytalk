@@ -23,7 +23,7 @@ static const char *TAG = "sync";
 
 bz_station_t *station;
 static SemaphoreHandle_t lock;
-static TaskHandle_t volatile task;
+static TaskHandle_t task; /* NULL once the sync task has exited; the waits below re-read it across vTaskDelay */
 static volatile bool running;
 static volatile bool offline;
 static volatile bool force_refresh;
