@@ -37,7 +37,7 @@ static void drop_entry(bz_outbox_t *ob, bz_entry_t *entry)
     ob->outbox_count--;
 }
 
-static bz_entry_t *new_entry(bz_outbox_t *ob, const bz_event_t *event, bz_op_t op, unsigned patch, bool detached,
+static bz_entry_t *new_entry(bz_outbox_t *ob, const bz_event_t *event, bz_op_t op, bz_changed_t patch, bool detached,
                              const char *baby_id)
 {
     if (ob->outbox_count >= BZ_OUTBOX_MAX) return NULL;
@@ -49,7 +49,7 @@ static bz_entry_t *new_entry(bz_outbox_t *ob, const bz_event_t *event, bz_op_t o
     entry->event.sync = BZ_SAVED;
     memcpy(entry->baby_id, baby, sizeof baby);
     entry->op = op;
-    entry->patch = (uint8_t)patch;
+    entry->patch = patch;
     entry->exists = op == BZ_OP_CREATE ? BZ_EXISTS_NO : BZ_EXISTS_YES;
     entry->status = BZ_ST_READY;
     entry->version = 1;
@@ -69,7 +69,7 @@ static bz_event_t base_event(const bz_outbox_t *ob, const char *id, bz_type_t ty
     return stand_in;
 }
 
-static void apply_changes(bz_event_t *event, unsigned changed, const bz_event_t *values)
+static void apply_changes(bz_event_t *event, bz_changed_t changed, const bz_event_t *values)
 {
     if (changed & BZ_CHANGED_STARTED) event->started = values->started;
     if (changed & BZ_CHANGED_ENDED) event->ended = values->ended;
@@ -121,14 +121,14 @@ bool bz_ob_create(bz_outbox_t *ob, const bz_event_t *event, const char *baby_id)
     return new_entry(ob, event, BZ_OP_CREATE, 0, false, baby_id) != NULL;
 }
 
-bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_event_t *values)
+bool bz_ob_update(bz_outbox_t *ob, const char *id, bz_changed_t changed, const bz_event_t *values)
 {
     bz_entry_t *entry = entry_of(ob, id);
     if ((changed & BZ_CHANGED_META) && (values->meta_lost || (entry && entry->event.meta_lost))) return false;
     if (entry) {
         if (entry->op == BZ_OP_DELETE) return false;
         apply_changes(&entry->event, changed, values);
-        entry->patch |= (uint8_t)changed;
+        entry->patch |= changed;
         if (entry->status != BZ_ST_SENDING) entry->status = BZ_ST_READY;
         entry->version++;
         return true;
@@ -444,8 +444,8 @@ bool bz_ob_adopt(bz_outbox_t *ob, const char *json)
         const cJSON *baby = cJSON_GetObjectItemCaseSensitive(item, "baby");
         snprintf(entry->baby_id, sizeof entry->baby_id, "%s", cJSON_IsString(baby) ? baby->valuestring : "");
         entry->op = (bz_op_t)num(item, "op", BZ_OP_UPDATE);
-        entry->patch = (uint8_t)num(item, "patch", 0);
-        entry->sent_patch = (uint8_t)num(item, "sentPatch", 0);
+        entry->patch = (bz_changed_t)num(item, "patch", 0);
+        entry->sent_patch = (bz_changed_t)num(item, "sentPatch", 0);
         entry->status = (bz_status_t)num(item, "status", BZ_ST_READY);
         entry->exists = (bz_exists_t)num(item, "exists", BZ_EXISTS_MAYBE);
         entry->version = (uint32_t)num(item, "version", 1);

@@ -114,7 +114,7 @@ char *bz_gql_log_event(const bz_event_t *event, const char *baby_id)
     return body(query, vars);
 }
 
-char *bz_gql_update_event(const bz_event_t *event, unsigned changed)
+char *bz_gql_update_event(const bz_event_t *event, bz_changed_t changed)
 {
     const char *type = bz_type_name(event->type);
     cJSON *vars = cJSON_CreateObject();

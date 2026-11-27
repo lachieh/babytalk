@@ -12,11 +12,12 @@ char *bz_gql_poll_device_code(const char *code, bool with_web_url);
 char *bz_gql_confirm_redirect(const char *code);
 char *bz_gql_refresh_token(const char *refresh_token);
 
-char *bz_gql_log_event(const bz_event_t *event, const char *baby_id);
-char *bz_gql_update_event(const bz_event_t *event, unsigned changed);
-char *bz_gql_delete_event(const char *id);
-
+typedef uint8_t bz_changed_t;
 enum { BZ_CHANGED_STARTED = 1, BZ_CHANGED_ENDED = 2, BZ_CHANGED_META = 4 };
+
+char *bz_gql_log_event(const bz_event_t *event, const char *baby_id);
+char *bz_gql_update_event(const bz_event_t *event, bz_changed_t changed);
+char *bz_gql_delete_event(const char *id);
 
 typedef enum {
     BZ_REPLY_OK,

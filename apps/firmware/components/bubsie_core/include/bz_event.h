@@ -21,6 +21,8 @@ typedef int64_t bz_ms_t;
 
 #define BZ_RUNNING 0
 
+typedef enum { BZ_SAVED, BZ_PENDING, BZ_FAILED } bz_sync_t;
+
 typedef struct {
     char id[BZ_ID_LEN];
     bz_type_t type;
@@ -28,10 +30,8 @@ typedef struct {
     bz_ms_t ended;
     char meta[BZ_META_LEN];
     bool meta_lost;
-    uint8_t sync;
+    bz_sync_t sync;
 } bz_event_t;
-
-typedef enum { BZ_SAVED, BZ_PENDING, BZ_FAILED } bz_sync_t;
 
 const char *bz_type_name(bz_type_t type);
 const char *bz_type_label(bz_type_t type);

@@ -21,8 +21,8 @@ typedef struct {
     bz_event_t event;
     char baby_id[BZ_ID_LEN];
     bz_op_t op;
-    uint8_t patch;
-    uint8_t sent_patch;
+    bz_changed_t patch;
+    bz_changed_t sent_patch;
     bz_status_t status;
     bz_exists_t exists;
     uint32_t version;
@@ -52,7 +52,7 @@ void bz_ob_set_baby(bz_outbox_t *ob, const char *baby_id);
 void bz_ob_loaded(bz_outbox_t *ob, const bz_event_t *events, size_t count, bz_ms_t requested_at);
 
 bool bz_ob_create(bz_outbox_t *ob, const bz_event_t *event, const char *baby_id);
-bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_event_t *values);
+bool bz_ob_update(bz_outbox_t *ob, const char *id, bz_changed_t changed, const bz_event_t *values);
 bool bz_ob_delete(bz_outbox_t *ob, const char *id);
 bool bz_ob_can_delete(const bz_outbox_t *ob, const char *id);
 void bz_ob_hide(bz_outbox_t *ob, const char *id);
