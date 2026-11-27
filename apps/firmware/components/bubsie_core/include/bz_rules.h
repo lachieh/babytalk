@@ -17,7 +17,6 @@ typedef struct {
 } bz_variant_t;
 
 const bz_variant_t *bz_variants(bz_type_t type, size_t *count);
-const bz_variant_t *bz_variant_find(bz_type_t type, const char *key);
 /** The variant a tap logs, from what was logged lately. */
 const bz_variant_t *bz_infer_default(bz_type_t type, const bz_event_t *events, size_t count);
 
@@ -38,7 +37,6 @@ int bz_last_amount_ml(const bz_event_t *events, size_t count, bz_type_t type);
 /** Three quick amounts around the last one, in the display unit. */
 void bz_amount_chips(int last_ml, bool oz, double out[3]);
 int bz_display_to_ml(double value, bool oz);
-double bz_ml_to_display(int ml, bool oz);
 /** "120 ml", "4 oz", "3.5 oz". */
 void bz_format_volume(int ml, bool oz, char *out, size_t len);
 

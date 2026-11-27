@@ -45,7 +45,7 @@ const bz_variant_t *bz_variants(bz_type_t type, size_t *count)
     }
 }
 
-const bz_variant_t *bz_variant_find(bz_type_t type, const char *key)
+static const bz_variant_t *variant_find(bz_type_t type, const char *key)
 {
     size_t count;
     const bz_variant_t *variants = bz_variants(type, &count);
@@ -73,7 +73,7 @@ static const char *infer_feed(const bz_event_t *events, size_t count)
         if (!last_side[0] && bz_meta_str(events[i].meta, "side", side, sizeof side) && side[0]) strcpy(last_side, side);
     }
     if (seen == 0) return "breast-l";
-    if (other > breast) return last_other[0] ? (strcmp(last_other, "formula") == 0 ? "formula" : "bottle") : "bottle";
+    if (other > breast) return strcmp(last_other, "formula") == 0 ? "formula" : "bottle";
     // Alternate sides: the next feed starts on the other breast.
     return strcmp(last_side[0] ? last_side : "left", "left") == 0 ? "breast-r" : "breast-l";
 }
@@ -91,18 +91,18 @@ static const char *infer_diaper(const bz_event_t *events, size_t count)
 
 const bz_variant_t *bz_infer_default(bz_type_t type, const bz_event_t *events, size_t count)
 {
-    if (type == BZ_FEED) return bz_variant_find(type, infer_feed(events, count));
-    if (type == BZ_DIAPER) return bz_variant_find(type, infer_diaper(events, count));
+    if (type == BZ_FEED) return variant_find(type, infer_feed(events, count));
+    if (type == BZ_DIAPER) return variant_find(type, infer_diaper(events, count));
     if (type == BZ_SLEEP) {
         for (size_t i = 0; i < count; i++) {
             if (events[i].type != BZ_SLEEP) continue;
             char location[16];
             bz_meta_str(events[i].meta, "location", location, sizeof location);
-            return bz_variant_find(type, location[0] ? location : "crib");
+            return variant_find(type, location[0] ? location : "crib");
         }
-        return bz_variant_find(type, "crib");
+        return variant_find(type, "crib");
     }
-    return bz_variant_find(type, NULL);
+    return variant_find(type, NULL);
 }
 
 bool bz_starts_timer(bz_type_t type, const char *meta)
@@ -166,7 +166,7 @@ int bz_last_amount_ml(const bz_event_t *events, size_t count, bz_type_t type)
 
 #define ML_PER_OZ 29.5735
 
-double bz_ml_to_display(int ml, bool oz)
+static double ml_to_display(int ml, bool oz)
 {
     return oz ? round(ml / ML_PER_OZ * 10) / 10 : round(ml * 10.0) / 10;
 }
@@ -176,7 +176,7 @@ int bz_display_to_ml(double value, bool oz) { return (int)lround(oz ? value * ML
 void bz_amount_chips(int last_ml, bool oz, double out[3])
 {
     double step = oz ? 1 : 30, snap = oz ? 0.5 : 10, typical = oz ? 4 : 120;
-    double snapped = last_ml > 0 ? round(bz_ml_to_display(last_ml, oz) / snap) * snap : typical;
+    double snapped = last_ml > 0 ? round(ml_to_display(last_ml, oz) / snap) * snap : typical;
     double middle = snapped > snap ? snapped : snap;
     out[0] = middle - step > 0 ? middle - step : middle / 2;
     out[1] = middle;
@@ -185,7 +185,7 @@ void bz_amount_chips(int last_ml, bool oz, double out[3])
 
 void bz_format_volume(int ml, bool oz, char *out, size_t len)
 {
-    snprintf(out, len, "%g %s", bz_ml_to_display(ml, oz), oz ? "oz" : "ml");
+    snprintf(out, len, "%g %s", ml_to_display(ml, oz), oz ? "oz" : "ml");
 }
 
 static void capitalize(char *s)
@@ -302,27 +302,27 @@ void bz_last_line(const bz_event_t *events, size_t count, bz_type_t type, bz_ms_
     bz_format_ago(now - e->started, ago, sizeof ago);
     int amount = bz_meta_int(e->meta, "amountMl");
     switch (type) {
-    case BZ_SLEEP:
+    case BZ_SLEEP: {
         if (e->ended == BZ_RUNNING) {
             snprintf(out, len, "asleep now");
             return;
-        } else {
-            char awake[24], slept[24];
-            long since = (long)((now - e->ended) / 60000);
-            bz_format_minutes(since, awake, sizeof awake);
-            if (since < 1) {
-                snprintf(out, len, "just woke");
-            } else {
-                snprintf(out, len, "awake %s", awake);
-            }
-            long minutes = (long)((e->ended - e->started) / 60000);
-            if (minutes > 0) {
-                bz_format_minutes(minutes, slept, sizeof slept);
-                snprintf(detail, sizeof detail, "slept %s", slept);
-                join(out, len, detail);
-            }
-            return;
         }
+        char awake[24], slept[24];
+        long since = (long)((now - e->ended) / 60000);
+        bz_format_minutes(since, awake, sizeof awake);
+        if (since < 1) {
+            snprintf(out, len, "just woke");
+        } else {
+            snprintf(out, len, "awake %s", awake);
+        }
+        long minutes = (long)((e->ended - e->started) / 60000);
+        if (minutes > 0) {
+            bz_format_minutes(minutes, slept, sizeof slept);
+            snprintf(detail, sizeof detail, "slept %s", slept);
+            join(out, len, detail);
+        }
+        return;
+    }
     case BZ_FEED:
     case BZ_PUMP:
         if (amount > 0) bz_format_volume(amount, oz, detail, sizeof detail);
