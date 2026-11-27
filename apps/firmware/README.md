@@ -39,37 +39,42 @@ Needs `esptool` on the host (`pip install esptool`); Docker on macOS cannot reac
 pnpm --filter @bubsie/firmware test               # host unit tests of the pure-C core (cc, ASan, UBSan)
 ```
 
-The emulator test boots a build in [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator),
-walks every screen against a local Bubsie, checks what reached the API, and saves each screen to
-`docs/screens/`:
+The emulator tests boot a build in [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator)
+through its `HeadlessBoard` (imported from the checkout at `AMOLED_EMU`, nothing copied), drive the
+screens against Bubsie instances they start themselves, check what reached the API, and save each
+screen to `docs/screens/`. Each instance runs the built API and web (`pnpm --filter @bubsie/api build`,
+`pnpm --filter @bubsie/web build`) on a fresh `bubsie_fw_*` database in the dev Postgres, and signs
+people in by magic link through Mailpit (without deleting anyone's mail). The firmware is built for the
+first instance's web URL:
 
 ```sh
 pnpm docker:dev:up                                # Postgres and Mailpit (from the repo root)
-# API and web on this machine's LAN address, e.g. API on :4417 and web on :3417 with
-# BUBSIE_WEB_API_URL=http://<lan ip>:4417/graphql
 BUBSIE_UI_TRACE=1 BUBSIE_WEB_URL=http://<lan ip>:3417 BUBSIE_OUT=dist-dev scripts/build.sh
-AMOLED_EMU=~/src/amoled-175c-emulator BUBSIE_IMAGES=dist-dev BUBSIE_API=http://localhost:4417/graphql \
-  pnpm --filter @bubsie/firmware test:emulator
+AMOLED_EMU=~/src/amoled-175c-emulator BUBSIE_IMAGES=dist-dev BUBSIE_HOST=<lan ip> \
+  BUBSIE_PG=<postgres container> pnpm --filter @bubsie/firmware test:emulator
 ```
 
-The emulator needs its own setup first (`scripts/fetch-rom.sh`, `scripts/build-emulator.sh`,
-`pnpm install` in `web/`). The test starts its own relay with private addresses allowed, signs a new
-person in by magic link through Mailpit, adds two babies and approves the device's code. The
-emulator's random numbers repeat on every boot, so clear the events table between runs
-(`docs/emulator-gaps.md`). To watch it in the browser instead, register `bubsie` in the emulator's
-`web/src/main.ts` `FIRMWARES`, copy the images to `web/public/firmware/bubsie/`, and run
-`pnpm relay --allow-private` with `pnpm dev`.
+- `BUBSIE_TEST` picks the suite: `bubsie` (default) walks every screen from new; `wifi` lists the
+  emulator's four networks, joins one that can't be reached, then `emulator-wpa2` with a wrong password
+  ("Wrong password", the text kept) and the fixed one, on to pairing; `redirect` is below.
+- `BUBSIE_API_PORT` and `BUBSIE_WEB_PORT` (default 4417 and 3417) move the first instance, for example
+  off a Bubsie already running there; further instances take the next ports. Build with the same web port.
+- `BUBSIE_SCREENS` saves the screens elsewhere; `BUBSIE_LOG` is where the device's serial log is
+  written when a test ends (default `$TMPDIR/bubsie-serial.log`).
 
-`test/emulator/redirect.test.ts` pairs through one Bubsie to another and checks the sign-out. It runs
-its own instances from the built API and web (`pnpm --filter @bubsie/api build`, `pnpm --filter
-@bubsie/web build`), each on a fresh database in the dev Postgres: A on :4417/:3417 stands in for
-bubsie.app and is the build's web URL, B on :4418/:3418 is self-hosted. The phone side runs in Chrome
-through Playwright. It covers the redirect (the device ends up on B, logs land only in B, A issues no
-tokens), B already holding the code, a server from before redirects, a rotated JWT secret
-(the device refreshes) and a revoked refresh token (the device signs out to pairing on B, once):
+The emulator needs its own setup first (`scripts/fetch-rom.sh`, `scripts/build-emulator.sh`,
+`pnpm install` in `web/`). The test runs its own relay with private addresses allowed. To watch the
+firmware in the browser instead, register `bubsie` in the emulator's `web/src/main.ts` `FIRMWARES`,
+copy the images to `web/public/firmware/bubsie/`, and run `pnpm relay --allow-private` with `pnpm dev`.
+
+`test/emulator/redirect.test.ts` pairs through one Bubsie to another and checks the sign-out. A (the
+first instance, :4417/:3417 by default) stands in for bubsie.app and is the build's web URL; B (the
+next ports) is self-hosted. The phone side runs in Chrome through Playwright. It covers the redirect
+(the device ends up on B, logs land only in B, A issues no tokens), B already holding the code, a server
+from before redirects, a rotated JWT secret (the device refreshes) and a revoked refresh token (the
+device signs out to pairing on B, once):
 
 ```sh
-BUBSIE_UI_TRACE=1 BUBSIE_WEB_URL=http://<lan ip>:3417 BUBSIE_OUT=dist-dev scripts/build.sh
 git worktree add --detach /tmp/bubsie-old dd52dbd   # optional: an API from before redirects,
                                                     # then `pnpm install` and `pnpm turbo run build --filter=@bubsie/api` there
 AMOLED_EMU=~/src/amoled-175c-emulator BUBSIE_IMAGES=dist-dev BUBSIE_HOST=<lan ip> \
@@ -124,7 +129,7 @@ main/
 | Screen                | Reached from                                 | Shows                                                                                                          |
 | --------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | Splash                | boot                                         | breathing pebble, wordmark, status                                                                             |
-| Wi-Fi list / password | first boot, Settings > Wi-Fi, a network gone | networks following the circle; keyboard                                                                        |
+| Wi-Fi list / password | first boot, Settings > Wi-Fi, a network gone | networks following the circle; keyboard; "Wrong password" keeps what was typed                                 |
 | Time zone             | setup, Settings                              | roller of zones                                                                                                |
 | Pairing / server      | not paired, Unpair, signed out               | QR of `<web>/auth/approve?code=C`, `XXXX-XXXX`, Server button                                                  |
 | Station page          | paired                                       | one per visible type: baby name, big button (tap logs, long press picks), last time, variant pill              |

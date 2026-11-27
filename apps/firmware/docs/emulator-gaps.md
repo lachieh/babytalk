@@ -1,40 +1,31 @@
 # Emulator gaps
 
-What the Bubsie firmware needs that [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator)
-(at `9b918ea`) does not do yet. Each is written so it can be fixed in the emulator; the firmware does
-not work around any of them.
+What the Bubsie firmware needed from [amoled-175c-emulator](https://github.com/lachieh/amoled-175c-emulator)
+that it did not do at `9b918ea`. Both are fixed by
+[lachieh/amoled-175c-emulator#1](https://github.com/lachieh/amoled-175c-emulator/pull/1). The firmware
+never worked around either.
 
-## 1. Only one open Wi-Fi network: no secured network, no wrong password
+## 1. Only one open Wi-Fi network: no secured network, no wrong password (fixed)
 
-The access point is fixed to `ssid=emulator` with no security (`emulator/src/lib.rs`, `WIFI_SSID`,
-`ApConfig::parse("ssid=emulator")`). A scan returns that one network.
+The access point was fixed to an open `emulator` network, so a scan listed one network and the
+password screen, WPA2 and a wrong password could not be tested.
 
-Untestable as a result:
+A scan now finds `emulator` (open), `emulator-wpa2` (WPA2-PSK, password `emulator-pass`), `Neighbour`
+and `Cafe Guest`; `HeadlessBoard.boot(..., { wifi })` sets other networks. A wrong password fails after
+about 10 s with disconnect reason 204 (`WIFI_REASON_HANDSHAKE_TIMEOUT`); a real access point may send 15
+(`4WAY_HANDSHAKE_TIMEOUT`) instead. The firmware treats 14, 15, 202 and 204 as a wrong password
+(`bz_wifi`). `test/emulator/wifi.test.ts` covers the list of four, a network that can't be reached,
+a wrong password then the fixed one, and joining again after a power cycle.
 
-- the password screen (`screen: wifi-password`), reached only by picking a secured network;
-- joining with WPA2-PSK, and the "That password didn't work" path (station disconnect reason
-  `WIFI_REASON_AUTH_FAIL` / `4WAY_HANDSHAKE_TIMEOUT`);
-- a list of several networks (sorting by signal, de-duplicating names, scrolling the round list).
+## 2. The hardware random number generator repeated on every boot (fixed)
 
-Wanted: a way for the page and the Node harness to configure the access point list, for example
-`Emulator.boot(..., { wifi: [{ ssid: "emulator" }, { ssid: "Nursery", psk: "goodnight" }, { ssid: "Neighbour", psk: "x", rssi: -80 }] })`,
-where a secured network completes the WPA2 4-way handshake only with the right passphrase and
-deauthenticates with reason 15 (or 2) otherwise.
+`esp_random()` returned the same bytes on every boot of an image, so event ids (v4 UUIDs) repeated
+between runs and the API refused the second run's first event. The emulator now seeds it from host
+entropy at every power-on (`rngSeed` fixes it for reproducible runs). The tests no longer clear the
+events table between runs, and each now runs its own Bubsie on a fresh database anyway.
 
-## 2. The hardware random number generator repeats on every boot
+## Still open
 
-`esp_fill_random()` returns the same bytes on every boot of the same image. The firmware makes each
-event's id with it (a v4 UUID, as the web does with `crypto.randomUUID()`), and the API stores events
-under that id. A second run of the emulator test against the same database logs its first event with
-the id the first run already used, and the API refuses it ("Event could not be saved": the id belongs
-to another person's event).
-
-On the board the RNG is seeded by RF noise while Wi-Fi runs, so this does not happen there. The
-firmware does not mix in other entropy to hide it.
-
-Wanted: `RNG_DATA_REG` (0x6003507C on the ESP32-S3) answering from a host source of randomness (or a
-seed the harness passes, for reproducible runs).
-
-`test/emulator/redirect.test.ts` gives every run fresh databases, so it is not affected. For
-`bubsie.test.ts`, until then, clear the dev database's events between runs:
-`docker exec <postgres container> psql -U bubsie -d bubsie -c 'DELETE FROM events;'`.
+- `HeadlessBoard` has no way to take the network away and give it back (the relay link is private to
+  it). The walkthrough's outage stops the test's own API instead, which the device sees the same way
+  (requests fail and are retried), but it cannot test losing the access point itself.
