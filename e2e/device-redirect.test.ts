@@ -43,9 +43,25 @@ test.describe("Sending a device to your own server", () => {
     ).toBeVisible();
   });
 
+  test("refuses this server's own address", async ({ page, baseURL }) => {
+    const code = await requestCode();
+    const here = new URL(baseURL ?? "http://localhost:3000").origin;
+    await page.goto(`/auth/approve?code=${code}`);
+    await page.getByRole("button", { name: "Using your own server?" }).click();
+    await page.getByLabel("Your Bubsie address").fill(`${here}/somewhere`);
+    await page.getByRole("button", { name: "Send device there" }).click();
+
+    await expect(
+      page.getByText("That's this server. Use the steps above instead.")
+    ).toBeVisible();
+  });
+
   test("waits for the device, then follows it", async ({ page, baseURL }) => {
     const code = await requestCode();
-    const origin = new URL(baseURL ?? "http://localhost:3000").origin;
+    // The same instance under another name: another origin to the page.
+    const here = new URL(baseURL ?? "http://localhost:3000");
+    here.hostname = here.hostname === "127.0.0.1" ? "localhost" : "127.0.0.1";
+    const { origin } = here;
     await page.goto(`/auth/approve?code=${code}`);
 
     // No account here: the expander sits under "Sign in first".

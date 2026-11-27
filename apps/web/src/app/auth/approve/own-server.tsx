@@ -4,6 +4,8 @@ import { useCallback, useEffect, useId, useState } from "react";
 
 import { gqlRequest } from "@/lib/gql-request";
 
+import { ownServerTarget } from "./own-server-target";
+
 const REDIRECT_DEVICE_CODE = `
   mutation RedirectDeviceCode($code: String!, $webUrl: String!) {
     redirectDeviceCode(code: $code, webUrl: $webUrl)
@@ -18,27 +20,20 @@ const DEVICE_CODE_REDIRECT = `
 
 const POLL_MS = 2000;
 const WAIT_MS = 2 * 60 * 1000;
+/** A device that can't reach the address gives up within about a minute
+ * (three tries with a 15 s timeout). */
+const DEVICE_CHECK_WAIT_MS = 75 * 1000;
 
+/** `deviceChecks`: the browser couldn't check the address (http from an https
+ * page), so only the device can tell whether it's Bubsie and reachable. */
 type State =
   | { kind: "form"; error: string }
   | { kind: "checking" }
-  | { kind: "waiting"; host: string }
-  | { kind: "timed-out"; host: string }
+  | { kind: "waiting"; host: string; deviceChecks: boolean }
+  | { kind: "timed-out"; host: string; deviceChecks: boolean }
   | { kind: "expired" };
 
 const NOT_BUBSIE = "We couldn't find Bubsie at that address.";
-
-/** The origin of an http(s) address, or null. */
-const originOf = (input: string): string | null => {
-  try {
-    const url = new URL(input.trim());
-    return url.protocol === "http:" || url.protocol === "https:"
-      ? url.origin
-      : null;
-  } catch {
-    return null;
-  }
-};
 
 /** Whether `origin` serves a Bubsie web app: its public config names an API. */
 const isBubsie = async (origin: string): Promise<boolean> => {
@@ -55,6 +50,27 @@ const isBubsie = async (origin: string): Promise<boolean> => {
   } catch {
     return false;
   }
+};
+
+const timedOutCopy = (
+  state: Extract<State, { kind: "timed-out" | "expired" }>
+): { title: string; body: string } => {
+  if (state.kind === "expired") {
+    return {
+      body: "It may have expired or already been used. On the device, get a new code and scan it again.",
+      title: "This code can't move now",
+    };
+  }
+  if (state.deviceChecks) {
+    return {
+      body: `Check the address, and that ${state.host} is on a network the device can reach. If the device shows a new code, scan that one.`,
+      title: "The device couldn't reach that server",
+    };
+  }
+  return {
+    body: `Check the device is on and connected, then try again. It's heading to ${state.host}.`,
+    title: "Your device hasn't arrived yet",
+  };
 };
 
 const ChevronIcon = ({ open }: { open: boolean }) => (
@@ -89,16 +105,24 @@ export const OwnServer = ({ code }: { code: string }) => {
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
-      const origin = originOf(address);
-      if (!origin) {
+      const target = ownServerTarget(address, window.location.origin);
+      if (target.kind === "invalid") {
         setState({
           error: "Enter the full address, like https://bubsie.example.com.",
           kind: "form",
         });
         return;
       }
+      if (target.kind === "this-server") {
+        setState({
+          error: "That's this server. Use the steps above instead.",
+          kind: "form",
+        });
+        return;
+      }
+      const { origin } = target;
       setState({ kind: "checking" });
-      if (!(await isBubsie(origin))) {
+      if (target.kind === "check" && !(await isBubsie(origin))) {
         setState({ error: NOT_BUBSIE, kind: "form" });
         return;
       }
@@ -119,17 +143,23 @@ export const OwnServer = ({ code }: { code: string }) => {
         });
         return;
       }
-      setState({ host: new URL(origin).host, kind: "waiting" });
+      setState({
+        deviceChecks: target.kind === "device-checks",
+        host: new URL(origin).host,
+        kind: "waiting",
+      });
     },
     [address, code]
   );
 
   const waitingHost = state.kind === "waiting" ? state.host : null;
+  const deviceChecks = state.kind === "waiting" && state.deviceChecks;
 
   useEffect(() => {
     if (!waitingHost) return;
     let stopped = false;
-    const deadline = Date.now() + WAIT_MS;
+    const deadline =
+      Date.now() + (deviceChecks ? DEVICE_CHECK_WAIT_MS : WAIT_MS);
     let timer: ReturnType<typeof setTimeout>;
 
     const check = async () => {
@@ -154,7 +184,7 @@ export const OwnServer = ({ code }: { code: string }) => {
       }
       if (stopped) return;
       if (Date.now() >= deadline) {
-        setState({ host: waitingHost, kind: "timed-out" });
+        setState({ deviceChecks, host: waitingHost, kind: "timed-out" });
         return;
       }
       timer = setTimeout(check, POLL_MS);
@@ -165,11 +195,11 @@ export const OwnServer = ({ code }: { code: string }) => {
       stopped = true;
       clearTimeout(timer);
     };
-  }, [code, waitingHost]);
+  }, [code, deviceChecks, waitingHost]);
 
   const keepWaiting = useCallback(() => {
     if (state.kind === "timed-out") {
-      setState({ host: state.host, kind: "waiting" });
+      setState({ ...state, kind: "waiting" });
     }
   }, [state]);
 
@@ -198,14 +228,10 @@ export const OwnServer = ({ code }: { code: string }) => {
       >
         <div className="w-full max-w-sm animate-fade-up">
           <h1 className="font-serif text-2xl text-neutral-900">
-            {state.kind === "expired"
-              ? "This code can't move now"
-              : "Your device hasn't arrived yet"}
+            {timedOutCopy(state).title}
           </h1>
           <p className="mt-2 text-base text-neutral-500">
-            {state.kind === "expired"
-              ? "It may have expired or already been used. On the device, get a new code and scan it again."
-              : `Check the device is on and connected, then try again. It's heading to ${state.host}.`}
+            {timedOutCopy(state).body}
           </p>
           {state.kind === "timed-out" && (
             <button
