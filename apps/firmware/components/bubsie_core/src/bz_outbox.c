@@ -190,6 +190,12 @@ bool bz_ob_delete(bz_outbox_t *ob, const char *id)
     return remove_event(ob, id);
 }
 
+bool bz_ob_can_delete(const bz_outbox_t *ob, const char *id)
+{
+    // A change already waiting becomes the delete; anything else needs an entry of its own.
+    return entry_of((bz_outbox_t *)ob, id) || ob->outbox_count < BZ_OUTBOX_MAX;
+}
+
 void bz_ob_hide(bz_outbox_t *ob, const char *id)
 {
     if (is_hidden(ob, id)) return;

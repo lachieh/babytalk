@@ -69,6 +69,8 @@ void bz_ob_loaded(bz_outbox_t *ob, const bz_event_t *events, size_t count, bz_ms
 bool bz_ob_create(bz_outbox_t *ob, const bz_event_t *event, const char *baby_id);
 bool bz_ob_update(bz_outbox_t *ob, const char *id, unsigned changed, const bz_event_t *values);
 bool bz_ob_delete(bz_outbox_t *ob, const char *id);
+/** Whether bz_ob_delete(id) has room to be recorded. */
+bool bz_ob_can_delete(const bz_outbox_t *ob, const char *id);
 void bz_ob_hide(bz_outbox_t *ob, const char *id);
 void bz_ob_unhide(bz_outbox_t *ob, const char *id);
 

@@ -70,3 +70,38 @@ TEST(test_uuid)
     bz_uuid_format(bytes, id);
     CHECK_STR(id, "f0f1f2f3-f4f5-46f7-b8f9-fafbfcfdfeff");
 }
+
+/* A loaded running pump `p1` and `count` diaper changes waiting to send. */
+static void loaded_timer_and_changes(int count)
+{
+    bz_st_init(&st);
+    bz_st_set_baby(&st, "b1");
+    bz_event_t timer = {.id = "p1", .type = BZ_PUMP, .started = NOW - 60000, .ended = BZ_RUNNING};
+    strcpy(timer.meta, "{\"side\":\"both\"}");
+    bz_st_loaded(&st, &timer, 1, NOW);
+    char id[BZ_ID_LEN];
+    for (int i = 0; i < count; i++) {
+        snprintf(id, sizeof id, "d%d", i);
+        CHECK_INT(bz_st_log(&st, BZ_DIAPER, "{\"wet\":true}", 0, false, 0, NOW, id), BZ_ST_OK);
+    }
+    bz_st_tick(&st, NOW + BZ_UNDO_MS);
+}
+
+TEST(test_station_discard_when_full)
+{
+    // No room to record the delete: refused, the timer still shows, nothing pretends otherwise.
+    loaded_timer_and_changes(BZ_OUTBOX_MAX);
+    CHECK_INT(bz_st_discard(&st, "p1", NOW + BZ_UNDO_MS), BZ_ERR_FULL);
+    CHECK(bz_st_active(&st, BZ_PUMP) != NULL);
+    CHECK(!(st.toast.shown && st.toast.phase == BZ_TOAST_DISCARDED));
+
+    // The last slot is the discard's: a change made in its undo window cannot take it.
+    loaded_timer_and_changes(BZ_OUTBOX_MAX - 1);
+    CHECK_INT(bz_st_discard(&st, "p1", NOW + BZ_UNDO_MS), BZ_ST_OK);
+    CHECK(bz_st_active(&st, BZ_PUMP) == NULL);
+    CHECK_INT(bz_st_log(&st, BZ_DIAPER, "{\"wet\":true}", 0, false, 0, NOW + BZ_UNDO_MS + 1000, "late"), BZ_ERR_FULL);
+    bz_st_tick(&st, NOW + 3 * BZ_UNDO_MS);
+    CHECK(bz_st_active(&st, BZ_PUMP) == NULL);
+    CHECK_INT(st.ob.outbox_count, BZ_OUTBOX_MAX);
+    CHECK_INT(st.ob.outbox[BZ_OUTBOX_MAX - 1].op, BZ_OP_DELETE);
+}

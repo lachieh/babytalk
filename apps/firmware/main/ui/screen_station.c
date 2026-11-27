@@ -197,7 +197,7 @@ static void on_done(lv_event_t *event)
 static void on_discard(lv_event_t *event)
 {
     bz_type_t type = (bz_type_t)(intptr_t)lv_event_get_user_data(event);
-    station_discard(timer_ids[type]);
+    ui_toast_error(station_discard(timer_ids[type]));
     screen_station_refresh();
 }
 

@@ -22,10 +22,12 @@ static void changed(bz_station_t *st)
     bz_st_refresh(st);
 }
 
+/* A discard checked for room when it was made (bz_st_discard), and every change commits it before
+ * taking room of its own, so the delete always fits. */
 static void commit_discard(bz_station_t *st)
 {
     if (!st->pending_discard[0]) return;
-    bz_ob_delete(&st->ob, st->pending_discard);
+    if (!bz_ob_delete(&st->ob, st->pending_discard)) bz_ob_unhide(&st->ob, st->pending_discard);
     st->pending_discard[0] = '\0';
     st->revision++;
 }
@@ -65,6 +67,7 @@ bz_err_t bz_st_log(bz_station_t *st, bz_type_t type, const char *meta, int minut
 {
     if (now < BZ_CLOCK_VALID_AFTER) return BZ_ERR_NO_CLOCK;
     if (!st->baby_id[0]) return BZ_ERR_NO_BABY;
+    commit_discard(st);
     bz_event_t event = {.type = type};
     snprintf(event.id, sizeof event.id, "%s", new_id);
     snprintf(event.meta, sizeof event.meta, "%s", meta && meta[0] ? meta : "{}");
@@ -86,6 +89,7 @@ bz_err_t bz_st_stop(bz_station_t *st, const char *id, bz_ms_t now)
     const bz_event_t *current = find(st, id);
     if (!current) return BZ_ERR_NOT_FOUND;
     bz_event_t values = *current;
+    commit_discard(st);
     values.ended = now < values.started ? values.started : now;
     if (!bz_ob_update(&st->ob, id, BZ_CHANGED_ENDED, &values)) return BZ_ERR_FULL;
     // Feeds and pumps that take an amount say "saved" once the amount is in.
@@ -108,6 +112,7 @@ bz_err_t bz_st_complete_amount(bz_station_t *st, const char *id, int amount_ml, 
     const bz_event_t *current = find(st, id);
     if (!current) return BZ_ERR_NOT_FOUND;
     bz_event_t saved = *current;
+    commit_discard(st);
     if (amount_ml > 0) {
         bz_meta_with_int(current->meta, "amountMl", amount_ml, saved.meta, sizeof saved.meta);
         if (!bz_ob_update(&st->ob, id, BZ_CHANGED_META, &saved)) return BZ_ERR_FULL;
@@ -123,6 +128,8 @@ bz_err_t bz_st_discard(bz_station_t *st, const char *id, bz_ms_t now)
     const bz_event_t *current = find(st, id);
     if (!current) return BZ_ERR_NOT_FOUND;
     bz_event_t event = *current;
+    commit_discard(st);
+    if (!bz_ob_can_delete(&st->ob, id)) return BZ_ERR_FULL;
     show_toast(st, &event, BZ_TOAST_DISCARDED, true, now);
     snprintf(st->pending_discard, sizeof st->pending_discard, "%s", id);
     bz_ob_hide(&st->ob, id);
