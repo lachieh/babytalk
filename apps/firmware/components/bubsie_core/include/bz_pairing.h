@@ -7,8 +7,11 @@
 //     expired    -> a new code
 //     redirected -> webUrl W: fetch W/.well-known/config, requestDeviceCode(code: C) on W,
 //                   confirmDeviceCodeRedirect(C) on the original, web_url = W, poll C on W.
-//                   If W refuses the code (CODE_TAKEN, or it does not know the `code` argument)
-//                   the device says so and starts again on the original server.
+//                   If W refuses the code (CODE_TAKEN, or it does not know the `code` argument),
+//                   or the original does not confirm (answers anything but true), the device
+//                   says so and starts again on the original server. CODE_TAKEN after a claim
+//                   that went unanswered may be this device's own claim: W is polled for C, and
+//                   pending there means it was.
 #pragma once
 
 #include <stdbool.h>
@@ -24,6 +27,7 @@ typedef enum {
     BZ_PAIR_POLL,             /* show the code; poll */
     BZ_PAIR_REDIRECT_CONFIG,  /* W's API URL */
     BZ_PAIR_REDIRECT_CLAIM,   /* requestDeviceCode(code: C) on W */
+    BZ_PAIR_REDIRECT_CHECK,   /* pollDeviceCode(C) on W: whether a claim whose reply was lost got there */
     BZ_PAIR_REDIRECT_CONFIRM, /* confirmDeviceCodeRedirect(C) on the original */
     BZ_PAIR_DONE,
 } bz_pair_state_t;
@@ -45,6 +49,8 @@ typedef struct {
     bool poll_web_url;
     /* Attempts at the current step that failed for want of an answer. */
     int failures;
+    /* A claim on W went unanswered: it may have reached W. */
+    bool claim_unanswered;
     /* The server to remember once paired (changes on a redirect). */
     bool server_changed;
     char token[1024];

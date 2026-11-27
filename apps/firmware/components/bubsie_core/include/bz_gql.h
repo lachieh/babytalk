@@ -74,6 +74,8 @@ typedef struct {
 bool bz_parse_poll(const char *body, bz_poll_t *out);
 /** requestDeviceCode { code }. */
 bool bz_parse_device_code(const char *body, char *code, size_t len);
+/** confirmDeviceCodeRedirect: true only when the server answered exactly true. */
+bool bz_parse_confirm_redirect(const char *body);
 bool bz_parse_refresh(const char *body, char *token, size_t token_len, char *refresh, size_t refresh_len);
 /** /.well-known/config { apiUrl }. */
 bool bz_parse_config(const char *body, char *api_url, size_t len);

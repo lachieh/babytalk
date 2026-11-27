@@ -127,3 +127,78 @@ TEST(test_url_host)
     bz_url_host("http://192.168.1.20:3000/path?x", host, sizeof host);
     CHECK_STR(host, "192.168.1.20:3000");
 }
+
+/* Up to the claim on W: a code on A, redirected, W's config fetched. */
+static void to_claim(bz_pairing_t *p)
+{
+    bz_pair_start(p, "https://bubsie.app", "https://api.bubsie.app/graphql");
+    step(p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", NULL, 200, CODE);
+    step(p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", NULL, 200, REDIRECTED);
+    step(p, BZ_ACT_FETCH_CONFIG, "http://192.168.1.20:3000/.well-known/config", NULL, 200, CONFIG_W);
+}
+
+TEST(test_pairing_redirect_confirm_false)
+{
+    // A answers the confirmation with false (the code expired there, say): the device stays on A.
+    bz_pairing_t p;
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "\"code\":\"ABCD2345\"", 200, CODE);
+    step(&p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", "confirmDeviceCodeRedirect", 200,
+         "{\"data\":{\"confirmDeviceCodeRedirect\":false}}");
+    CHECK(!p.server_changed);
+    CHECK_INT(p.state, BZ_PAIR_REQUEST_CODE);
+    CHECK_STR(p.server.web, "https://bubsie.app");
+    CHECK(strstr(p.notice, "Pair with bubsie.app instead.") != NULL);
+    bz_pair_act_t act = bz_pair_next(&p);
+    CHECK_STR(act.url, "https://api.bubsie.app/graphql");
+    CHECK(strstr(act.body, "requestDeviceCode {") != NULL);
+    free(act.body);
+
+    // A reply without the field is not a confirmation either.
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 200, CODE);
+    step(&p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", NULL, 200, "{\"data\":{\"confirmDeviceCodeRedirect\":null}}");
+    CHECK(!p.server_changed);
+    CHECK_STR(p.server.web, "https://bubsie.app");
+}
+
+static const char *TAKEN = "{\"errors\":[{\"message\":\"taken\",\"extensions\":{\"code\":\"CODE_TAKEN\"}}]}";
+
+TEST(test_pairing_redirect_claim_reply_lost)
+{
+    // The claim reached W but its reply was lost; the retry finds the code taken, by this device.
+    bz_pairing_t p;
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "\"code\":\"ABCD2345\"", 0, NULL);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "\"code\":\"ABCD2345\"", 200, TAKEN);
+    // W is asked about the code: pending there means the claim was ours.
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "pollDeviceCode", 200, PENDING);
+    CHECK_INT(p.state, BZ_PAIR_REDIRECT_CONFIRM);
+    step(&p, BZ_ACT_GRAPHQL, "https://api.bubsie.app/graphql", "confirmDeviceCodeRedirect", 200,
+         "{\"data\":{\"confirmDeviceCodeRedirect\":true}}");
+    CHECK(p.server_changed);
+    CHECK_STR(p.server.web, "http://192.168.1.20:3000");
+
+    // Taken, and W says something other than pending: someone else's. Fall back as before.
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 0, NULL);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 200, TAKEN);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "pollDeviceCode", 200,
+         "{\"data\":{\"pollDeviceCode\":{\"status\":\"expired\",\"token\":null,\"refreshToken\":null,\"webUrl\":null}}}");
+    CHECK_INT(p.state, BZ_PAIR_REQUEST_CODE);
+    CHECK_STR(p.server.web, "https://bubsie.app");
+    CHECK(strstr(p.notice, "already has a device using this code") != NULL);
+
+    // W cannot be asked: after a few tries, fall back.
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 0, NULL);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 200, TAKEN);
+    for (int i = 0; i < 3; i++) step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", "pollDeviceCode", 0, NULL);
+    CHECK_INT(p.state, BZ_PAIR_REQUEST_CODE);
+    CHECK_STR(p.server.web, "https://bubsie.app");
+
+    // Taken on the first try: another device holds it, no need to ask.
+    to_claim(&p);
+    step(&p, BZ_ACT_GRAPHQL, "http://192.168.1.20:4000/graphql", NULL, 200, TAKEN);
+    CHECK_INT(p.state, BZ_PAIR_REQUEST_CODE);
+}

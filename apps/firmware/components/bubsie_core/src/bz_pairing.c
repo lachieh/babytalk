@@ -53,6 +53,10 @@ bz_pair_act_t bz_pair_next(const bz_pairing_t *p)
         snprintf(act.url, sizeof act.url, "%s", p->target.api);
         act.body = bz_gql_request_device_code(p->code);
         break;
+    case BZ_PAIR_REDIRECT_CHECK:
+        snprintf(act.url, sizeof act.url, "%s", p->target.api);
+        act.body = bz_gql_poll_device_code(p->code, false);
+        break;
     case BZ_PAIR_REDIRECT_CONFIRM:
         snprintf(act.url, sizeof act.url, "%s", p->origin.api);
         act.body = bz_gql_confirm_redirect(p->code);
@@ -80,6 +84,7 @@ static void fall_back(bz_pairing_t *p, const char *why)
     p->server = p->origin;
     p->code[0] = '\0';
     p->poll_web_url = true;
+    p->claim_unanswered = false;
     go(p, BZ_PAIR_REQUEST_CODE);
 }
 
@@ -130,6 +135,7 @@ static void on_poll(bz_pairing_t *p, const bz_reply_t *reply, const char *body)
         break;
     case BZ_POLL_REDIRECTED:
         p->origin = p->server;
+        p->claim_unanswered = false;
         set_server(&p->target, poll.web_url, "");
         p->notice[0] = '\0';
         go(p, BZ_PAIR_REDIRECT_CONFIG);
@@ -171,6 +177,9 @@ void bz_pair_on_reply(bz_pairing_t *p, int status, const char *body)
         char why[BZ_URL_LEN + 64];
         if (reply.kind == BZ_REPLY_OK && bz_parse_device_code(body, code, sizeof code)) {
             go(p, BZ_PAIR_REDIRECT_CONFIRM);
+        } else if (strcmp(reply.code, "CODE_TAKEN") == 0 && p->claim_unanswered) {
+            // Perhaps by this device, whose earlier claim got there without an answer.
+            go(p, BZ_PAIR_REDIRECT_CHECK);
         } else if (strcmp(reply.code, "CODE_TAKEN") == 0) {
             snprintf(why, sizeof why, "%s already has a device using this code.", host);
             fall_back(p, why);
@@ -180,16 +189,33 @@ void bz_pair_on_reply(bz_pairing_t *p, int status, const char *body)
         } else if (reply.kind == BZ_REPLY_REFUSED || ++p->failures >= GIVE_UP_AFTER) {
             snprintf(why, sizeof why, "Couldn't move pairing to %s.", host);
             fall_back(p, why);
+        } else {
+            p->claim_unanswered = true;
+        }
+        break;
+    }
+    case BZ_PAIR_REDIRECT_CHECK: {
+        bz_poll_t poll;
+        bool answered = reply.kind == BZ_REPLY_OK && bz_parse_poll(body, &poll) && poll.status != BZ_POLL_UNKNOWN;
+        if (answered && poll.status == BZ_POLL_PENDING) {
+            go(p, BZ_PAIR_REDIRECT_CONFIRM);
+        } else if (answered || reply.kind == BZ_REPLY_REFUSED || ++p->failures >= GIVE_UP_AFTER) {
+            char host[BZ_URL_LEN];
+            bz_url_host(p->target.web, host, sizeof host);
+            char why[BZ_URL_LEN + 64];
+            snprintf(why, sizeof why, "%s already has a device using this code.", host);
+            fall_back(p, why);
         }
         break;
     }
     case BZ_PAIR_REDIRECT_CONFIRM:
-        if (reply.kind == BZ_REPLY_OK) {
+        if (reply.kind == BZ_REPLY_OK && bz_parse_confirm_redirect(body)) {
             p->server = p->target;
             p->server_changed = true;
             p->poll_web_url = true;
             go(p, BZ_PAIR_POLL);
-        } else if (reply.kind == BZ_REPLY_REFUSED || ++p->failures >= GIVE_UP_AFTER) {
+        } else if (reply.kind == BZ_REPLY_OK || reply.kind == BZ_REPLY_REFUSED || ++p->failures >= GIVE_UP_AFTER) {
+            // Anything but true (false: the code expired on the original, say) is not a move.
             fall_back(p, "The move to the new server didn't go through.");
         }
         break;

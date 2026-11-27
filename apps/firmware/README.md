@@ -116,8 +116,10 @@ main/
   refresh the server refuses signs the device out and it asks to pair again.
 - **Pairing.** `requestDeviceCode`, then `pollDeviceCode` every 2.5 s. `redirected` with `webUrl` W:
   fetch W's config, `requestDeviceCode(code: C)` on W, `confirmDeviceCodeRedirect(code: C)` on the
-  original, save W as `web_url`, poll C on W. `CODE_TAKEN` or a server without the `code` argument
-  shows why and starts a fresh code on the original server. A server without the `webUrl` field is
+  original, save W as `web_url`, poll C on W. `CODE_TAKEN`, a server without the `code` argument, or a
+  confirmation that is anything but `true` shows why and starts a fresh code on the original server.
+  `CODE_TAKEN` after a claim that went unanswered polls C on W first: `pending` there means the
+  earlier claim got through, and the redirect goes on. A server without the `webUrl` field is
   polled without it.
 - **Clock.** SNTP after Wi-Fi; nothing is logged until the clock is set (a timer from 1970 would be
   wrong), and the station says so.

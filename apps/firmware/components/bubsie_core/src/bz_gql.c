@@ -317,6 +317,14 @@ bool bz_parse_device_code(const char *text, char *code, size_t len)
     return code[0] != '\0';
 }
 
+bool bz_parse_confirm_redirect(const char *text)
+{
+    cJSON *root = cJSON_Parse(text ? text : "");
+    bool confirmed = cJSON_IsTrue(data_field(root, "confirmDeviceCodeRedirect"));
+    cJSON_Delete(root);
+    return confirmed;
+}
+
 bool bz_parse_refresh(const char *text, char *token, size_t token_len, char *refresh, size_t refresh_len)
 {
     cJSON *root = cJSON_Parse(text ? text : "");
