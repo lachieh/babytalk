@@ -50,14 +50,11 @@ void settings_load(void)
         strlen(blob) + 1 < size) {
         strlcpy(settings.token, blob, sizeof settings.token);
         strlcpy(settings.refresh, blob + strlen(blob) + 1, sizeof settings.refresh);
-    } else {
-        read_str(nvs, "token", settings.token, sizeof settings.token, "");
-        read_str(nvs, "refresh", settings.refresh, sizeof settings.refresh, "");
     }
     read_str(nvs, "baby_id", settings.baby_id, sizeof settings.baby_id, "");
     read_str(nvs, "tz", settings.tz, sizeof settings.tz, "");
     read_u8(nvs, "tiles", &settings.tiles, DEFAULT_TILES);
-    read_u8(nvs, "dark", &settings.dark, 0);
+    read_u8(nvs, "dark", &settings.dark, NIGHT_AUTO);
     read_u8(nvs, "volume_oz", &settings.volume_oz, 0);
     read_u8(nvs, "reduced", &settings.reduced_motion, 0);
     if (open) nvs_close(nvs);
@@ -121,8 +118,6 @@ static void persist_tokens(void)
     } else {
         nvs_erase_key(nvs, "session");
     }
-    nvs_erase_key(nvs, "token");
-    nvs_erase_key(nvs, "refresh");
     nvs_commit(nvs);
     nvs_close(nvs);
 }
