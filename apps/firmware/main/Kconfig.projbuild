@@ -1,0 +1,10 @@
+menu "Bubsie"
+
+    config BUBSIE_DEFAULT_WEB_URL
+        string "Factory web URL"
+        default "https://bubsie.app"
+        help
+            The Bubsie instance a new or reset device pairs with. The API URL is read from
+            <web URL>/.well-known/config. scripts/build.sh sets this from BUBSIE_WEB_URL.
+
+endmenu

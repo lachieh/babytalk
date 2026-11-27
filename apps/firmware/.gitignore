@@ -1,0 +1,7 @@
+build/
+build-*/
+dist/
+managed_components/
+sdkconfig
+sdkconfig.old
+test/out/
