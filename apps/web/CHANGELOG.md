@@ -1,5 +1,11 @@
 # @bubsie/web
 
+## 0.4.1
+
+### Patch Changes
+
+- c0ec3c8: The installed Android app's status bar now always matches the page, including when the app is dark and the phone is light. Its navigation bar is now the night colour instead of cream, so it no longer glares under the dark app. The bottom tabs also keep clear of Android's navigation bar from the first paint.
+
 ## 0.4.0
 
 ### Minor Changes
