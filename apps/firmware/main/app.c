@@ -3,10 +3,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/time.h>
 
+#include "api.h"
 #include "bsp/esp-bsp.h"
+#include "bz_pairing.h"
+#include "bz_time.h"
 #include "esp_log.h"
+#include "esp_netif_sntp.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/queue.h"
 #include "screens.h"
 #include "settings.h"
@@ -14,12 +20,15 @@
 
 static const char *TAG = "app";
 
+
 typedef struct {
     app_fn fn;
     void *arg;
 } job_t;
 
 static QueueHandle_t jobs;
+static EventGroupHandle_t signals;
+#define APP_INTERRUPT BIT0
 
 static void worker(void *unused)
 {
@@ -42,12 +51,20 @@ void ui_do(app_fn fn, void *arg)
     bsp_display_unlock();
 }
 
+void app_interrupt(void) { xEventGroupSetBits(signals, APP_INTERRUPT); }
+
+/* Sleep on the worker; false if interrupted. */
+static bool pause_ms(int ms)
+{
+    if (ms <= 0) return !(xEventGroupClearBits(signals, APP_INTERRUPT) & APP_INTERRUPT);
+    return !(xEventGroupWaitBits(signals, APP_INTERRUPT, pdTRUE, pdFALSE, pdMS_TO_TICKS(ms)) & APP_INTERRUPT);
+}
+
 /* ── Wi-Fi ───────────────────────────────────────────────── */
 
 typedef struct {
     wifi_ap_t aps[WIFI_SCAN_MAX];
     int count;
-    const char *message;
 } scan_result_t;
 
 static scan_result_t scan;
@@ -63,7 +80,11 @@ static void do_scan(void *message)
     ui_do(show_wifi_list, message);
 }
 
-void app_wifi_scan(void) { app_do(do_scan, NULL); }
+void app_wifi_scan(void)
+{
+    app_interrupt();
+    app_do(do_scan, NULL);
+}
 
 typedef struct {
     char ssid[33];
@@ -77,6 +98,8 @@ static void show_joining(void *ssid)
     screen_splash_show(line);
 }
 
+static void do_continue(void *arg);
+
 static void do_join(void *arg)
 {
     join_t *join = arg;
@@ -85,7 +108,7 @@ static void do_join(void *arg)
     if (result == WIFI_JOINED) {
         settings_save_wifi(join->ssid, join->pass);
         free(join);
-        app_continue();
+        do_continue(NULL);
         return;
     }
     const char *message = result == WIFI_WRONG_PASSWORD ? "That password didn't work"
@@ -100,17 +123,133 @@ void app_wifi_join(const char *ssid, const char *pass)
     join_t *join = calloc(1, sizeof *join);
     strlcpy(join->ssid, ssid, sizeof join->ssid);
     strlcpy(join->pass, pass ? pass : "", sizeof join->pass);
+    app_interrupt();
     app_do(do_join, join);
+}
+
+/* ── Clock ───────────────────────────────────────────────── */
+
+static bool sntp_started;
+
+bool app_clock_synced(void)
+{
+    struct timeval now;
+    gettimeofday(&now, NULL);
+    return (long long)now.tv_sec * 1000 > BZ_CLOCK_VALID_AFTER;
+}
+
+static void on_time_sync(struct timeval *tv)
+{
+    char clock[16];
+    bz_format_clock((long long)tv->tv_sec * 1000, clock, sizeof clock);
+    ESP_LOGI(TAG, "clock set, %s %s", clock, settings.tz);
+}
+
+static void start_clock(void)
+{
+    bz_tz_apply(settings.tz);
+    if (sntp_started) return;
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    config.sync_cb = on_time_sync;
+    esp_netif_sntp_init(&config);
+    sntp_started = true;
+}
+
+void app_set_timezone(const char *name)
+{
+    settings_save_tz(name);
+    bz_tz_apply(name);
+    ESP_LOGI(TAG, "time zone %s", name);
+    app_continue();
+}
+
+/* ── Pairing ─────────────────────────────────────────────── */
+
+static bz_pairing_t pairing;
+static screen_pairing_t pairing_view;
+
+static void show_pairing(void *arg) { screen_pairing_show(&pairing_view); }
+
+static void publish_pairing(void)
+{
+    screen_pairing_t view = {0};
+    if (pairing.state == BZ_PAIR_POLL) {
+        bz_pair_format_code(pairing.code, view.code, sizeof view.code);
+        bz_pair_approve_url(&pairing, view.url, sizeof view.url);
+    }
+    bz_url_host(pairing.server.web, view.host, sizeof view.host);
+    strlcpy(view.notice, pairing.notice, sizeof view.notice);
+    if (memcmp(&view, &pairing_view, sizeof view) == 0) return;
+    pairing_view = view;
+    ui_do(show_pairing, NULL);
+}
+
+/* Pair until approved; false if interrupted (the person changed server or Wi-Fi). */
+static bool pair(void)
+{
+    bz_pair_start(&pairing, settings.web_url, settings.api_url);
+    memset(&pairing_view, 0xff, sizeof pairing_view);
+    for (;;) {
+        bz_pair_act_t act = bz_pair_next(&pairing);
+        if (act.kind == BZ_ACT_DONE) break;
+        publish_pairing();
+        if (!pause_ms(act.delay_ms)) {
+            free(act.body);
+            return false;
+        }
+        http_resp_t resp;
+        int status = http_request(act.url, act.body, NULL, &resp, 15000);
+        free(act.body);
+        ESP_LOGI(TAG, "pair: %s -> %d %.120s", act.url, status, resp.body ? resp.body : "");
+        bz_pair_state_t before = pairing.state;
+        bz_pair_on_reply(&pairing, status, resp.body);
+        if (before == BZ_PAIR_REQUEST_CODE && pairing.state == BZ_PAIR_POLL) ESP_LOGI(TAG, "pair: code %s", pairing.code);
+        http_free(&resp);
+        if (pairing.server_changed) {
+            // Redirected: from here on this device belongs to the new server.
+            pairing.server_changed = false;
+            settings_save_web_url(pairing.server.web, pairing.server.api);
+            ESP_LOGI(TAG, "pair: server is now %s", pairing.server.web);
+        }
+    }
+    if (strcmp(settings.web_url, pairing.server.web) != 0 || strcmp(settings.api_url, pairing.server.api) != 0) {
+        settings_save_web_url(pairing.server.web, pairing.server.api);
+    }
+    settings_save_tokens(pairing.token, pairing.refresh);
+    ESP_LOGI(TAG, "pair: approved");
+    return true;
+}
+
+static void do_set_server(void *arg)
+{
+    char *url = arg;
+    settings_save_web_url(url, "");
+    free(url);
+    do_continue(NULL);
+}
+
+void app_set_server(const char *web_url)
+{
+    app_interrupt();
+    app_do(do_set_server, strdup(web_url));
 }
 
 /* ── Flow ────────────────────────────────────────────────── */
 
-static void show_connected(void *arg) { screen_splash_show("Connected"); }
+static void show_timezone(void *arg) { screen_timezone_show(settings.tz); }
+
+static void show_paired(void *arg) { screen_splash_show("Paired"); }
 
 static void do_continue(void *arg)
 {
-    ESP_LOGI(TAG, "online");
-    ui_do(show_connected, NULL);
+    xEventGroupClearBits(signals, APP_INTERRUPT);
+    if (!settings.tz[0]) {
+        ui_do(show_timezone, NULL);
+        return;
+    }
+    start_clock();
+    if (!settings.refresh[0] && !pair()) return;
+    ui_do(show_paired, NULL);
 }
 
 void app_continue(void) { app_do(do_continue, NULL); }
@@ -132,6 +271,8 @@ static void do_boot(void *arg)
 void app_start(void)
 {
     jobs = xQueueCreate(16, sizeof(job_t));
+    signals = xEventGroupCreate();
+    bz_tz_apply(settings.tz);
     // TLS handshakes need a deep stack.
     xTaskCreatePinnedToCore(worker, "app", 12 * 1024, NULL, 4, NULL, 0);
     app_do(do_boot, NULL);

@@ -4,3 +4,5 @@ idf_component_register(
     SRC_DIRS "src"
     INCLUDE_DIRS "include"
     REQUIRES json)
+# Text is cut to the fields it goes into on purpose (a long server name, a notice).
+target_compile_options(${COMPONENT_LIB} PRIVATE -Wno-format-truncation)

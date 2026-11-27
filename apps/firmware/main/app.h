@@ -17,3 +17,10 @@ void app_wifi_scan(void);
 void app_wifi_join(const char *ssid, const char *pass);
 /** The next step of setup after Wi-Fi, or the station once set up. */
 void app_continue(void);
+void app_set_timezone(const char *name);
+/** Pair with another Bubsie server (web URL); restarts pairing. */
+void app_set_server(const char *web_url);
+/** Stop what the worker is waiting on (pairing polls) so a new request runs next. */
+void app_interrupt(void);
+/** Whether the clock has been set from the network. Timers refuse to start until it has. */
+bool app_clock_synced(void);
