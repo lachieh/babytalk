@@ -79,7 +79,8 @@ static void fall_back(bz_pairing_t *p, const char *why)
 {
     char host[BZ_URL_LEN];
     bz_url_host(p->origin.web, host, sizeof host);
-    snprintf(p->notice, sizeof p->notice, "%s Pair with %s instead.", why, host);
+    int n = snprintf(p->notice, sizeof p->notice, "%s Pair with %s instead.", why, host);
+    if (n < 0 || (size_t)n >= sizeof p->notice) snprintf(p->notice, sizeof p->notice, "%s", why);
     p->server = p->origin;
     p->code[0] = '\0';
     p->poll_web_url = true;
@@ -104,7 +105,8 @@ static void on_config(bz_pairing_t *p, int status, const char *body, bz_server_t
         snprintf(why, sizeof why, "Couldn't reach %s.", host);
         fall_back(p, why);
     } else if (!redirect && p->failures >= 2) {
-        snprintf(p->notice, sizeof p->notice, "Can't reach %s yet. Still trying.", host);
+        int n = snprintf(p->notice, sizeof p->notice, "Can't reach %s yet. Still trying.", host);
+        if (n < 0 || (size_t)n >= sizeof p->notice) snprintf(p->notice, sizeof p->notice, "Can't reach the server yet. Still trying.");
     }
 }
 

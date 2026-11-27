@@ -6,6 +6,8 @@
 #include <string.h>
 #include <time.h>
 
+#define BZ_EM_DASH "—"
+
 /* Days since 1970-01-01 of a civil date (Howard Hinnant's algorithm). */
 static long long days_from_civil(int y, int m, int d)
 {
@@ -101,7 +103,8 @@ void bz_format_iso(bz_ms_t ms, char out[25])
     int rest = (int)(seconds - days * 86400);
     int y, m, d;
     civil_from_days(days, &y, &m, &d);
-    snprintf(out, 25, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", y, m, d, rest / 3600, rest / 60 % 60, rest % 60, millis);
+    int n = snprintf(out, 25, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", y, m, d, rest / 3600, rest / 60 % 60, rest % 60, millis);
+    if (n < 0 || n >= 25) out[0] = '\0';
 }
 
 void bz_format_elapsed(bz_ms_t ms, char *out, size_t len)
@@ -118,7 +121,7 @@ void bz_format_elapsed(bz_ms_t ms, char *out, size_t len)
 void bz_format_minutes(long minutes, char *out, size_t len)
 {
     if (minutes <= 0) {
-        snprintf(out, len, "\xE2\x80\x94");
+        snprintf(out, len, "%s", BZ_EM_DASH);
         return;
     }
     long h = minutes / 60, m = minutes % 60;
