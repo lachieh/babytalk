@@ -25,6 +25,7 @@ import {
 } from "@/lib/daily-totals";
 import { EVENT_TYPE_LABELS } from "@/lib/event-meta";
 import { EventIcon, getEventStyle } from "@/lib/event-styles";
+import { NOW } from "@/lib/event-time";
 import { triggerFeedback } from "@/lib/haptics";
 import type { StationActionKey } from "@/lib/station-config";
 
@@ -90,7 +91,7 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
     const action = oneTapAction(type, selectedVariant.meta);
     handleLog(selectedVariant.meta, {
       finished: action === "instant",
-      minutesAgo: 0,
+      when: NOW,
     });
   }, [type, selectedVariant, handleLog]);
 
@@ -136,7 +137,7 @@ export const StationTile = ({ type }: { type: StationActionKey }) => {
       setPhase("idle");
       return;
     }
-    handleLog({ text: noteText.trim() }, { finished: true, minutesAgo: 0 });
+    handleLog({ text: noteText.trim() }, { finished: true, when: NOW });
     setNoteText("");
     setPhase("idle");
   }, [noteText, handleLog]);

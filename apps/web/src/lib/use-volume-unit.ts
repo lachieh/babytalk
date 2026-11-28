@@ -80,16 +80,3 @@ export function formatVolume(ml: number, unit: VolumeUnit): string {
   const val = mlToDisplay(ml, unit);
   return `${val} ${unit}`;
 }
-
-export function amountChips(lastMl: number | null, unit: VolumeUnit): number[] {
-  const step = unit === "oz" ? 1 : 30;
-  const snap = unit === "oz" ? 0.5 : 10;
-  const typical = unit === "oz" ? 4 : 120;
-  const snapped =
-    lastMl && lastMl > 0
-      ? Math.round(mlToDisplay(lastMl, unit) / snap) * snap
-      : typical;
-  const middle = Math.max(snap, snapped);
-  const lower = middle - step > 0 ? middle - step : middle / 2;
-  return [lower, middle, middle + step];
-}
