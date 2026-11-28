@@ -1,5 +1,13 @@
 # @bubsie/mcp
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [d95914b]
+  - @bubsie/standard-config@0.1.2
+  - @bubsie/vite-config@0.0.3
+
 ## 0.1.0
 
 ### Minor Changes

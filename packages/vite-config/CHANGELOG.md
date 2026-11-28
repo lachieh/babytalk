@@ -1,5 +1,12 @@
 # @bubsie/vite-config
 
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [d95914b]
+  - @bubsie/standard-config@0.1.2
+
 ## 0.0.2
 
 ### Patch Changes

@@ -1,5 +1,18 @@
 # @bubsie/web
 
+## 0.5.0
+
+### Minor Changes
+
+- d95914b: Send a pairing device to your own Bubsie server. On the approve page, "Using your own server?" checks the address you enter, moves the device's code there, and opens that server's approve page once the device has arrived. No account on this server is needed, and sign-in tokens never pass through it. The API adds `redirectDeviceCode`, `confirmDeviceCodeRedirect`, the `deviceCodeRedirect` query, a `redirected` poll status, and an optional `code` on `requestDeviceCode`. `/.well-known/config` is now readable from other origins.
+- 0010f69: Times and amounts are set with sliders. Started now sits above Ended when editing an entry, and each time slides from Now back to an hour ago, with a Pick button for an exact date and time. Amounts slide from none to 8 oz (240 ml), with Pick for an exact number. The quick-log sheet and the "How much?" prompt use the same sliders.
+
+### Patch Changes
+
+- d95914b: Sign-in and logging work on a self-hosted Bubsie reached over plain http (a LAN address): ids no longer need `crypto.randomUUID`, which browsers only offer on https and localhost.
+- Updated dependencies [d95914b]
+  - @bubsie/standard-config@0.1.2
+
 ## 0.4.2
 
 ### Patch Changes
