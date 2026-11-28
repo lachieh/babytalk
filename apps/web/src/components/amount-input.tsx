@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useId, useState, useSyncExternalStore } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 
-import { amountChips, displayToMl, useVolumeUnit } from "@/lib/use-volume-unit";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 import type { VolumeUnit } from "@/lib/use-volume-unit";
+
+import { AmountSlider } from "./slider-field";
 
 const DISMISSED_KEY = "bubsie_amount_prompts_skipped";
 const DISMISSED_LIMIT = 30;
@@ -63,35 +65,6 @@ const UNIT_NAMES: Record<VolumeUnit, string> = {
   oz: "ounces",
 };
 
-const AmountChip = ({
-  isSelected,
-  onSelect,
-  unit,
-  value,
-}: {
-  isSelected: boolean;
-  onSelect: (value: number) => void;
-  unit: VolumeUnit;
-  value: number;
-}) => {
-  const handleClick = useCallback(() => onSelect(value), [onSelect, value]);
-  return (
-    <button
-      aria-label={`${value} ${UNIT_NAMES[unit]}`}
-      aria-pressed={isSelected}
-      className={`min-h-[48px] rounded-xl border-2 px-2 text-base tabular-nums transition-[background-color,border-color,transform] active:scale-[0.97] ${
-        isSelected
-          ? "border-primary-ink bg-primary-100 font-semibold text-neutral-800"
-          : "border-neutral-200 bg-surface font-medium text-neutral-700 hover:bg-neutral-100"
-      }`}
-      onClick={handleClick}
-      type="button"
-    >
-      {value} <span className="text-sm">{unit}</span>
-    </button>
-  );
-};
-
 const UnitButton = ({
   current,
   onSelect,
@@ -135,89 +108,31 @@ export const AmountInput = ({
   confirmLabel?: string;
   cancelLabel?: string;
 }) => {
-  const fieldId = useId();
   const { unit: preferredUnit } = useVolumeUnit();
   const [unit, setUnit] = useState<VolumeUnit>(preferredUnit);
-  const [amount, setAmount] = useState(() =>
-    lastAmountMl ? String(amountChips(lastAmountMl, preferredUnit)[1]) : ""
+  const [amountMl, setAmountMl] = useState<number | undefined>(
+    lastAmountMl ?? undefined
   );
-
-  const chips = amountChips(lastAmountMl, unit);
-  const numericAmount = Number(amount);
-  const isValid = amount !== "" && numericAmount > 0;
 
   const handleConfirm = useCallback(() => {
-    const value = Number(amount);
-    if (!(value > 0)) return;
-    onConfirm(displayToMl(value, unit));
-  }, [amount, unit, onConfirm]);
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => setAmount(e.target.value),
-    []
-  );
-
-  const handleChip = useCallback(
-    (value: number) => setAmount(String(value)),
-    []
-  );
-
-  const handleUnit = useCallback(
-    (next: VolumeUnit) => {
-      if (next === unit) return;
-      const pickedIndex = amountChips(lastAmountMl, unit).indexOf(
-        Number(amount)
-      );
-      if (pickedIndex !== -1) {
-        setAmount(String(amountChips(lastAmountMl, next)[pickedIndex]));
-      }
-      setUnit(next);
-    },
-    [amount, lastAmountMl, unit]
-  );
+    if (amountMl) onConfirm(amountMl);
+  }, [amountMl, onConfirm]);
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="font-medium text-neutral-700 text-sm" htmlFor={fieldId}>
-        {label}
-      </label>
-
+      <AmountSlider
+        amountMl={amountMl}
+        legend={label}
+        onChange={setAmountMl}
+        unit={unit}
+      />
       <div
-        aria-label="Quick amounts"
-        className="grid grid-cols-3 gap-2"
+        aria-label="Unit"
+        className="flex shrink-0 self-start gap-0.5 rounded-xl border border-neutral-300 p-0.5"
         role="group"
       >
-        {chips.map((value) => (
-          <AmountChip
-            isSelected={isValid && numericAmount === value}
-            key={value}
-            onSelect={handleChip}
-            unit={unit}
-            value={value}
-          />
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          className="min-h-[48px] min-w-[6rem] flex-1 rounded-xl border border-neutral-300 bg-surface px-3 text-base tabular-nums text-neutral-800 caret-primary-ink placeholder:text-neutral-500"
-          id={fieldId}
-          inputMode="decimal"
-          min="0"
-          onChange={handleChange}
-          placeholder="Other amount"
-          step="any"
-          type="number"
-          value={amount}
-        />
-        <div
-          aria-label="Unit"
-          className="flex shrink-0 gap-0.5 rounded-xl border border-neutral-300 p-0.5"
-          role="group"
-        >
-          <UnitButton current={unit} onSelect={handleUnit} unit="oz" />
-          <UnitButton current={unit} onSelect={handleUnit} unit="ml" />
-        </div>
+        <UnitButton current={unit} onSelect={setUnit} unit="oz" />
+        <UnitButton current={unit} onSelect={setUnit} unit="ml" />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -230,7 +145,7 @@ export const AmountInput = ({
         </button>
         <button
           className="min-h-[48px] flex-[2] rounded-xl bg-primary-500 px-4 font-semibold text-base text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] disabled:bg-neutral-200 disabled:text-neutral-500 disabled:active:scale-100"
-          disabled={!isValid}
+          disabled={!amountMl}
           onClick={handleConfirm}
           type="button"
         >

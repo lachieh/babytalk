@@ -3,11 +3,13 @@
 import { useCallback, useId, useState } from "react";
 
 import { AmountInput } from "@/components/amount-input";
-import { ChoiceChips, Sheet } from "@/components/sheet";
+import { Sheet } from "@/components/sheet";
+import { TimeSlider } from "@/components/slider-field";
 import type { BabyEvent } from "@/lib/baby-context";
 import { logSheetPrimary, methodTakesAmount } from "@/lib/daily-totals";
 import { EVENT_TYPE_LABELS, parseMeta } from "@/lib/event-meta";
-import { BACKDATE_MINUTES, logTimes } from "@/lib/event-time";
+import { logTimes, NOW, resolveTime } from "@/lib/event-time";
+import type { TimeChoice } from "@/lib/event-time";
 import type { StationActionKey } from "@/lib/station-config";
 
 interface Variant {
@@ -148,7 +150,7 @@ export const amountLabelFor = (event: BabyEvent): string => {
 export interface LogRequest {
   amountMl?: number;
   finished: boolean;
-  minutesAgo: number;
+  when: TimeChoice;
 }
 
 export const requestMeta = (
@@ -157,7 +159,7 @@ export const requestMeta = (
 ): Record<string, unknown> => ({
   ...meta,
   ...(request.amountMl ? { amountMl: request.amountMl } : {}),
-  ...logTimes(request.minutesAgo, request.finished),
+  ...logTimes(request.when, request.finished),
 });
 
 const WHEN_LEGEND: Record<StationActionKey, string> = {
@@ -167,11 +169,6 @@ const WHEN_LEGEND: Record<StationActionKey, string> = {
   pump: "Started",
   sleep: "Fell asleep",
 };
-
-const WHEN_OPTIONS = BACKDATE_MINUTES.map((minutes) => ({
-  label: minutes === 0 ? "Now" : `${minutes}m`,
-  value: String(minutes),
-}));
 
 const CheckIcon = () => (
   <svg
@@ -234,7 +231,7 @@ export const LogSheet = ({
 }) => {
   const variantGroup = useId();
   const variants = VARIANTS_BY_TYPE[type];
-  const [minutesAgo, setMinutesAgo] = useState(0);
+  const [when, setWhen] = useState<TimeChoice>(NOW);
   const [askingAmount, setAskingAmount] = useState(false);
 
   const selectedVariant =
@@ -242,14 +239,9 @@ export const LogSheet = ({
   const primary = logSheetPrimary(type, selectedVariant.meta);
   const typeLabel = EVENT_TYPE_LABELS[type];
 
-  const handleWhen = useCallback(
-    (value: string) => setMinutesAgo(Number(value)),
-    []
-  );
-
   const handlePrimary = useCallback(
-    () => onLog({ finished: primary.action === "instant", minutesAgo }),
-    [primary.action, minutesAgo, onLog]
+    () => onLog({ finished: primary.action === "instant", when }),
+    [primary.action, when, onLog]
   );
 
   const handleFinished = useCallback(() => {
@@ -257,29 +249,26 @@ export const LogSheet = ({
       setAskingAmount(true);
       return;
     }
-    onLog({ finished: true, minutesAgo });
-  }, [selectedVariant, minutesAgo, onLog]);
+    onLog({ finished: true, when });
+  }, [selectedVariant, when, onLog]);
 
   const handleAmountConfirm = useCallback(
-    (amountMl: number) => onLog({ amountMl, finished: true, minutesAgo }),
-    [minutesAgo, onLog]
+    (amountMl: number) => onLog({ amountMl, finished: true, when }),
+    [when, onLog]
   );
 
   const handleAmountSkip = useCallback(
-    () => onLog({ finished: true, minutesAgo }),
-    [minutesAgo, onLog]
+    () => onLog({ finished: true, when }),
+    [when, onLog]
   );
 
   const clock =
-    minutesAgo > 0
-      ? new Date(Date.now() - minutesAgo * 60_000).toLocaleTimeString([], {
+    when.kind === "ago" && when.minutes === 0
+      ? null
+      : new Date(resolveTime(when)).toLocaleTimeString([], {
           hour: "numeric",
           minute: "2-digit",
-        })
-      : null;
-  const whenLegend = clock
-    ? `${WHEN_LEGEND[type]} ${minutesAgo} minutes ago, at ${clock}`
-    : `${WHEN_LEGEND[type]} just now`;
+        });
 
   if (askingAmount) {
     return (
@@ -343,11 +332,10 @@ export const LogSheet = ({
         </fieldset>
       )}
       <div className="px-5 pt-4 pb-1">
-        <ChoiceChips
-          legend={whenLegend}
-          onChange={handleWhen}
-          options={WHEN_OPTIONS}
-          value={String(minutesAgo)}
+        <TimeSlider
+          choice={when}
+          legend={WHEN_LEGEND[type]}
+          onChange={setWhen}
         />
       </div>
     </Sheet>

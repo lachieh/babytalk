@@ -64,9 +64,7 @@ export type TimeChoice =
   | { kind: "ago"; minutes: number }
   | { kind: "at"; local: string };
 
-export type LengthChoice =
-  | { kind: "minutes"; minutes: number }
-  | { kind: "start"; local: string };
+export const NOW: TimeChoice = { kind: "ago", minutes: 0 };
 
 interface StoredTiming {
   endedAt: string | null;
@@ -74,9 +72,9 @@ interface StoredTiming {
 }
 
 export interface EntryTiming {
+  end: TimeChoice;
   running: boolean;
-  time: TimeChoice | null;
-  length: LengthChoice | null;
+  start: TimeChoice;
   /** The saved times, kept verbatim until a timing field changes. */
   stored?: StoredTiming;
 }
@@ -89,7 +87,7 @@ export function changeTiming(
   return { ...rest, ...patch };
 }
 
-export type TimingField = "time" | "length";
+export type TimingField = "start" | "end";
 
 export type ResolvedTiming =
   | { ok: true; endedAt: string | null; startedAt: string }
@@ -104,7 +102,7 @@ export function toLocalInput(iso: string | number): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
-function resolveTime(choice: TimeChoice, now: number): number {
+export function resolveTime(choice: TimeChoice, now = Date.now()): number {
   if (choice.kind === "ago") return now - choice.minutes * 60_000;
   return choice.local ? new Date(choice.local).getTime() : Number.NaN;
 }
@@ -121,42 +119,37 @@ export function resolveEntryTiming(
   now = Date.now()
 ): ResolvedTiming {
   if (timing.stored) return { ok: true, ...timing.stored };
-  if (!timing.time) return fail("time", "Pick a time.");
-  const at = resolveTime(timing.time, now);
-  if (!Number.isFinite(at)) return fail("time", "Pick a time.");
-  const inFuture = at > now + FUTURE_TOLERANCE_MS;
+  const end = resolveTime(timing.end, now);
 
   if (shape === "instant") {
-    if (inFuture) return fail("time", "That time hasn't happened yet.");
-    const iso = new Date(at).toISOString();
+    if (!Number.isFinite(end)) return fail("end", "Pick a time.");
+    if (end > now + FUTURE_TOLERANCE_MS) {
+      return fail("end", "That time hasn't happened yet.");
+    }
+    const iso = new Date(end).toISOString();
     return { endedAt: iso, ok: true, startedAt: iso };
   }
 
-  if (timing.running) {
-    if (inFuture) return fail("time", "Start can't be in the future.");
-    return { endedAt: null, ok: true, startedAt: new Date(at).toISOString() };
+  const start = resolveTime(timing.start, now);
+  if (!Number.isFinite(start)) return fail("start", "Pick a start time.");
+  if (start > now + FUTURE_TOLERANCE_MS) {
+    return fail("start", "Start can't be in the future.");
   }
+  const startedAt = new Date(start).toISOString();
+  if (timing.running) return { endedAt: null, ok: true, startedAt };
 
-  if (inFuture) return fail("time", "End can't be in the future.");
-  if (!timing.length) return fail("length", "Choose how long it lasted.");
-  const start =
-    timing.length.kind === "minutes"
-      ? at - timing.length.minutes * 60_000
-      : resolveTime({ kind: "at", local: timing.length.local }, now);
-  if (!Number.isFinite(start)) return fail("length", "Pick a start time.");
-  if (start >= at) return fail("length", "Start must be before the end.");
+  if (!Number.isFinite(end)) return fail("end", "Pick an end time.");
+  if (end > now + FUTURE_TOLERANCE_MS) {
+    return fail("end", "End can't be in the future.");
+  }
+  if (start >= end) return fail("start", "Start must be before the end.");
 
-  return {
-    endedAt: new Date(at).toISOString(),
-    ok: true,
-    startedAt: new Date(start).toISOString(),
-  };
+  return { endedAt: new Date(end).toISOString(), ok: true, startedAt };
 }
 
 export function timingFromEvent(
   event: Pick<BabyEvent, "endedAt" | "startedAt">,
-  shape: EntryShape,
-  presets: readonly number[] = []
+  shape: EntryShape
 ): EntryTiming {
   const stored = { endedAt: event.endedAt, startedAt: event.startedAt };
   const start: TimeChoice = {
@@ -164,19 +157,13 @@ export function timingFromEvent(
     local: toLocalInput(event.startedAt),
   };
   if (shape === "instant") {
-    return { length: null, running: false, stored, time: start };
+    return { end: start, running: false, start, stored };
   }
   if (!event.endedAt) {
-    return { length: null, running: true, stored, time: start };
+    return { end: NOW, running: true, start, stored };
   }
-
-  const end = toLocalInput(event.endedAt);
-  const minutes =
-    (new Date(end).getTime() - new Date(start.local).getTime()) / 60_000;
-  const length: LengthChoice = presets.includes(minutes)
-    ? { kind: "minutes", minutes }
-    : { kind: "start", local: start.local };
-  return { length, running: false, stored, time: { kind: "at", local: end } };
+  const end: TimeChoice = { kind: "at", local: toLocalInput(event.endedAt) };
+  return { end, running: false, start, stored };
 }
 
 export function durationWithinRange(
@@ -197,14 +184,14 @@ export function durationWithinRange(
   return Math.max(0, overlapEnd - overlapStart);
 }
 
-export const BACKDATE_MINUTES = [0, 5, 10, 15, 30] as const;
-
 export function logTimes(
-  minutesAgo: number,
+  when: TimeChoice,
   instant: boolean,
   now = Date.now()
 ): { _endedAt?: string; _startedAt?: string } {
-  if (!instant && minutesAgo <= 0) return {};
-  const at = new Date(now - Math.max(0, minutesAgo) * 60_000).toISOString();
-  return instant ? { _endedAt: at, _startedAt: at } : { _startedAt: at };
+  const resolved = resolveTime(when, now);
+  const at = Number.isFinite(resolved) ? Math.min(resolved, now) : now;
+  if (!instant && at >= now) return {};
+  const iso = new Date(at).toISOString();
+  return instant ? { _endedAt: iso, _startedAt: iso } : { _startedAt: iso };
 }

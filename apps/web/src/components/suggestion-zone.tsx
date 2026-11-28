@@ -10,6 +10,7 @@ import {
   oneTapAction,
 } from "@/lib/daily-totals";
 import { EventIcon } from "@/lib/event-styles";
+import { NOW } from "@/lib/event-time";
 import { triggerFeedback } from "@/lib/haptics";
 
 import { ActiveTimer } from "./active-timer";
@@ -85,7 +86,7 @@ const LogColumn = ({
 
   const handleMainTap = useCallback(() => {
     const action = oneTapAction(type, selectedVariant.meta);
-    log({ finished: action === "instant", minutesAgo: 0 });
+    log({ finished: action === "instant", when: NOW });
   }, [log, selectedVariant, type]);
 
   const handleSheetLog = useCallback(

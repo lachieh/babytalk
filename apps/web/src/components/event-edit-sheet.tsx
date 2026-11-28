@@ -9,18 +9,13 @@ import type { EventType } from "@/lib/event-styles";
 import {
   changeTiming,
   entryShape,
+  NOW,
   resolveEntryTiming,
   timingFromEvent,
-  toLocalInput,
 } from "@/lib/event-time";
-import type {
-  EntryShape,
-  EntryTiming,
-  LengthChoice,
-  TimeChoice,
-} from "@/lib/event-time";
+import type { EntryShape, EntryTiming, TimeChoice } from "@/lib/event-time";
 import { triggerFeedback } from "@/lib/haptics";
-import { displayToMl, mlToDisplay, useVolumeUnit } from "@/lib/use-volume-unit";
+import { useVolumeUnit } from "@/lib/use-volume-unit";
 
 import {
   ChoiceChips,
@@ -31,6 +26,7 @@ import {
   ToggleChip,
 } from "./sheet";
 import type { ChipOption } from "./sheet";
+import { AmountSlider, TimeSlider } from "./slider-field";
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -42,7 +38,7 @@ interface EventFormData {
   type: EventType;
 }
 
-type FieldErrors = Partial<Record<"time" | "length" | "meta", string>>;
+type FieldErrors = Partial<Record<"start" | "end" | "meta", string>>;
 
 const EVENT_TYPES: readonly ChipOption<EventType>[] = [
   { label: "Feed", value: "feed" },
@@ -72,18 +68,6 @@ const LOCATIONS: readonly ChipOption<string>[] = [
   { label: "Carrier", value: "carrier" },
 ];
 
-function lengthPresets(type: EventType): readonly number[] {
-  if (type === "sleep") return [30, 45, 60, 90, 120, 180];
-  if (type === "pump") return [10, 15, 20, 30];
-  return [5, 10, 15, 20, 30];
-}
-
-const formatMinutes = (m: number): string => {
-  if (m < 60) return `${m} min`;
-  const h = m / 60;
-  return `${Number.isInteger(h) ? h : h.toFixed(1)} hr`;
-};
-
 const DEFAULT_META: Record<EventType, Meta> = {
   diaper: { soiled: false, wet: true },
   feed: { method: "breast", side: "left" },
@@ -92,13 +76,13 @@ const DEFAULT_META: Record<EventType, Meta> = {
   sleep: { location: "crib" },
 };
 
-const NOW: TimeChoice = { kind: "ago", minutes: 0 };
+const DEFAULT_START: TimeChoice = { kind: "ago", minutes: 15 };
 
 function formFor(event: BabyEvent | null): EventFormData {
   if (!event) {
     return {
       meta: DEFAULT_META.feed,
-      timing: { length: null, running: false, time: NOW },
+      timing: { end: NOW, running: false, start: DEFAULT_START },
       type: "feed",
     };
   }
@@ -106,25 +90,10 @@ function formFor(event: BabyEvent | null): EventFormData {
   const meta = parseMeta(event.metadata);
   return {
     meta,
-    timing: timingFromEvent(
-      event,
-      entryShape(type, meta.method),
-      lengthPresets(type)
-    ),
+    timing: timingFromEvent(event, entryShape(type, meta.method)),
     type,
   };
 }
-
-const timeKey = (choice: TimeChoice | null): string | null => {
-  if (!choice) return null;
-  return choice.kind === "ago" ? String(choice.minutes) : "at";
-};
-
-const toPickedLocal = (choice: TimeChoice | null): string => {
-  if (choice?.kind === "at" && choice.local) return choice.local;
-  const minutes = choice?.kind === "ago" ? choice.minutes : 0;
-  return toLocalInput(Date.now() - minutes * 60_000);
-};
 
 function metaError(type: EventType, meta: Meta): string | undefined {
   if (type === "diaper" && !meta.wet && !meta.soiled) {
@@ -144,168 +113,6 @@ function validate(form: EventFormData, shape: EntryShape) {
   if (meta) errors.meta = meta;
   return { errors, timing };
 }
-
-const TIME_OPTIONS: readonly ChipOption<string>[] = [
-  { label: "Now", value: "0" },
-  { label: "15 min ago", value: "15" },
-  { label: "30 min ago", value: "30" },
-  { label: "Pick a time", value: "at" },
-];
-
-const RUNNING = "running";
-
-const TimeField = ({
-  legend,
-  choice,
-  onChange,
-  error,
-  running,
-  onRunningChange,
-}: {
-  choice: TimeChoice | null;
-  error?: string;
-  legend: string;
-  onChange: (choice: TimeChoice) => void;
-  onRunningChange?: (running: boolean) => void;
-  running?: boolean;
-}) => {
-  const pickerId = useId();
-  const options = onRunningChange
-    ? [...TIME_OPTIONS, { label: "Still going", value: RUNNING }]
-    : TIME_OPTIONS;
-
-  const handleChoice = useCallback(
-    (key: string) => {
-      if (key === RUNNING) {
-        onRunningChange?.(true);
-        return;
-      }
-      if (running) onRunningChange?.(false);
-      onChange(
-        key === "at"
-          ? { kind: "at", local: toPickedLocal(choice) }
-          : { kind: "ago", minutes: Number(key) }
-      );
-    },
-    [choice, onChange, onRunningChange, running]
-  );
-
-  const handlePicked = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({ kind: "at", local: e.target.value }),
-    [onChange]
-  );
-
-  const showPicker = !running && choice?.kind === "at";
-
-  return (
-    <div>
-      <ChoiceChips
-        error={showPicker ? undefined : (error ?? null)}
-        legend={legend}
-        onChange={handleChoice}
-        options={options}
-        value={running ? RUNNING : timeKey(choice)}
-      />
-      {showPicker && (
-        <>
-          <label className="sr-only" htmlFor={pickerId}>
-            {legend}, date and time
-          </label>
-          <input
-            aria-describedby={`${pickerId}-error`}
-            aria-invalid={error ? true : undefined}
-            className={FIELD_INPUT_CLASS}
-            id={pickerId}
-            max={toLocalInput(Date.now())}
-            onChange={handlePicked}
-            type="datetime-local"
-            value={choice.local}
-          />
-          <FieldError id={`${pickerId}-error`} message={error} />
-        </>
-      )}
-    </div>
-  );
-};
-
-const LengthField = ({
-  type,
-  end,
-  length,
-  onChange,
-  error,
-}: {
-  end: TimeChoice | null;
-  error?: string;
-  length: LengthChoice | null;
-  onChange: (length: LengthChoice) => void;
-  type: EventType;
-}) => {
-  const pickerId = useId();
-  const presets = lengthPresets(type);
-  const options: ChipOption<string>[] = [
-    ...presets.map((m) => ({ label: formatMinutes(m), value: String(m) })),
-    { label: "Pick start time", value: "start" },
-  ];
-
-  const handleChoice = useCallback(
-    (key: string) => {
-      if (key !== "start") {
-        onChange({ kind: "minutes", minutes: Number(key) });
-        return;
-      }
-      const endLocal = toPickedLocal(end);
-      const minutes = length?.kind === "minutes" ? length.minutes : 15;
-      onChange({
-        kind: "start",
-        local: toLocalInput(new Date(endLocal).getTime() - minutes * 60_000),
-      });
-    },
-    [end, length, onChange]
-  );
-
-  const handlePicked = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({ kind: "start", local: e.target.value }),
-    [onChange]
-  );
-
-  let value: string | null = null;
-  if (length)
-    value = length.kind === "start" ? "start" : String(length.minutes);
-  const showPicker = length?.kind === "start";
-
-  return (
-    <div>
-      <ChoiceChips
-        error={showPicker ? undefined : (error ?? null)}
-        legend="How long"
-        onChange={handleChoice}
-        options={options}
-        value={value}
-      />
-      {showPicker && (
-        <>
-          <label className="sr-only" htmlFor={pickerId}>
-            Started, date and time
-          </label>
-          <input
-            aria-describedby={`${pickerId}-error`}
-            aria-invalid={error ? true : undefined}
-            className={FIELD_INPUT_CLASS}
-            id={pickerId}
-            max={toLocalInput(Date.now())}
-            onChange={handlePicked}
-            type="datetime-local"
-            value={length.local}
-          />
-          <FieldError id={`${pickerId}-error`} message={error} />
-        </>
-      )}
-    </div>
-  );
-};
 
 interface MetaProps {
   meta: Meta;
@@ -328,31 +135,21 @@ function useMetaField<V>(
 
 const AmountField = ({ meta, onChange }: MetaProps) => {
   const { unit } = useVolumeUnit();
-  const amount = typeof meta.amountMl === "number" ? meta.amountMl : 0;
   const handleAmount = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) =>
-      onChange({
-        ...meta,
-        amountMl: e.target.value
-          ? displayToMl(Number(e.target.value), unit)
-          : undefined,
-      }),
-    [meta, onChange, unit]
+    (amountMl: number | undefined) => onChange({ ...meta, amountMl }),
+    [meta, onChange]
   );
   return (
-    <label className={FIELD_LABEL_CLASS}>
-      Amount ({unit})
-      <span className="ml-1 font-normal text-neutral-400">optional</span>
-      <input
-        className={FIELD_INPUT_CLASS}
-        inputMode="decimal"
-        min="0"
-        onChange={handleAmount}
-        step="any"
-        type="number"
-        value={amount ? mlToDisplay(amount, unit) : ""}
-      />
-    </label>
+    <AmountSlider
+      amountMl={typeof meta.amountMl === "number" ? meta.amountMl : undefined}
+      legend={
+        <>
+          Amount <span className="font-normal text-neutral-400">optional</span>
+        </>
+      }
+      onChange={handleAmount}
+      unit={unit}
+    />
   );
 };
 
@@ -537,18 +334,7 @@ const MetaFields = ({
   }
 };
 
-function startOf(timing: EntryTiming): TimeChoice {
-  const { length, time } = timing;
-  if (length?.kind === "start") return { kind: "at", local: length.local };
-  if (length && time) {
-    const end = new Date(toPickedLocal(time)).getTime();
-    return { kind: "at", local: toLocalInput(end - length.minutes * 60_000) };
-  }
-  return NOW;
-}
-
 const TimingFields = ({
-  type,
   shape,
   timing,
   errors,
@@ -560,63 +346,57 @@ const TimingFields = ({
   onChange: (patch: Partial<EntryTiming>) => void;
   shape: EntryShape;
   timing: EntryTiming;
-  type: EventType;
 }) => {
-  const handleTime = useCallback(
-    (time: TimeChoice) => onChange({ time }),
+  const handleStart = useCallback(
+    (start: TimeChoice) => onChange({ start }),
     [onChange]
   );
-  const handleLength = useCallback(
-    (length: LengthChoice) => onChange({ length }),
+  const handleEnd = useCallback(
+    (end: TimeChoice) => onChange({ end, running: false }),
     [onChange]
   );
   const handleRunning = useCallback(
-    (running: boolean) =>
-      onChange(
-        running
-          ? { length: null, running: true, time: startOf(timing) }
-          : { running: false }
-      ),
-    [onChange, timing]
+    (running: boolean) => onChange({ end: NOW, running }),
+    [onChange]
   );
 
   if (shape === "instant") {
     return (
-      <TimeField
-        choice={timing.time}
-        error={errors.time}
+      <TimeSlider
+        choice={timing.end}
+        error={errors.end}
         legend="Time"
-        onChange={handleTime}
+        onChange={handleEnd}
       />
     );
   }
 
   return (
     <>
-      <TimeField
-        choice={timing.running ? null : timing.time}
-        error={timing.running ? undefined : errors.time}
-        legend="Ended"
-        onChange={handleTime}
-        onRunningChange={canRun ? handleRunning : undefined}
-        running={timing.running}
+      <TimeSlider
+        choice={timing.start}
+        error={errors.start}
+        legend="Started"
+        onChange={handleStart}
       />
-      {timing.running ? (
-        <TimeField
-          choice={timing.time}
-          error={errors.time}
-          legend="Started"
-          onChange={handleTime}
+      <div>
+        <TimeSlider
+          choice={timing.end}
+          error={timing.running ? undefined : errors.end}
+          legend="Ended"
+          onChange={handleEnd}
+          running={timing.running}
         />
-      ) : (
-        <LengthField
-          end={timing.time}
-          error={errors.length}
-          length={timing.length}
-          onChange={handleLength}
-          type={type}
-        />
-      )}
+        {canRun && (
+          <div className="mt-2">
+            <ToggleChip
+              checked={timing.running}
+              label="Still going"
+              onChange={handleRunning}
+            />
+          </div>
+        )}
+      </div>
     </>
   );
 };
@@ -843,7 +623,6 @@ export const EventEditSheet = ({
           onChange={handleTimingChange}
           shape={shape}
           timing={form.timing}
-          type={form.type}
         />
 
         {form.type !== "note" && (
