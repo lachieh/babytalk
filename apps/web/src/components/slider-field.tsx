@@ -65,7 +65,12 @@ const SliderField = ({
   );
   const togglePicking = useCallback(() => setPicking((p) => !p), []);
 
-  const pct = ((clamp(value, min, max) - min) / (max - min)) * 100;
+  const position = clamp(
+    min + Math.round((value - min) / step) * step,
+    min,
+    max
+  );
+  const pct = ((position - min) / (max - min)) * 100;
   const fillStyle = {
     "--fill-from": fill === "below" ? "0%" : `${pct}%`,
     "--fill-to": fill === "below" ? `${pct}%` : "100%",
@@ -100,7 +105,7 @@ const SliderField = ({
                 step={step}
                 style={fillStyle}
                 type="range"
-                value={clamp(value, min, max)}
+                value={position}
               />
               <div
                 aria-hidden="true"
@@ -229,7 +234,7 @@ export const TimeSlider = ({
 
 const AMOUNT_RANGE: Record<VolumeUnit, { max: number; step: number }> = {
   ml: { max: 240, step: 5 },
-  oz: { max: 8, step: 0.25 },
+  oz: { max: 8, step: 0.5 },
 };
 
 export const AmountSlider = ({
@@ -250,14 +255,19 @@ export const AmountSlider = ({
   const { max, step } = AMOUNT_RANGE[unit];
   const shown = amountMl ? mlToDisplay(amountMl, unit) : 0;
 
+  const [typed, setTyped] = useState<{ text: string; unit: VolumeUnit }>();
+
   const handleSlide = useCallback(
-    (value: number) =>
-      onChange(value > 0 ? displayToMl(value, unit) : undefined),
+    (value: number) => {
+      setTyped(undefined);
+      onChange(value > 0 ? displayToMl(value, unit) : undefined);
+    },
     [onChange, unit]
   );
   const handlePicked = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = Number(e.target.value);
+      setTyped({ text: e.target.value, unit });
       onChange(value > 0 ? displayToMl(value, unit) : undefined);
     },
     [onChange, unit]
@@ -279,7 +289,7 @@ export const AmountSlider = ({
         placeholder={`Amount in ${unit}`}
         step="any"
         type="number"
-        value={shown || ""}
+        value={typed?.unit === unit ? typed.text : shown || ""}
       />
     </>
   );

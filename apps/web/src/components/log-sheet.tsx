@@ -8,7 +8,7 @@ import { TimeSlider } from "@/components/slider-field";
 import type { BabyEvent } from "@/lib/baby-context";
 import { logSheetPrimary, methodTakesAmount } from "@/lib/daily-totals";
 import { EVENT_TYPE_LABELS, parseMeta } from "@/lib/event-meta";
-import { logTimes, NOW, resolveTime } from "@/lib/event-time";
+import { logTimes, NOW, pastTimeError, resolveTime } from "@/lib/event-time";
 import type { TimeChoice } from "@/lib/event-time";
 import type { StationActionKey } from "@/lib/station-config";
 
@@ -262,8 +262,9 @@ export const LogSheet = ({
     [when, onLog]
   );
 
+  const whenError = pastTimeError(when);
   const clock =
-    when.kind === "ago" && when.minutes === 0
+    whenError || (when.kind === "ago" && when.minutes === 0)
       ? null
       : new Date(resolveTime(when)).toLocaleTimeString([], {
           hour: "numeric",
@@ -297,7 +298,8 @@ export const LogSheet = ({
         <div className="flex gap-2">
           {type === "feed" && primary.action === "timer" && (
             <button
-              className="min-h-[52px] flex-1 rounded-xl border border-neutral-300 px-3 font-medium text-neutral-700 text-sm leading-tight transition-colors hover:bg-neutral-100 active:bg-neutral-200"
+              className="min-h-[52px] flex-1 rounded-xl border border-neutral-300 px-3 font-medium text-neutral-700 text-sm leading-tight transition-colors hover:bg-neutral-100 active:bg-neutral-200 disabled:text-neutral-400 disabled:hover:bg-transparent"
+              disabled={Boolean(whenError)}
               onClick={handleFinished}
               type="button"
             >
@@ -305,7 +307,8 @@ export const LogSheet = ({
             </button>
           )}
           <button
-            className="min-h-[52px] flex-1 rounded-xl bg-primary-500 px-3 font-semibold text-base text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] motion-reduce:active:scale-100"
+            className="min-h-[52px] flex-1 rounded-xl bg-primary-500 px-3 font-semibold text-base text-white transition-[background-color,transform] hover:bg-primary-600 active:scale-[0.97] motion-reduce:active:scale-100 disabled:bg-neutral-200 disabled:text-neutral-500 disabled:active:scale-100"
+            disabled={Boolean(whenError)}
             onClick={handlePrimary}
             type="button"
           >
@@ -334,6 +337,7 @@ export const LogSheet = ({
       <div className="px-5 pt-4 pb-1">
         <TimeSlider
           choice={when}
+          error={whenError}
           legend={WHEN_LEGEND[type]}
           onChange={setWhen}
         />

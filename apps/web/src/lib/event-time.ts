@@ -107,6 +107,16 @@ export function resolveTime(choice: TimeChoice, now = Date.now()): number {
   return choice.local ? new Date(choice.local).getTime() : Number.NaN;
 }
 
+export function pastTimeError(
+  choice: TimeChoice,
+  now = Date.now()
+): string | undefined {
+  const at = resolveTime(choice, now);
+  if (!Number.isFinite(at)) return "Pick a time.";
+  if (at > now + FUTURE_TOLERANCE_MS) return "That time hasn't happened yet.";
+  return undefined;
+}
+
 const fail = (field: TimingField, message: string): ResolvedTiming => ({
   field,
   message,
@@ -122,10 +132,8 @@ export function resolveEntryTiming(
   const end = resolveTime(timing.end, now);
 
   if (shape === "instant") {
-    if (!Number.isFinite(end)) return fail("end", "Pick a time.");
-    if (end > now + FUTURE_TOLERANCE_MS) {
-      return fail("end", "That time hasn't happened yet.");
-    }
+    const error = pastTimeError(timing.end, now);
+    if (error) return fail("end", error);
     const iso = new Date(end).toISOString();
     return { endedAt: iso, ok: true, startedAt: iso };
   }

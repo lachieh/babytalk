@@ -7,6 +7,7 @@ import {
   eventOverlapsRange,
   eventsOverlappingDay,
   logTimes,
+  pastTimeError,
   resolveEntryTiming,
   timingFromEvent,
   toLocalInput,
@@ -395,5 +396,26 @@ describe("log timing", () => {
       _endedAt: "2026-03-01T08:30:00.000Z",
       _startedAt: "2026-03-01T08:30:00.000Z",
     });
+  });
+});
+
+describe("quick-log time check", () => {
+  const now = new Date("2026-08-14T10:00:00").getTime();
+
+  it("accepts a time on the slider or a picked past time", () => {
+    expect(pastTimeError(ago(20), now)).toBeUndefined();
+    expect(
+      pastTimeError({ kind: "at", local: "2026-08-14T07:30" }, now)
+    ).toBeUndefined();
+  });
+
+  it("rejects a cleared picker instead of logging now", () => {
+    expect(pastTimeError({ kind: "at", local: "" }, now)).toBe("Pick a time.");
+  });
+
+  it("rejects a picked time in the future", () => {
+    expect(pastTimeError({ kind: "at", local: "2026-08-14T11:00" }, now)).toBe(
+      "That time hasn't happened yet."
+    );
   });
 });
