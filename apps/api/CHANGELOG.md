@@ -1,5 +1,17 @@
 # @bubsie/api
 
+## 0.4.0
+
+### Minor Changes
+
+- d95914b: Send a pairing device to your own Bubsie server. On the approve page, "Using your own server?" checks the address you enter, moves the device's code there, and opens that server's approve page once the device has arrived. No account on this server is needed, and sign-in tokens never pass through it. The API adds `redirectDeviceCode`, `confirmDeviceCodeRedirect`, the `deviceCodeRedirect` query, a `redirected` poll status, and an optional `code` on `requestDeviceCode`. `/.well-known/config` is now readable from other origins.
+
+### Patch Changes
+
+- Updated dependencies [d95914b]
+  - @bubsie/standard-config@0.1.2
+  - @bubsie/vite-config@0.0.3
+
 ## 0.3.0
 
 ### Minor Changes
